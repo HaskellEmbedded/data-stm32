@@ -1,0 +1,64 @@
+name:                data-stm32
+version:             0.1.0.0
+github:              "sorki/data-stm32"
+license:             BSD3
+author:              "Richard Marko"
+maintainer:          "srk@48.io"
+copyright:           "2018 Richard Marko"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         ARM SVD and CubeMX XML parser and pretty printer for STM32 family
+
+dependencies:
+- base >= 4.7 && < 5
+- containers
+- hxt
+- hxt-xpath
+- attoparsec
+- text
+- time
+- ansi-wl-pprint
+- pretty-simple
+
+library:
+  source-dirs: src
+
+executables:
+  mxmcu: &apptemplate
+    main:                Main.hs
+    source-dirs:         app/mxmcu
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - data-stm32
+
+  svdparse:
+    <<: *apptemplate
+    source-dirs:         app/svd
+
+  stm32-reference-pdf:
+    <<: *apptemplate
+    source-dirs:         app/referencepdf
+
+tests:
+  data-cubemx-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - data-stm32
