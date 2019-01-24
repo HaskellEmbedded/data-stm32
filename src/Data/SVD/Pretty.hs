@@ -12,6 +12,7 @@ import Data.List (intersperse)
 ppList pp x = vcat $ map pp x
 
 ppDevice res = displayS (renderPretty 0.4 80 (ppDevice' res)) ""
+ppDeviceInfo res = displayS (renderPretty 0.4 80 (ppDeviceInfo' res)) ""
 ppPeripheral res = displayS (renderPretty 0.4 80 (ppPeriph res)) ""
 ppRegister res = displayS (renderPretty 0.4 80 (ppReg res)) ""
 
@@ -24,7 +25,7 @@ ppPeriph periph@Peripheral{..} =
   <> (yellow $ string periphName)
   <+> (white $ ppHex periphBaseAddress)
   <+> (magenta $ string periphDescription)
-  <$$> indent 2 (ppList (ppIvoryReg periph) periphRegisters)
+  <$$> indent 2 (ppList ppReg periphRegisters)
   <//> (maybe empty (\x -> string "Derived from" <+> string x) periphDerivedFrom)
 
 ppReg Register{..} =
@@ -81,3 +82,42 @@ ppWidth x = string "Bits" <+> int x
 ppWidthPad m 1 = string $ rpad m "Bit"
 ppWidthPad m x = string $ rpad m $ "Bits " ++ show x
 
+
+-- ISR
+
+ppDevISR res = displayS (renderPretty 0.4 80 (ppDevISR' res)) ""
+
+ppDevISR' Device{..} = (ppList ppPeriphISR devicePeripherals)
+
+ppPeriphISR periph@Peripheral{..} =
+  indent 2 (ppList ppISR periphInterrupts)
+--  <//> (maybe empty (\x -> string "Derived from" <+> string x) periphDerivedFrom)
+--
+--
+
+
+ppISRs res = displayS (renderPretty 0.4 80 (ppList ppISR res)) ""
+
+ppISR Interrupt{..} = indent 2 (
+  "|"
+  <+> string interruptName
+  <> " -- " <> int interruptValue <+> string interruptDescription
+  )
+
+-- terse output
+
+ppDeviceInfo' Device{..} =
+  (red $ string deviceName)
+  <$$> indent 2 (ppList ppPeriphName devicePeripherals)
+
+ppPeriphName periph@Peripheral{..} = (yellow $ string periphName)
+
+-- MemMap
+
+ppMemMap res = displayS (renderPretty 0.4 80 (ppList ppMem res)) ""
+ppMem (addr, periph) =
+     name <> " :: Integer"
+  </> name
+  <> " = "
+  <> string addr
+  where name = string (map toLower periph) <> "_periph_base"

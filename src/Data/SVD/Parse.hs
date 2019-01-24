@@ -120,6 +120,7 @@ field = atTag "field" >>>
         fieldBitWidth = read bitWidth
         fieldDescription = filterCrap desc
         fieldReserved = False
+        fieldRegType = Nothing
 
     returnA -< Field{..}
 

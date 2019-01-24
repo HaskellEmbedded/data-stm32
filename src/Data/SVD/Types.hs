@@ -1,9 +1,15 @@
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DeriveGeneric #-}
 module Data.SVD.Types where
 
+import Data.Ord
 import Data.List
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 
+import GHC.Generics
+import Data.Serialize
+import Data.Algorithm.Diff
 
 data Device = Device {
     deviceName            :: String
@@ -15,7 +21,9 @@ data Device = Device {
   , deviceResetValue      :: Int
   , deviceResetMask       :: Int
   , devicePeripherals     :: [Peripheral]
-  } deriving (Eq, Ord, Show)
+  } deriving (Generic, Eq, Ord, Show)
+
+instance Serialize Device
 
 data Peripheral = Peripheral {
     periphName         :: String
@@ -26,19 +34,25 @@ data Peripheral = Peripheral {
   , periphAddressBlock :: Maybe AddressBlock
   , periphInterrupts   :: [Interrupt]
   , periphRegisters    :: [Register]
-  } deriving (Eq, Ord, Show)
+  } deriving (Generic, Eq, Ord, Show)
+
+instance Serialize Peripheral
 
 data AddressBlock = AddressBlock {
     addressBlockOffset :: Int
   , addressBlockSize   :: Int
   , addressBlockUsage  :: String
-  } deriving (Eq, Ord, Show)
+  } deriving (Generic, Eq, Ord, Show)
+
+instance Serialize AddressBlock
 
 data Interrupt = Interrupt {
     interruptName        :: String
   , interruptDescription :: String
   , interruptValue       :: Int
-  } deriving (Eq, Ord, Show)
+  } deriving (Generic, Eq, Ord, Show)
+
+instance Serialize Interrupt
 
 data Register = Register {
     regName          :: String
@@ -49,10 +63,14 @@ data Register = Register {
   , regAccess        :: AccessType
   , regResetValue    :: Int
   , regFields        :: [Field]
-  } deriving (Eq, Ord, Show)
+  } deriving (Generic, Eq, Ord, Show)
+
+instance Serialize Register
 
 data AccessType = ReadOnly | WriteOnly | ReadWrite | WriteOnce | ReadWriteOnce
-  deriving (Eq, Ord, Show)
+  deriving (Generic, Eq, Ord, Show)
+
+instance Serialize AccessType
 
 data Field = Field {
     fieldName        :: String
@@ -60,7 +78,10 @@ data Field = Field {
   , fieldBitOffset   :: Int
   , fieldBitWidth    :: Int
   , fieldReserved    :: Bool  -- so we can add reserved fields to the list
-  } deriving (Eq, Ord, Show)
+  , fieldRegType     :: Maybe String  -- ivory register type
+  } deriving (Generic, Eq, Ord, Show)
+
+instance Serialize Field
 
 toAccessType "read-only" = ReadOnly
 toAccessType "write-only" = WriteOnly
@@ -75,7 +96,7 @@ procFields f = reverse $ sortByOffset (f ++ missingAsReserved)
   where
     missingAsReserved = reserved $ conts $ Set.toList missing
 
-    reserved = map (\(offset, width) -> Field "_" "Reserved" offset width True)
+    reserved = map (\(offset, width) -> Field "_" "(Reserved)" offset width True Nothing)
 
     conts x = case cont x of
       [] -> []
@@ -102,4 +123,24 @@ mapFields f Register{..} = map f regFields
 
 mapDevFields f d = concat $ concat $ flip mapPeriphs d $ mapRegs $ mapFields f
 
+diffPeriphs a b = diffRegs (periphRegisters a) (periphRegisters b)
 
+diffRegs a b = getDiffBy (\x y -> regName x == regName y) (sortOn regName a) (sortOn regName b)
+
+-- |Get peripheral by name
+getPeriph :: String -> Device -> Peripheral
+getPeriph name dev = head . filter ((==name) . periphGroupName) $ devicePeripherals dev
+
+getReg rName name dev = head . filter((==rName) . regName) . periphRegisters $ getPeriph name dev
+
+registerNames pName dev = map regName . periphRegisters $ getPeriph pName dev
+fieldNames rName pName dev = map fieldName . regFields $ getReg rName pName dev
+
+diffRegisterNames pName dev1 dev2 = getDiff (registerNames pName dev1) (registerNames pName dev2)
+diffFieldNames rName pName dev1 dev2 = getDiff (fieldNames rName pName dev1) (fieldNames rName pName dev2)
+
+diffDistance x = sum $ map go x
+  where
+    go (Both _ _) = 0
+    go (First  _) = 1
+    go (Second _) = 1
