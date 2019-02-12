@@ -1,8 +1,6 @@
 MEMORY
 {
-  flash (rx) : ORIGIN = $flash_origin$, LENGTH = $flash_length$
-  sram (rwx) : ORIGIN = $sram_origin$, LENGTH = $sram_length$
-  ccsram (rwx) : ORIGIN = $ccsram_origin$, LENGTH = $ccsram_length$
+$regions$
 }
 _estack = $estack$;
 _min_heap_size = 0;
@@ -65,7 +63,7 @@ SECTIONS
     *(.gnu.linkonce.d.*)
     CONSTRUCTORS
     _edata = ABSOLUTE(.);
-  } > ccsram AT > flash
+  } > $ccsramOrSram$ AT > flash
   . = ALIGN(4);
   .bss : {
     _sbss = ABSOLUTE(.);
@@ -84,7 +82,7 @@ SECTIONS
     . = . + _min_heap_size;
     . = . + _min_stack_size;
     . = ALIGN(4);
-  } > ccsram
+  } > $ccsramOrSram$
   .stab 0 : { *(.stab) }
   .stabstr 0 : { *(.stabstr) }
   .stab.excl 0 : { *(.stab.excl) }

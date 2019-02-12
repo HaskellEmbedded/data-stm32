@@ -17,26 +17,29 @@ linker_script fname mcu bl_offset reset_handler =
   where
   path = "support/linker_script.lds.template"
   attrs MCU{..} =
-    [ ( "regions", memregs mcu)
-    , ( "estack", show $ (ramOffset mcuFamily) + mcuRAM)
+    [ ( "regions",       memregs mcu)
+    , ( "estack",        show $ (ramOffset mcuFamily) + mcuRAM)
     , ( "reset_handler", reset_handler)
+    -- use ccsram if available
+    , ( "ccsramOrSram",  maybe "sram" (pure "ccsram") mcuCCM)
     ]
 
-  memregs MCU{..} = concatMap mkRegion
+  memregs MCU{..} = unlines $ map mkRegion
     [ ("flash",  flashOffset + bl_offset, Just $ mcuROM - bl_offset)
-    , ("sram",   ramOffset mcuFamily, Just mcuRAM)
-    , ("ccsram", ccmOffset mcuFamily, mcuCCM)
+    , ("sram",   ramOffset mcuFamily,     Just mcuRAM)
+    , ("ccsram", ccmOffset mcuFamily,     mcuCCM)
    -- XXX: handle these as well
    -- , ("sram2",   ramOffset?? mcuFamily, mcuRAM2)
    -- , ("eep",   eepOffset?? mcuFamily, mcuEEP)
     ]
 
-  mkRegion (_, _, Nothing) = ""
-  mkRegion (name, offset, reglength) = "  " ++ name ++ "(" ++ (mode name) ++ "): ORIGIN = " ++ (show offset) ++ ", LENGTH =" ++ (show reglength)
+  mkRegion (_, _,         Nothing)          = ""
+  mkRegion (name, offset, (Just reglength)) =
+    "  " ++ name ++ "(" ++ (mode name) ++ "): ORIGIN = " ++ (show offset) ++ ", LENGTH =" ++ (show reglength)
 
-  mode "flash" = "rx"
+  mode "flash"  = "rx"
   mode "eeprom" = "rx"
-  mode _ = "rwx"
+  mode _        = "rwx"
 
 {-
     flash (rx) : ORIGIN = $flash_origin$, LENGTH = $flash_length$
