@@ -17,7 +17,7 @@ mkVar name n = do
   m <- lookupValueName (name ++ show n)
   case m of
     Just n' -> varE n'
-    Nothing -> error "bad pin number or name"
+    Nothing -> error $ "bad pin number or name, unable to lookup '" ++ (name ++ show n) ++ "'"
 
 mkGPIOPin :: Name -> Name -> Integer -> [DecQ]
 mkGPIOPin portName pin n =

@@ -34,4 +34,4 @@ ppMCU (pat:attrs) =
     addJust "RAM2" = ("Just $ "++)
     addJust _ = id
 
-    fixPat = (replace "*" ".*") . (replace "?" ".?") . map toUpper
+    fixPat = (replace "*" ".*") . (replace "?" ".") . map toUpper

@@ -94,10 +94,10 @@ mergedRegistersForPeriph p svds = (getPeriph p (snd fstDev)) { periphRegisters =
 --
 -- used to create one register containing all fields from similar devices of a family
 mergeRegisterFields :: [Register] -> [Register]
-mergeRegisterFields rs = mergeFields $ L.groupBy ((==) `on` regName) $ L.sortBy (comparing $ regName) $ rs
+mergeRegisterFields rs = mergeRegFields $ L.groupBy ((==) `on` regName) $ L.sortBy (comparing $ regName) $ rs
 
-mergeFields :: [[Register]] -> [Register]
-mergeFields groups = map mf groups
+mergeRegFields :: [[Register]] -> [Register]
+mergeRegFields groups = map mf groups
   where
     mf :: [Register] -> Register
     mf rs = (head rs) { regFields = mergedFields rs }

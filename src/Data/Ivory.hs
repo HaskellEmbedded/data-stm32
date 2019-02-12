@@ -50,6 +50,14 @@ procPeriphSpecificTemplate periph name vers attrs =  procTemplate name' attrs' >
       Nothing -> T.concat [ibs, T.replace "X" periph name]
       Just x -> T.concat [ibs, T.replace "X" (periph <> x) name]
 
+-- STM32DEV.File to STM32FXYZ.File
+procDevTemplate :: String -> Text -> [(Text, Text)] -> IO (Text, Text)
+procDevTemplate dev name attrs =  procTemplate name' attrs' >>= return . ((,) modns)
+  where
+    name' = T.concat ["STM32DEV/", T.replace "." "/" name, ".hs"]
+    attrs' = ("modns", modns):attrs
+    modns = T.concat [ibs, T.replace "DEV" (T.pack dev) (T.concat ["STM32DEV.", name]) ]
+
 procTemplate :: Text -> [(Text, Text)] -> IO Text
 procTemplate name attrs = do
   t <- TIO.readFile $ T.unpack $ T.concat [tdir, name]

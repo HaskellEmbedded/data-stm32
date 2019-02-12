@@ -41,27 +41,10 @@ import Debug.Trace
 import Extract
 import Utils
 
--- w00t
--- [ ] merged regmaps for multiple periphs
--- [ ] generate register definition files
--- [ ] generate periph definition files
--- [ ] add drivers, case according to IP version
---
--- integrate
--- src/Data/Ivory/MCU.hs
--- src/Data/Ivory/MemMap.hs
---
--- src/Data/Ivory/Periph
---
--- [?] mcudiff
--- [ ] web
-
-
 cdmk dir = do
   hasdir <- testdir dir
   when (not hasdir) (mktree dir)
   cd dir
-
 
 supFamilies =
   [ F0
@@ -125,11 +108,7 @@ periph2svdName :: Periph -> String
 periph2svdName UART = "USART"
 periph2svdName x = show x
 
-fixRegName "GPIOB_OSPEEDR" = "OSPEEDR"
-fixRegName x = x
-
-fixRegs peri = peri { periphRegisters = mapRegs (\x -> x { regName = fixRegName $ regName x }) peri }
-
+-- crap
 fixAndPack = T.replace "usart" "uart"
  . T.replace "USART" "UART"
  . T.pack
@@ -171,49 +150,20 @@ main = do
                  $ L.sortBy (comparing fst)
                  $ filter (\(name, dev) ->
                               (m =~ (replace "x" "[0-9]" $ take 4 name)) :: Bool) svds
+      getSVD = snd . head . svdByMcu
 
   cd dir
   (shortMCUs, families, mcuxmls) <- cmx
 
-  --for STM32/XYPeriph/Regs
+  --for STM32XY/Periph/Regs
   --print $ mergedRegistersForPeriph "USART" svds
 
   cd dir
   stm32toplevel
-  stm32periphs (snd . head . svdByMcu) -- (snd . head $ svdByMcu ("STM32F765" :: String))
+  stm32periphs getSVD
 
-  cd dir
-  forM supFamilies $ \f -> do
-    putStrLn $ "Processing family " ++ (show f)
-    let
-      fns = "STM32" ++ (show f)
-      svdsFam = svdsFamily f svds
-      mcusFam = filter (L.isPrefixOf (show f)) shortMCUs
-      isr = replaceOne "|" "="
-          $ T.pack
-          $ ppISRs
-          $ normalizeISRNames
-          $ isrsFamily f svds
-
-    (ns, t) <- procFamilyTemplate f "STM32XX.Interrupt" [ ("isr", isr) ]
-    writeHS ns t
-
-    --print $ zip (map (length . svdByMcu) mcusFam) mcusFam
-    --print $ zip (map svdByMcu mcusFam) mcusFam
-    forM mcusFam $ \mcu -> do
-      print $ (mcu, map fst  $ svdByMcu mcu)
-
-    {-
-     - memmap for family, not usable
-    let mem = T.pack
-          $ ppMemMap
-          $ S.toList
-          $ S.unions
-          $ map (S.fromList . getDevMemMap) svdsFam
-
-    (ns, t) <- procFamilyTemplate f "STM32XX.MemoryMap" [ ("mem", mem) ]
-    writeHS ns t
-    -}
+  stm32families svds shortMCUs
+  stm32devs getSVD
 
   -- cabal file and support files
   cd dir
@@ -225,6 +175,46 @@ main = do
   where
     prefixRest (x:xs) = x:(map (\y -> T.concat [T.replicate (T.length "exposed-modules:       ") " ", y]) xs)
 
+thesePlease :: [String]
+thesePlease =
+  [ "F103"
+  , "F427" ]
+
+stm32devs get = do
+  forM (map (\x -> (x, get $ "STM32" ++ x)) thesePlease) $ \(namePart, dev) -> do
+    putStrLn $ "Processing device " ++ (show (deviceName dev))
+    -- memMap
+    (ns, t) <- procDevTemplate namePart "MemoryMap"
+                [ ("dev", T.pack namePart )
+                , ("map" , T.pack $ ppMemMap $ getDevMemMap dev ) ]
+
+    writeHS ns t
+
+    let genPeriph p = case filter ((==periph2svdName p) . periphGroupName) $ devicePeripherals dev of
+         [] -> fail $ "No " ++ (show p) ++ " found"
+         [x] -> do
+               let new = procPeriph p Nothing x
+               (ns, t) <- procDevTemplate namePart (T.pack . show $ p)
+                 [ ("dev", T.pack namePart)
+                 , ("regs", T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
+
+               writeHS ns t
+
+    forM_ [ RCC, FLASH, PWR ] genPeriph
+
+    forM_ supPeriphs $ \p -> do
+      -- XXX: handle UART vs USART?
+      case filter (((periph2svdName p)`L.isPrefixOf`) . periphName) $ devicePeripherals dev of
+        [] -> fail $ "No peripheral found with groupName " ++ show p ++ " for device " ++ (deviceName dev)
+        xs -> do
+          print $ map periphName xs
+          (ns, t) <- procDevTemplate namePart "UART"
+            [ ("dev", T.pack namePart)
+            , ("fam", T.take 2 $ T.pack namePart)
+            , ("imports", "") ]
+          writeHS ns t
+
+
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
 -- for all supPeriphs
 stm32periphs get = do
@@ -235,13 +225,12 @@ stm32periphs get = do
   forM_ supPeriphs $ \p -> do
     case filter ((==periph2svdName p) . periphGroupName) $ devicePeripherals nVDev of
       [] -> fail $ "No peripheral found with groupName " ++ show p ++ " for device " ++ (deviceName nVDev)
-      --xs | length xs > 1 -> fail $ "Multiple peripheral found with groupName " ++ show p ++ " for device " ++ (deviceName devSvd)
       x:xs -> do
 
         case versioned p of
           False -> do
              -- register bitdata
-            let new = fixRegs $ filterByPeriph p Nothing x
+            let new = procPeriph p Nothing x
                 res = ppPeriphRegs new
             (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X.Regs" Nothing
               [ ("regs", fixAndPack res)
@@ -270,7 +259,7 @@ stm32periphs get = do
               let x' = head . filter ((==periph2svdName p) . periphGroupName) $ devicePeripherals (get repre)
 
               -- register bitdata
-              let new = fixRegs $ filterByPeriph p (Just ver) x'
+              let new = procPeriph p (Just ver) x'
                   res = ppPeriphRegs new
               (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X.Regs" (Just $ tshow ver)
                 [ ("regs", fixAndPack res)
@@ -286,9 +275,6 @@ stm32periphs get = do
                   versionSpecific = [
                       (GPIO, [ "RegTypes", "TH" ])
                     ]
-              -- TODO
-              -- complete GPIO interface needs wrapping for two GPIO versions
-              -- so scan for exports and wrap all functions
 
               -- additional files / regtypes
               -- take stuff from UART/file to UART1/file
@@ -314,10 +300,24 @@ stm32periphs get = do
                 ]
               writeHS ns t
 
-              -- reexports
-              (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X" Nothing
-                [ ("type", (tshow p) <> (tshow ver)) ]
-              writeHS ns t
+              case p of
+                GPIO -> do
+                      -- reexports
+                      (ns, t) <- procPeriphSpecificTemplate (tshow p) "STM32.Peripheral.X" Nothing
+                        [ ("type", (tshow p)) ]
+                      writeHS ns t
+
+                _    -> do
+
+                      -- reexports
+                      (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X" Nothing
+                        [ ("type", (tshow p) <> (tshow ver)) ]
+                      writeHS ns t
+
+
+  -- RCC reg types common for all devs
+  (ns, t) <- procPeriphSpecificTemplate (tshow RCC) ("STM32.Peripheral.X.RegTypes") Nothing []
+  writeHS ns t
 
 
 versionedPeriphs = [GPIO, UART]
@@ -372,42 +372,92 @@ canFilters :: String
 canFilters = "F[0-9][0-9]?R[1-2]"
 
 -- UART
-adjustUartRegs x = adjustFields fix x
+adjustUARTRegs x = adjustFields fix x
   where
-    fix x | fieldName x == "DR"  = Just $ x { fieldBitWidth = 8 }
+    fix x | fieldName x == "DR"  = Just $ x { fieldBitWidth = 8 } -- we fix these to 8 bits, they are defined as 9 bit iirc but that fucks with our drivers
     fix x | fieldName x == "RDR" = Just $ x { fieldBitWidth = 8 }
     fix x | fieldName x == "TDR" = Just $ x { fieldBitWidth = 8 }
-    fix x | fieldName x == "DIV_Mantissa" = Nothing
+    fix x | fieldName x == "DIV_Mantissa" = Nothing  -- mantissa is dropped and div bellow covers both mantissa and fraction
     fix x | fieldName x == "DIV_Fraction" = Just $ x { fieldBitWidth = 16, fieldName = "div", fieldDescription = "divider" }
     fix x | fieldDescription x == "Word length" = Just $ x { fieldRegType = Just "UART_WordLen" }
     fix x | fieldDescription x == "STOP bits" = Just $ x { fieldRegType = Just "UART_StopBits" }
     fix x = Just x
 
-adjustGPIORegs x = adjustFields fix x
+adjustGPIORegs x = adjustRegs rename $ adjustFields fix x
   where
-    fix x | "PUPDR"   `L.isPrefixOf` (fieldName x) = Just $ setRegType "GPIO_PUPD" x
-    fix x | "AFR"     `L.isPrefixOf` (fieldName x) = Just $ setRegType "GPIO_AF" x
-    fix x | "OSPEEDR" `L.isPrefixOf` (fieldName x) = Just $ setRegType "GPIO_Speed" x
-    fix x | "OT"      `L.isPrefixOf` (fieldName x) = Just $ setRegType "GPIO_OutputType" x -- gpio_ot vs gpio_otype_x
-    fix x | "MODE"    `L.isPrefixOf` (fieldName x) = Just $ setRegType "GPIO_Mode" x
+    fix x | "PUPDR"   `L.isPrefixOf` (fieldName x) = Just $ setFieldType "GPIO_PUPD" x
+    fix x | "AFR"     `L.isPrefixOf` (fieldName x) = Just $ setFieldType "GPIO_AF" x
+    fix x | "OSPEEDR" `L.isPrefixOf` (fieldName x) = Just $ setFieldType "GPIO_Speed" x
+    fix x | "OT"      `L.isPrefixOf` (fieldName x) = Just $ setFieldType "GPIO_OutputType" x -- gpio_ot vs gpio_otype_x
+    fix x | "MODE"    `L.isPrefixOf` (fieldName x) = Just $ setFieldType "GPIO_Mode" x
     fix x = Just x
+    rename x | regName x == "GPIOB_OSPEEDR" = x { regName = "OSPEEDR" }
+    rename x | otherwise = x
 
 adjustGPIOF1Regs x = adjustFields fix x
   where
-    fix x | "MODE"    `L.isPrefixOf` (fieldName x) = Just $ setRegType "GPIOF1_Mode" x
+    fix x | "MODE"    `L.isPrefixOf` (fieldName x) = Just $ setFieldType "GPIOF1_Mode" x
     fix x = Just x
 
-setRegType rt x = x { fieldRegType = Just rt }
 
-adjustFields fn x@Peripheral{..} = x { periphRegisters = map adj periphRegisters }
+renameGPIO x = x { periphName = fix $ periphName x }
   where
-    adj reg@Register{..} = reg { regFields = catMaybes $ map fn regFields }
+    fix x | "GPIO" `L.isPrefixOf` x = ("GPIO"++) . drop 5 $ x
+    fix x | "gpio" `L.isPrefixOf` x = ("gpio"++) . drop 5 $ x
+    fix x | otherwise = x
 
-filterByPeriph GPIO (Just 1) x = adjustGPIOF1Regs x
-filterByPeriph GPIO (Just 2) x = adjustGPIORegs x
-filterByPeriph CAN  _        x = adjustCANRegs $ filterRegsByName (not . (=~ canFilters)) x
-filterByPeriph UART _        x = adjustUartRegs x
+adjustRCCRegs x = merges $ adjustFields fix x
+  where
+    fix x | "PPRE"    `L.isPrefixOf` (fieldName x)      = Just $ setFieldType "RCC_PPREx" x
+    fix x | "HPRE"    `L.isPrefixOf` (fieldName x)      = Just $ setFieldType "RCC_HPRE" x
+    fix x | fieldName x `matchesRe` "MCO[0-9]?PRE"      = Just $ setFieldType "RCC_MCOxPre" x
+    fix x | fieldName x `matchesRe` "MCO[0-9]?"         = Just $ setFieldType "RCC_MCOx" x
+    fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK" x
+    fix x | otherwise                                   = Just x
+    merges x = mergeFields "PLLP" [0..1] (setFieldType "RCC_PLLP")
+             . mergeFields "PLLQ" [0..3] id
+             . mergeFields "PLLN" [0..8] id
+             . mergeFields "PLLM" [0..5] id
+             $ x
+
+-- given a composed field like pllp0 pllp1 merge this into multiple Bits or specific type set by adjust function
+-- mergeFields "PLLP" [0..1] id will drop pllp1 and grow pllp0, renaming it to "pllp"
+mergeFields prefix ids adjust x = adjustFields merger x
+  where
+    merger x | prefix ++ (show $ minimum ids) == fieldName x = Just $ setFieldName prefix $ grow $ adjust x
+    merger x | or (map ((==fieldName x).(prefix++).show) ids) = Nothing
+    merger x | otherwise = Just x
+    grow x = x { fieldBitWidth = length ids }
+
+setFieldType rt x = x { fieldRegType = Just rt }
+setFieldName n x = x { fieldName = n }
+
+matchesRe :: String -> String -> Bool
+matchesRe x re = x =~ re
+
+-- turn uart6 into uart
+dropID x | periphName x `matchesRe` "[A-Za-z]+[0-9]" = x { periphName = init $ periphName x }
+dropID x | otherwise = error $ "Cannot dropID from " ++ (show x)
+
+-- apply fn to peripherals registers
+adjustRegs fn x@Peripheral{..} = x { periphRegisters = map fn periphRegisters }
+
+-- apply fn to peripherals registers fields
+adjustFields fn x@Peripheral{..} = adjustRegs adj x
+  where
+    adj reg@Register{..} = reg { regFields = mapMaybe fn regFields }
+
+filterByPeriph GPIO (Just 1) x = renameGPIO $ adjustGPIOF1Regs x
+filterByPeriph GPIO (Just 2) x = renameGPIO $ adjustGPIORegs x
+filterByPeriph CAN  _        x = dropID $ adjustCANRegs $ filterRegsByName (not . (=~ canFilters)) x
+filterByPeriph UART _        x = dropID $ adjustUARTRegs x
+filterByPeriph RCC  _        x = adjustRCCRegs x
 filterByPeriph _    _        x = x
+
+-- toplevel kindof
+procPeriph p ver x = trace (show $ mapRegs (continuityCheck . regFields) lal) lal
+  where
+  lal = adjustRegs (\r -> r { regFields = procFields $ regFields r}) $ filterByPeriph p ver x
 
 -- Special driver/peripheral regs versioning threatment
 --
@@ -435,7 +485,7 @@ stm32toplevel = do
   let copies = [
           "Core"
         , "ClockConfig"
---        , "ClockConfig.Init"
+        , "ClockConfig.Init"
         , "Family"
         , "Interrupt"
         , "LinkerScript"
@@ -472,4 +522,30 @@ normalizeISRNames xs = map (\x -> x { interruptName = norm (interruptName x) }) 
 
 
 -- Right f103 <- parseSVD "data/STMicro/STM32F103xx.svd"
---
+
+stm32families svds shortMCUs = forM supFamilies $ \f -> do
+    putStrLn $ "Processing family " ++ (show f)
+    let
+      fns = "STM32" ++ (show f)
+      svdsFam = svdsFamily f svds
+      mcusFam = filter (L.isPrefixOf (show f)) shortMCUs
+      isr = replaceOne "|" "="
+          $ T.pack
+          $ ppISRs
+          $ normalizeISRNames
+          $ isrsFamily f svds
+
+    (ns, t) <- procFamilyTemplate f "STM32XX.Interrupt" [ ("isr", isr) ]
+    writeHS ns t
+
+    {-
+     - memmap for family, not usable
+    let mem = T.pack
+          $ ppMemMap
+          $ S.toList
+          $ S.unions
+          $ map (S.fromList . getDevMemMap) svdsFam
+
+    (ns, t) <- procFamilyTemplate f "STM32XX.MemoryMap" [ ("mem", mem) ]
+    writeHS ns t
+    -}

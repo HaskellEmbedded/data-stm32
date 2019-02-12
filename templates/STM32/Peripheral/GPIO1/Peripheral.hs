@@ -78,6 +78,7 @@ pinName p = gpioPortName (gpioPinPort p) ++ show (gpioPinNumber p)
 pinEnable :: GPIOPin -> Ivory eff ()
 pinEnable = gpioPortRCCEnable . gpioPinPort
 
+-- XXX: this looks bogus, we don't want to turn off WHOLE gpio port
 pinDisable :: GPIOPin -> Ivory eff ()
 pinDisable = gpioPortRCCDisable . gpioPinPort
 
@@ -86,7 +87,7 @@ pinUnconfigure :: GPIOPin -> Ivory eff ()
 pinUnconfigure p = do
   pinDisable p
   pinSetMode p gpio_mode_input
-  --pinSetPUPD p gpio_pupd_none
+  pinSetInputConfig p gpio_input_conf_float
 
 setRegF :: (BitData a, BitData b, IvoryIOReg (BitDataRep a),
             SafeCast (BitDataRep b) (BitDataRep a))
@@ -99,25 +100,56 @@ setRegF reg field pin val =
   modifyReg (reg $ gpioPinPort pin) $
     setField (field pin) val
 
-{-
-pinSetMode :: GPIOPin -> GPIO_Mode -> Ivory eff ()
-pinSetMode = setRegF gpioPortMODER gpioPinMode_F
-
-pinSetOutputType :: GPIOPin -> GPIO_OutputType -> Ivory eff ()
-pinSetOutputType = setRegF gpioPortOTYPER gpioPinOutputType_F
-
-pinSetSpeed :: GPIOPin -> GPIO_Speed -> Ivory eff ()
-pinSetSpeed = setRegF gpioPortOSPEEDR gpioPinSpeed_F
-
-pinSetPUPD :: GPIOPin -> GPIO_PUPD -> Ivory eff ()
-pinSetPUPD = setRegF gpioPortPUPDR gpioPinPUPD_F
--}
-
 pinSetMode :: GPIOPin -> GPIOF1_Mode -> Ivory eff ()
 pinSetMode pin mode =
   case gpioPinMode_F pin of
     CRModeLow  field -> setRegF gpioPortCRL (const field) pin mode
     CRModeHigh field -> setRegF gpioPortCRH (const field) pin mode
+
+pinSetConf :: GPIOPin -> (Bits 2) -> Ivory eff ()
+pinSetConf pin conf =
+  case gpioPinConf_F pin of
+    CRConfLow  field -> setRegF gpioPortCRL (const field) pin conf
+    CRConfHigh field -> setRegF gpioPortCRH (const field) pin conf
+
+pinSetInputConfig :: GPIOPin -> GPIOF1_InputConfig -> Ivory eff ()
+pinSetInputConfig pin conf = pinSetConf pin (fromRep . toRep $ conf)
+
+pinSetOutputConfig :: GPIOPin -> GPIOF1_OutputConfig -> Ivory eff ()
+pinSetOutputConfig pin conf = pinSetConf pin (fromRep . toRep $ conf)
+
+pinGetMode :: GPIOPin -> Ivory eff GPIOF1_Mode
+pinGetMode pin = case gpioPinMode_F pin of
+    CRModeLow  field -> do
+      r <- getReg (gpioPortCRL $ gpioPinPort pin)
+      return $ r #. field
+    CRModeHigh field -> do
+      r <- getReg (gpioPortCRH $ gpioPinPort pin)
+      return $ r #. field
+
+pinGetConf :: GPIOPin -> Ivory eff (Bits 2)
+pinGetConf pin = case gpioPinConf_F pin of
+    CRConfLow  field -> do
+      r <- getReg (gpioPortCRL $ gpioPinPort pin)
+      return $ r #. field
+    CRConfHigh field -> do
+      r <- getReg (gpioPortCRH $ gpioPinPort pin)
+      return $ r #. field
+
+pinGetOutputConfig :: GPIOPin -> Ivory eff GPIOF1_OutputConfig
+pinGetOutputConfig pin = do
+  x <- pinGetConf pin
+  return $ fromRep $ bitsToRep x
+
+pinIsAF :: GPIOPin -> Ivory eff IBool
+pinIsAF pin = do
+  oc <- toRep <$> pinGetOutputConfig pin
+  return (oc ==? toRep gpio_output_conf_pushpull .|| oc ==? toRep gpio_output_conf_opendrain)
+
+pinIsPushPull :: GPIOPin -> Ivory eff IBool
+pinIsPushPull pin = do
+  oc <- toRep <$> pinGetOutputConfig pin
+  return (oc ==? toRep gpio_output_conf_pushpull .|| oc ==? toRep gpio_output_conf_af_pushpull)
 
 pinSet :: GPIOPin -> Ivory eff ()
 pinSet pin =

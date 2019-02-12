@@ -13,77 +13,72 @@ import Data.Ivory.Pretty
 
 ppList pp x = vcat $ map pp x
 
-ppPeriphRegs res = displayIvoryCompact (ppPeriphRegs' res)
+ppPeriphRegs res = displayIvoryCompact (ppPeriphRegs' res False)
+ppPeriphRegsWithDefs res = displayIvoryCompact (ppPeriphRegs' res True)
+
 ppBitDataRegs res = displayIvoryCompact (ppBitDataRegs' res)
 ppBitDataRegsMk res = displayIvoryCompact (ppBitDataRegsMk' res)
 
-filterFirst p [] = []
-filterFirst p (x:xs)
-    | p x       = x:filterFirst p xs
-    | otherwise = xs
-
--- this drops first number from names
--- can6_lal6 -> can_lal6
-dropFirstDigit = filterFirst (not . isDigit)
-
--- from SPI1 we get SPI
--- from GPIOD we get GPIO
-name x | "GPIO" `isPrefixOf` x = string . ("GPIO"++) . drop 5 $ x
-name x | "gpio" `isPrefixOf` x = string . ("gpio"++) . drop 5 $ x
-name x | otherwise = string . dropFirstDigit $ x
-
-
-ppPeriphRegs' periph@Peripheral{..} =
-       comment (name periphName <+> string periphDescription)
+ppPeriphRegs' periph@Peripheral{..} withDefs =
+       comment (string periphName <+> string periphDescription)
   <>   hardline
   <>   comment ("Base address:" <+> ppHex periphBaseAddress)
-  <>   ppList (ppIvoryReg periph) periphRegisters
+  <>   ppList (\reg -> ppIvoryReg periph reg withDefs) periphRegisters
   <//> maybe empty (\x -> string "Derived from" <+> string x) periphDerivedFrom
 
-ppIvoryReg Peripheral{..} Register{..} =
+ppIvoryReg Peripheral{..} r@Register{..} withDefs =
        hardline
   <>   comment (string regDescription)
   <>   comment (string " | offset :" <+> string (hexFormat regAddressOffset))
   <>   comment (string " | address:" <+> string (hexFormat (periphBaseAddress + regAddressOffset)))
   <>   (red $ string "[ivory|\n")
   <+>  (string "bitdata ")
-  <>   (blue $ name upcaseRegName)
+  <>   (blue $ string upcaseRegName)
   <+>  (string $ ":: Bits 32 = ")
-  <>   (blue $ name lowcaseRegName)
-  <$$> indent 2 ( encloseStack "{" "}" "," (ppField maxFieldLength <$> procFields prefixed))
+  <>   (blue $ string lowcaseRegName)
+  <$$> indent 2 ( encloseStack "{" "}" "," (ppField maxFieldLength <$> prefixed))
   <$$> (red $ string "|]")
+  <$$> (if withDefs then defs else empty)
     where
       prefixed = fmap (prefixRegField $ lowcaseRegName ++ "_") regFields
       prefixRegField :: String -> Field -> Field
-      prefixRegField prefix f = f {fieldName = (prefix ++fieldName f)}
+      prefixRegField prefix f | not $ fieldReserved f = f {fieldName = (prefix ++fieldName f)}
+      prefixRegField prefix f = f
       upcaseRegName = toUpper <$> mconcat [periphName, "_", regName]
       lowcaseRegName = toLower <$> upcaseRegName
       maxFieldLength = maximum . map (length . fieldName) $ prefixed
+      defs = defName
+           <> string " :: BitDataReg "
+           <> string (toUpper <$> mconcat [periphName, "_", regName])
+           <$$> defName <> string " = mkBitDataRegNamed"
+           <+> parens (string (mconcat [toLower <$> periphName, "_periph_base + ", hexFormat regAddressOffset]))
+           <+> dquotes (string (toLower <$> regName))
+      defName = string (toLower <$> mconcat [ periphName, "_reg_", regName] )
+
 
 ppBitDataRegs' Peripheral{..} = indent 2 $ encloseSep "{" "" "," $
      map (\Register{..} ->
                    space
-                <> name (rpad maxRegLength ((toLower <$> periphName) ++ (regOrPort periphName) ++ regName))
+                <> string (rpad maxRegLength ((toLower <$> periphName) ++ (regOrPort periphName) ++ regName))
                 <> string " :: BitDataReg "
-                <> name (toUpper <$> mconcat [periphName, "_", regName])
+                <> string (toUpper <$> mconcat [periphName, "_", regName])
        ) periphRegisters
   where
-    regOrPort "GPIOA" = "Port"
-    regOrPort "GPIOD" = "Port"
+    regOrPort x | "GPIO" `isPrefixOf` x = "Port"
     regOrPort _ = "Reg"
     maxRegLength = maximum . ((length (periphName ++ "RCCDisable")):) . map ((+3) . (+length periphName). length . regName) $ periphRegisters
 
+-- register definitions with constructors
 ppBitDataRegsMk' Peripheral{..} = indent 2 $ encloseSep "{" "" "," $
       map (\Register{..} ->
                    space
-                <> name (rpad maxRegLength ((toLower <$> periphName) ++  (regOrPort periphName) ++ regName))
+                <> string (rpad maxRegLength ((toLower <$> periphName) ++  (regOrPort periphName) ++ regName))
                 <> string " = reg"
                 <+> string (hexFormat regAddressOffset)
                 <+> dquotes (string (toLower <$> regName))
        ) periphRegisters
   where
-    regOrPort "GPIOA" = "Port"
-    regOrPort "GPIOD" = "Port"
+    regOrPort x | "GPIO" `isPrefixOf` x = "Port"
     regOrPort _ = "Reg"
     maxRegLength = maximum . ((length (periphName ++ "RCCDisable")):) . map ((+3) . (+length periphName). length . regName) $ periphRegisters
 
@@ -93,12 +88,12 @@ ppHex = text . hexFormat
 rpad m xs | m <= length xs = xs
 rpad m xs | otherwise = take m $ xs ++ repeat ' '
 
-ppField maxLen Field{..} =
-  (green $ name $ rpad maxLen (toLower <$> fieldName))
+ppField maxLen f@Field{..} =
+  (green $ string $ rpad maxLen (toLower <$> fieldName))
   <> fixPadding fieldReserved
   <> string "::"
   <+> (maybe (ppWidthPad 7 fieldBitWidth) string fieldRegType)
-  <+> cyan (string $ " -- " ++ fieldDescription)
+  <+> cyan (string $ " -- " ++ fieldDescription)  -- ++ show f) -- debug show
   where fixPadding True = mempty
         fixPadding False  = string "  "
 

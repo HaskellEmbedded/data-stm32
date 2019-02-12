@@ -11,9 +11,14 @@ import Ivory.Stdlib
 import Ivory.HW
 
 import Ivory.BSP.STM32.ClockConfig
+{-
 import Ivory.BSP.STM32.Peripheral.Flash
 import Ivory.BSP.STM32.Peripheral.PWR
 import Ivory.BSP.STM32.Peripheral.RCC
+-}
+import Ivory.BSP.STM32F103.FLASH
+import Ivory.BSP.STM32F103.PWR
+import Ivory.BSP.STM32F103.RCC
 
 init_clocks :: ClockConfig -> Def('[]':->())
 init_clocks clockconfig = proc "init_clocks" $ body $ do
@@ -24,7 +29,8 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
            "pclk2:  "  ++ (show (clockPClk2Hz cc)))
 
   -- RCC clock config to default reset state
-  modifyReg (rcc_reg_cr rcc) $ setBit rcc_cr_hsi_on
+  modifyReg (rcc_reg_cr) $ setBit rcc_cr_hsion
+  {-
   modifyReg (rcc_reg_cfgr rcc) $ do
     setField rcc_cfgr_mco2     rcc_mcox_sysclk
     setField rcc_cfgr_mco2_pre rcc_mcoxpre_none
@@ -129,8 +135,10 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     cfgr <- getReg (rcc_reg_cfgr rcc)
     when ((cfgr #. rcc_cfgr_sws) ==? rcc_sysclk_pll) $ breakOut
 
+  -}
   where
   cc = clockconfig
+  {-
   --cc = if clockPLL48ClkHz clockconfig == 48 * 1000 * 1000
   --        then clockconfig
   --        else error "ClockConfig invalid: 48MHz peripheral clock is wrong speed"
@@ -179,3 +187,4 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     8  -> rcc_pprex_div8
     16 -> rcc_pprex_div16
     _  -> error "platformClockConfig pclk2 divider not in valid range"
+  -}
