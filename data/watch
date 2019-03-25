@@ -1,0 +1,1 @@
+ghcid -c "sleep 2; cabal new-repl" --restart=src/
