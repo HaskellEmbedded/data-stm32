@@ -92,7 +92,7 @@ setStopBits uart x =
 setWordLen :: UART -> UART_WordLen -> Ivory eff ()
 setWordLen uart x =
   modifyReg (uartRegCR1 uart) $
-    setField uart_cr1_m0 x
+    setField uart_cr1_m x
 
 -- | Configure the parity setting for a UART.
 setParity :: UART -> IBool -> Ivory eff ()
@@ -139,14 +139,14 @@ uartInit uart pins clockconfig baud useinterrupts = do
 -- | Set the UART data register.
 setDR :: UART -> Uint8 -> Ivory eff ()
 setDR uart b =
-  setReg (uartRegTDR uart) $
-    setField uart_tdr_tdr (fromRep b)
+  setReg (uartRegDR uart) $
+    setField uart_dr_dr (fromRep b)
 
 -- | Read the UART data register.
 readDR :: UART -> Ivory eff Uint8
 readDR uart = do
-  dr <- getReg (uartRegRDR uart)
-  return (toRep (dr #. uart_rdr_rdr))
+  dr <- getReg (uartRegDR uart)
+  return (toRep (dr #. uart_dr_dr))
 
 -- | Enable or disable the "TXE" interrupt.
 setTXEIE :: UART -> IBool -> Ivory eff ()

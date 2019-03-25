@@ -299,9 +299,16 @@ stm32periphs get = do
                 , ("version", tshow ver)
                 ]
               writeHS ns t
+            -- /forM for periph representatives
 
               case p of
                 GPIO -> do
+                      -- reexports
+                      (ns, t) <- procPeriphSpecificTemplate (tshow p) "STM32.Peripheral.X" Nothing
+                        [ ("type", (tshow p)) ]
+                      writeHS ns t
+
+                UART -> do
                       -- reexports
                       (ns, t) <- procPeriphSpecificTemplate (tshow p) "STM32.Peripheral.X" Nothing
                         [ ("type", (tshow p)) ]
@@ -332,9 +339,10 @@ versionedRegTypes _ _ = mempty
 representatives :: [(Periph, Int, String)]
 representatives = [
   -- periph version representative
-  -- there is no uart_cr1_over8 :: Bit for F103??
-    (UART, 1, "F479")
-  , (UART, 2, "F765")
+    (UART, 1, "F103")  -- no over8 feature (uart_cr1_over8)
+  , (UART, 2, "F479")
+  , (UART, 3, "F765")
+
   , (GPIO, 1, "F103")
   , (GPIO, 2, "F765")
   ]

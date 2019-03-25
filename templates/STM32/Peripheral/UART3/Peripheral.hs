@@ -70,10 +70,15 @@ setBaudRate uart clockconfig baud = do
   --pclk    <- assign =<< getFreqPClk platform (uartPClk uart)
   pclk    <- assign (fromIntegral (clockPClkHz (uartPClk uart)
                                     clockconfig))
-  ipart   <- assign ((25 * pclk) `iDiv` (baud * 4))
+  cr1     <- getReg (uartRegCR1 uart)
+  isOver8 <- assign (bitToBool (cr1 #. uart_cr1_over8))
+  ipart   <- assign ((25 * pclk) `iDiv` (baud * (isOver8 ? (2, 4))))
   mask    <- assign ((ipart `iDiv` 100) `iShiftL` 4)
   fpart   <- assign (ipart - (100 * (mask `iShiftR` 4)))
-  brr     <- assign (mask .| ((((fpart * 16) + 50) `iDiv` 100) .& 0x0f))
+  brr     <- assign (mask .|
+                     (isOver8 ?
+                      ( (((fpart * 8)  + 50) `iDiv` 100) .& 0x07
+                      , (((fpart * 16) + 50) `iDiv` 100) .& 0x0f)))
   setReg (uartRegBRR uart) $ do
     setField uart_brr_div (fromRep (lbits brr))
 
@@ -87,7 +92,7 @@ setStopBits uart x =
 setWordLen :: UART -> UART_WordLen -> Ivory eff ()
 setWordLen uart x =
   modifyReg (uartRegCR1 uart) $
-    setField uart_cr1_m x
+    setField uart_cr1_m0 x
 
 -- | Configure the parity setting for a UART.
 setParity :: UART -> IBool -> Ivory eff ()
@@ -134,14 +139,14 @@ uartInit uart pins clockconfig baud useinterrupts = do
 -- | Set the UART data register.
 setDR :: UART -> Uint8 -> Ivory eff ()
 setDR uart b =
-  setReg (uartRegDR uart) $
-    setField uart_dr_dr (fromRep b)
+  setReg (uartRegTDR uart) $
+    setField uart_tdr_tdr (fromRep b)
 
 -- | Read the UART data register.
 readDR :: UART -> Ivory eff Uint8
 readDR uart = do
-  dr <- getReg (uartRegDR uart)
-  return (toRep (dr #. uart_dr_dr))
+  dr <- getReg (uartRegRDR uart)
+  return (toRep (dr #. uart_rdr_rdr))
 
 -- | Enable or disable the "TXE" interrupt.
 setTXEIE :: UART -> IBool -> Ivory eff ()
