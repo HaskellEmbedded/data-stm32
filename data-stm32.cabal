@@ -1,0 +1,150 @@
+name:           data-stm32
+version:        0.1.0.0
+synopsis:       ARM SVD and CubeMX XML parser and pretty printer for STM32 family
+description:    ARM SVD and CubeMX XML parser and pretty printer for STM32 family
+category:       Embedded
+homepage:       https://github.com/sorki/data-stm32#readme
+bug-reports:    https://github.com/sorki/data-stm32/issues
+author:         Richard Marko
+maintainer:     srk@48.io
+copyright:      2018 Richard Marko
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+cabal-version:  >= 1.10
+extra-source-files:
+    ChangeLog.md
+    README.md
+
+library
+  exposed-modules:
+      Data.CMX
+      Data.CMX.Parse
+      Data.CMX.Parse.Families
+      Data.CMX.Parse.Util
+      Data.CMX.Pretty
+      Data.CMX.Types
+      Data.Ivory
+      Data.Ivory.ISR
+      Data.Ivory.MCU
+      Data.Ivory.MemMap
+      Data.Ivory.Periph
+      Data.Ivory.Pretty
+      Data.SVD
+      Data.SVD.Parse
+      Data.SVD.Pretty
+      Data.SVD.Types
+  hs-source-dirs:
+      src
+  build-depends:
+      ansi-wl-pprint
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , cereal
+    , hierarchical-clustering
+    --, hierarchical-clustering-diagrams
+    --, clustering
+    -- temp
+    , ghcid
+    , Diff
+    , containers
+    , foldl
+    , hxt
+    , hxt-xpath
+    , pretty-simple
+    , regex-posix
+    , split
+    , text
+    , time
+    , turtle
+    , vector
+  default-language: Haskell2010
+
+executable genstm
+  main-is: Main.hs
+  other-modules:
+      Extract
+      Utils
+      Paths_data_stm32
+  hs-source-dirs:
+      app/genstm
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      ansi-wl-pprint
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , cereal
+    , containers
+    , data-stm32
+    , foldl
+    , hxt
+    , hxt-xpath
+    , pretty-simple
+    , regex-posix
+    , split
+    , text
+    , time
+    , turtle
+    , vector
+  default-language: Haskell2010
+
+executable mxmcu
+  main-is: Main.hs
+  other-modules:
+      Paths_data_stm32
+  hs-source-dirs:
+      app/mxmcu
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      ansi-wl-pprint
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , cereal
+    , containers
+    , data-stm32
+    , foldl
+    , hxt
+    , hxt-xpath
+    , pretty-simple
+    , regex-posix
+    , split
+    , text
+    , time
+    , turtle
+    , vector
+  default-language: Haskell2010
+
+test-suite data-cubemx-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_data_stm32
+  hs-source-dirs:
+      test
+  ghc-options: -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      ansi-wl-pprint
+    , attoparsec
+    , base >=4.7 && <5
+    , bytestring
+    , cereal
+    , containers
+    , data-stm32
+    , foldl
+    , hxt
+    , hxt-xpath
+    , pretty-simple
+    , regex-posix
+    , split
+    , text
+    , time
+    , turtle
+    , vector
+  default-language: Haskell2010
+
+source-repository head
+  type: git
+  location: https://github.com/sorki/data-stm32

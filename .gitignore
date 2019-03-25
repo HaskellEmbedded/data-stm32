@@ -1,5 +1,4 @@
 .stack-work/
-data-stm32.cabal
 *~
 .ghc.environment.*
 attic
