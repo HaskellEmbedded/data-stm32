@@ -1,0 +1,125 @@
+################################################################################
+#
+# Device chip tree definition file.
+#
+# modified, taken from libopencm3/ld/devices.data
+#
+# Copyright (c) 2013 Frantisek Burian <Bufran@seznam.cz>
+# Copyright (C) 2013 Werner Almesberger <wpwrak>
+#
+################################################################################
+# the STM32 chips
+
+stm32f03[01]?4*    ROM=16K RAM=4K
+stm32f03[01]?6*    ROM=32K RAM=4K
+stm32f030?8*       ROM=64K RAM=8K
+stm32f042?4*       ROM=16K RAM=6K
+stm32f042?6*       ROM=32K RAM=6K
+stm32f050?4*       ROM=16K RAM=4K
+stm32f050?6*       ROM=32K RAM=4K
+stm32f051?4*       ROM=16K RAM=8K
+stm32f051?6*       ROM=32K RAM=8K
+stm32f051?8*       ROM=64K RAM=8K
+stm32f072?8*       ROM=64K RAM=16K
+stm32f07[12]?b*    ROM=128K RAM=16K
+
+stm32f10[012]?4*   ROM=16K RAM=4K
+stm32f103?4*       ROM=16K RAM=6K
+stm32f100?6*       ROM=32K RAM=4K
+stm32f103?6*       ROM=32K RAM=10K
+stm32f10[12]?6*    ROM=32K RAM=6K
+stm32f100?8*       ROM=64K RAM=8K
+stm32f10[12]?8*    ROM=64K RAM=10K
+stm32f103?8*       ROM=64K RAM=20K
+stm32f105?8*       ROM=64K RAM=64K
+stm32f100?b*       ROM=128K RAM=8K
+stm32f10[12]?b*    ROM=128K RAM=16K
+stm32f103?b*       ROM=128K RAM=20K
+stm32f10[57]?b*    ROM=128K RAM=64K
+stm32f100?c*       ROM=256K RAM=24K
+stm32f101?c*       ROM=256K RAM=32K
+stm32f103?c*       ROM=256K RAM=48K
+stm32f10[57]?c*    ROM=256K RAM=64K
+stm32f100?d*       ROM=384K RAM=32K
+stm32f101?d*       ROM=384K RAM=48K
+stm32f103?d*       ROM=384K RAM=64K
+stm32f100?e*       ROM=512K RAM=32K
+stm32f101?e*       ROM=512K RAM=48K
+stm32f103?e*       ROM=512K RAM=64K
+stm32f100?f*       ROM=768K RAM=80K
+stm32f103?f*       ROM=768K RAM=96K
+stm32f100?g*       ROM=1024K RAM=80K
+stm32f103?g*       ROM=1024K RAM=96K
+
+stm32f205?b*       ROM=128K RAM=64K
+stm32f205?c*       ROM=256K RAM=96K
+stm32f207?c*       ROM=256K RAM=128K
+stm32f2[01][57]?e* ROM=512K RAM=128K
+stm32f20[57]?f*    ROM=768K RAM=128K
+stm32f2[01][57]?g* ROM=1024K RAM=128K
+
+stm32f302?b*       ROM=128K RAM=24K CCM=8K
+stm32f302?c*       ROM=256K RAM=32K CCM=8K
+stm32f302?8*       ROM=64K RAM=16K
+stm32f303?b*       ROM=128K RAM=32K CCM=8K
+stm32f3[01]3?c*    ROM=256K RAM=40K CCM=8K
+stm32f373?8*       ROM=64K RAM=16K
+stm32f373?b*       ROM=128K RAM=24K
+stm32f373?c*       ROM=256K RAM=32K
+stm32f3[78]3?8*    ROM=256K RAM=32K
+
+stm32f401?b*       ROM=128K RAM=64K
+stm32f401?c*       ROM=256K RAM=64K
+stm32f401?d*       ROM=384K RAM=96K
+stm32f401?e*       ROM=512K RAM=96K
+stm32f4[01][57]?e* ROM=512K RAM=128K CCM=64K
+stm32f4[01][57]?g* ROM=1024K RAM=128K CCM=64K
+stm32f411re        ROM=512K RAM=128K
+stm32f4[23][79]?g* ROM=1024K RAM=192K CCM=64K
+stm32f4[23][79]?i* ROM=2048K RAM=192K CCM=64K
+
+# on F7 CCM is in some datasheets named as DTCM
+stm32f7[23][23]?c* ROM=256K RAM=192K CCM=64K
+stm32f7[23][23]?e* ROM=512K RAM=192K CCM=64K
+stm32f745?e*       ROM=512K RAM=256K CCM=64K
+stm32f745?g*       ROM=1024K RAM=256K CCM=64K
+stm32f765?g*       ROM=512K RAM=384K CCM=128K
+stm32f765?i*       ROM=2048K RAM=384K CCM=128K
+stm32f7[45]6?e*    ROM=512K RAM=256K CCM=64K
+stm32f7[45]6?g*    ROM=1024K RAM=256K CCM=64K
+stm32f7[67]7?g*    ROM=1024K RAM=384K CCM=128K
+stm32f7[67]7?i*    ROM=2048K RAM=384K CCM=128K
+stm32f769?g*       ROM=1024K RAM=384K CCM=128K
+stm32f7[67][89]?i* ROM=2048K RAM=384K CCM=128K
+
+stm32l01??3*       ROM=8K RAM=2K
+stm32l0[12]??4*    ROM=16K RAM=2K
+stm32l03??4*       ROM=16K RAM=8K
+stm32l0???6*       ROM=32K RAM=8K
+stm32l0[56]??8*    ROM=64K RAM=8K
+stm32l0[78]??8*    ROM=64K RAM=20K
+stm32l0???b*       ROM=128K RAM=20K
+stm32l0???z*       ROM=192K RAM=20K
+
+stm32l100?6*       ROM=32K RAM=4K
+stm32l100?8*       ROM=64K RAM=8K
+stm32l100?b*       ROM=128K RAM=10K
+stm32l100?c*       ROM=256K RAM=16K
+stm32l15[12]?6*    ROM=32K RAM=10K EEP=4K
+stm32l15[12]?8*    ROM=64K RAM=10K EEP=4K
+stm32l15[12]?b*    ROM=128K RAM=16K EEP=4K
+stm32l15[12]?c*    ROM=256K RAM=32K EEP=8K
+stm32l15[12]?d*    ROM=384K RAM=48K EEP=12K
+stm32l162?c*       ROM=256K RAM=32K EEP=8K
+stm32l162?d*       ROM=384K RAM=48K EEP=12K
+
+stm32l4?6?c*       ROM=256K RAM=96K RAM2=32K
+stm32l4?6?e*       ROM=512K RAM=96K RAM2=32K
+stm32l4?6?g*       ROM=1024K RAM=96K RAM2=32K
+
+stm32ts60          ROM=32K RAM=10K
+
+stm32w108c8        ROM=64K RAM=8K
+stm32w108?b        ROM=128K RAM=8K
+stm32w108cz        ROM=192K RAM=12K
+stm32w108cc        ROM=256K RAM=16K
