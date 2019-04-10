@@ -51,7 +51,8 @@ supFamilies =
   , F1
   , F3
   , F4
-  , F7 ]
+  , F7
+  , L4 ]
 
 data Periph =
     ADC
