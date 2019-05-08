@@ -41,6 +41,19 @@ import Debug.Trace
 import Extract
 import Utils
 
+
+import Text.Karver
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as H
+import Data.Text (Text)
+import qualified Data.Text.IO as TIO
+import qualified Data.Vector as V
+
+lit = Literal
+litList = List . V.fromList . map lit
+litObj x = List . V.fromList $ [ Object (H.fromList [ ("prefix",  "||"), ("version", "12") ]) ]
+--(map (\(prefix, el) -> (if prefix then "| " else "  ", el))) . zip [False, True ..]
+
 cdmk dir = do
   hasdir <- testdir dir
   when (not hasdir) (mktree dir)
@@ -204,16 +217,32 @@ stm32devs get = do
     forM_ [ RCC, FLASH, PWR ] genPeriph
 
     forM_ supPeriphs $ \p -> do
+
+      -- per mcu peripheral definitions (mkXYZ)
+      -- Ivory.BSP.STM32.{{ peripheral }}
       -- XXX: handle UART vs USART?
       case filter (((periph2svdName p)`L.isPrefixOf`) . periphName) $ devicePeripherals dev of
         [] -> fail $ "No peripheral found with groupName " ++ show p ++ " for device " ++ (deviceName dev)
         xs -> do
           print $ map periphName xs
+          t <- TIO.readFile "../templates/STM32DEV/UART.hs"
+          let ctx =  H.fromList [
+                  ("dev", lit $ T.pack namePart)
+                , ("fam", lit $ T.take 2 $ T.pack namePart)
+                , ("modns" , lit $ "Ivory.BSP.STM32" <> T.pack namePart <> ".UART")
+                , ("version", lit "1")
+                ]
+
+          let re = renderTemplate ctx t
+          TIO.writeFile ("src/Ivory/BSP/STM32" ++ namePart ++ "/UART.hs") re
+
+          {-
           (ns, t) <- procDevTemplate namePart "UART"
             [ ("dev", T.pack namePart)
             , ("fam", T.take 2 $ T.pack namePart)
             , ("imports", "") ]
           writeHS ns t
+          -}
 
 
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
@@ -254,6 +283,8 @@ stm32periphs get = do
               [ ("type", (tshow p)) ]
             writeHS ns t
 
+          -- take a representative
+          -- and build a DRIVER${version} dir out of it
           True -> do
             forM_ (filter (\(p', _, _) -> p' == p) representatives) $ \(_, ver, repre) -> do
               -- get representative for this peripheral version
@@ -311,9 +342,20 @@ stm32periphs get = do
 
                 UART -> do
                       -- reexports
+                      {-
                       (ns, t) <- procPeriphSpecificTemplate (tshow p) "STM32.Peripheral.X" Nothing
                         [ ("type", (tshow p)) ]
                       writeHS ns t
+                      -}
+                      t <- TIO.readFile "../templates/STM32/Peripheral/UART.hs"
+                      let ctx =  H.fromList [
+                              ("modns" , lit $ "Ivory.BSP.STM32.Peripheral.UART")
+                            , ("versions", litObj [ "1",  "2", "3"])
+                            ]
+
+                      let re = renderTemplate ctx t
+                      print ctx
+                      TIO.writeFile ("src/Ivory/BSP/STM32/Peripheral/UART.hs") re
 
                 _    -> do
 

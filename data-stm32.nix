@@ -1,5 +1,5 @@
 { mkDerivation, ansi-wl-pprint, attoparsec, base, bytestring
-, cereal, containers, Diff, foldl, ghcid, hxt, hxt-xpath
+, cereal, containers, Diff, foldl, ghcid, hxt, hxt-xpath, karver
 , pretty-simple, regex-posix, split, stdenv, text, time, turtle
 , vector
 }:
@@ -11,8 +11,8 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     ansi-wl-pprint attoparsec base bytestring cereal containers Diff
-    foldl ghcid hxt hxt-xpath pretty-simple regex-posix split text time
-    turtle vector
+    foldl ghcid hxt hxt-xpath karver pretty-simple regex-posix split
+    text time turtle vector
   ];
   executableHaskellDepends = [
     ansi-wl-pprint attoparsec base bytestring cereal containers foldl
