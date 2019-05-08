@@ -43,9 +43,9 @@ mcu = atTag "Mcu" >>>
     -- rest of the tags are redundant as they appear
     -- in mcu/<name>.xml (handled by mcu parser)
 
-    periphs' <- listA periph -< x
+    periphs <- listA periph -< x
 
-    returnA -< (name, package, refName, rpn, core, periphs)
+    returnA -< (name, refName, rpn, periphs)
 
 periph = atTag "Peripheral" >>>
   proc x -> do
