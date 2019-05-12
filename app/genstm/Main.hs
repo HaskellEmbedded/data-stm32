@@ -164,7 +164,9 @@ main = do
                  $ L.sortBy (comparing fst)
                  $ filter (\(name, dev) ->
                               (m =~ (replace "x" "[0-9]" $ take 4 name)) :: Bool) svds
-      getSVD = snd . head . svdByMcu
+      getSVD m = case svdByMcu m of
+                 [] -> error $ "Cannot find SVD for mcu " ++ show m
+                 x:xs -> snd x
 
   cd dir
   (shortMCUs, families, mcuxmls) <- cmx
@@ -183,7 +185,7 @@ main = do
   cd dir
   mods <- prefixRest . L.sort . map (T.replace ".hs" "" . T.replace "/" "." . T.replace "./src/" "" . fpToText)
             <$> fold (find (suffix ".hs") "./src/") Fold.list
-  t <- procTemplate "ivory-bsp-stm32.cabal" [("exposed", T.intercalate ",\n" mods)]
+  t <- procTemplate "ivory-bsp-stm32.cabal_template" [("exposed", T.intercalate ",\n" mods)]
   TIO.writeFile "ivory-bsp-stm32.cabal" t
   cptree "../templates/support/" "./support/"
   where
@@ -383,7 +385,7 @@ representatives :: [(Periph, Int, String)]
 representatives = [
   -- periph version representative
     (UART, 1, "F103")  -- no over8 feature (uart_cr1_over8)
-  , (UART, 2, "F479")
+  , (UART, 2, "F469")
   , (UART, 3, "F765")
 
   , (GPIO, 1, "F103")
