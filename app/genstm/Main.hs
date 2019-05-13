@@ -51,8 +51,9 @@ import qualified Data.Vector as V
 
 lit = Literal
 litList = List . V.fromList . map lit
-litObj x = List . V.fromList $ [ Object (H.fromList [ ("prefix",  "||"), ("version", "12") ]) ]
---(map (\(prefix, el) -> (if prefix then "| " else "  ", el))) . zip [False, True ..]
+litObj x = List . V.fromList $ [ elemToObj e isFirst | (e, isFirst) <- zip x [False, True ..] ]
+  where
+    elemToObj e isFirst = Object (H.fromList [ ("prefix", if isFirst then "|" else " "), ("version", e) ])
 
 cdmk dir = do
   hasdir <- testdir dir
@@ -573,6 +574,11 @@ normalizeISRNames xs = map (\x -> x { interruptName = norm (interruptName x) }) 
                   $ replace "lptim1_OR_it_eit_23" "LPTIM1_EXT1_23"
                     name
 
+-- XXX breaks things when there are interrupt names ending with _
+renameDups xs = reverse $ snd $ foldl f (S.empty, []) xs
+  where f (seen, result) item | S.member (interruptName item) seen = f (seen, result) (item { interruptName = (interruptName item) ++ "_" })
+                              | otherwise                          = (S.insert (interruptName item) seen, item:result)
+
 
 -- Right f103 <- parseSVD "data/STMicro/STM32F103xx.svd"
 
@@ -586,6 +592,7 @@ stm32families svds shortMCUs = forM supFamilies $ \f -> do
           $ T.pack
           $ ppISRs
           $ normalizeISRNames
+          $ renameDups
           $ isrsFamily f svds
 
     (ns, t) <- procFamilyTemplate f "STM32XX.Interrupt" [ ("isr", isr) ]
