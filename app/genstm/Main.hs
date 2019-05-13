@@ -574,6 +574,11 @@ normalizeISRNames xs = map (\x -> x { interruptName = norm (interruptName x) }) 
                   $ replace "lptim1_OR_it_eit_23" "LPTIM1_EXT1_23"
                     name
 
+-- XXX breaks things when there are interrupt names ending with _
+renameDups xs = reverse $ snd $ foldl f (S.empty, []) xs
+  where f (seen, result) item | S.member (interruptName item) seen = f (seen, result) (item { interruptName = (interruptName item) ++ "_" })
+                              | otherwise                          = (S.insert (interruptName item) seen, item:result)
+
 
 -- Right f103 <- parseSVD "data/STMicro/STM32F103xx.svd"
 
@@ -587,6 +592,7 @@ stm32families svds shortMCUs = forM supFamilies $ \f -> do
           $ T.pack
           $ ppISRs
           $ normalizeISRNames
+          $ renameDups
           $ isrsFamily f svds
 
     (ns, t) <- procFamilyTemplate f "STM32XX.Interrupt" [ ("isr", isr) ]
