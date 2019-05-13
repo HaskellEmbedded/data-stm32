@@ -16,7 +16,7 @@ import Ivory.BSP.STM32.Peripheral.UART{{version}}.Peripheral
 import Ivory.BSP.STM32.Peripheral.UART{{version}}.Regs
 import Ivory.BSP.STM32.Peripheral.UART{{version}}.Types
 -}
-import Ivory.BSP.STM32.Peripheral.UART (mkUARTVersion )
+import Ivory.BSP.STM32.Peripheral.UART
 
 
 -- uart1, uart2, uart3, uart4, uart5, uart6 :: UART
