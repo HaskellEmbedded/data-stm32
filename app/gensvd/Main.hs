@@ -59,7 +59,7 @@ main = do
   fs <- fold (find (suffix ".svd") ".") Fold.list
 
   -- test parse them
-  svds <- mapM svd1 $ map fpToString fs
+  -- svds <- mapM svd1 $ map fpToString fs
 
   forM_ fs $ \f -> mv f ("../stm/" </> filename f)
 
