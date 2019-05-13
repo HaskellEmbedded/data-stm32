@@ -22,6 +22,7 @@ import qualified Data.Map as Map
 import Text.Regex.Posix
 import Text.Pretty.Simple
 
+import Data.Char (toUpper)
 import Data.Maybe
 import Data.Ord (comparing)
 
@@ -195,7 +196,8 @@ main = do
 thesePlease :: [String]
 thesePlease =
   [ "F103"
-  , "F427" ]
+  , "F427"
+  , "L432" ]
 
 stm32devs get = do
   forM (map (\x -> (x, get $ "STM32" ++ x)) thesePlease) $ \(namePart, dev) -> do
@@ -207,7 +209,7 @@ stm32devs get = do
 
     writeHS ns t
 
-    let genPeriph p = case filter ((==periph2svdName p) . periphGroupName) $ devicePeripherals dev of
+    let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals dev of
          [] -> fail $ "No " ++ (show p) ++ " found"
          [x] -> do
                let new = procPeriph p Nothing x
