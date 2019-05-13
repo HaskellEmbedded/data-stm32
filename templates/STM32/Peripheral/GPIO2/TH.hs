@@ -26,16 +26,16 @@ mkGPIOPin portName pin n =
   ]
   where fs = [ varE portName
              , litE (integerL n)
-             , mkVar "gpio_mode_" n
-             , mkVar "gpio_otype_" n
-             , mkVar "gpio_ospeed_" n
-             , mkVar "gpio_pupd_" n
-             , mkVar "gpio_idr_" n
-             , mkVar "gpio_bs_" n
-             , mkVar "gpio_br_" n
+             , mkVar "gpio_moder_moder" n
+             , mkVar "gpio_otyper_ot" n
+             , mkVar "gpio_ospeedr_ospeedr" n
+             , mkVar "gpio_pupdr_pupdr" n
+             , mkVar "gpio_idr_idr" n
+             , mkVar "gpio_bsrr_bs" n
+             , mkVar "gpio_bsrr_br" n
              , if n < 8
-                 then appE (conE 'AFRL) (mkVar "gpio_afrl_" n)
-                 else appE (conE 'AFRH) (mkVar "gpio_afrh_" n)
+                 then appE (conE 'AFRL) (mkVar "gpio_afrl_afrl" n)
+                 else appE (conE 'AFRH) (mkVar "gpio_afrh_afrh" n)
              ]
 
 -- | Define 16 GPIO pins for a GPIO port.
