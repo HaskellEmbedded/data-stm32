@@ -8,6 +8,7 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import Data.Ivory.Pretty
 import Data.Ivory.MemMap
+import Data.STM32.Types
 
 ibs = "Ivory.BSP."
 --- XXX

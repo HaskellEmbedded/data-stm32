@@ -12,7 +12,7 @@ import qualified Control.Foldl as Fold
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
-import GHC.Generics
+import GHC.Generics hiding (L1)
 import Data.Serialize
 import qualified Data.ByteString.Char8 as B
 
@@ -35,6 +35,7 @@ import Data.Ivory.Periph
 
 import Data.SVD hiding (svd, ppPeripheral)
 --import Data.CMX
+import Data.STM32.Types
 
 import Data.Serialize
 import Debug.Trace
@@ -61,65 +62,6 @@ cdmk dir = do
   when (not hasdir) (mktree dir)
   cd dir
 
-supFamilies =
-  [ F0
-  , F1
-  , F3
-  , F4
-  , F7
-  , L4 ]
-
-data Periph =
-    ADC
-  | AFIO -- F1 alternate function controls / remapping, proly good idea to turn it on
-  | ATIM
-  | GTIM
-  | CAN
-  | CEC
-  | CRC
-  | CRYP
-  | DAC
-  | DBG
-  | DCMI
-  | DMA
-  | DMA2D
-  | Ethernet
-  | EXTI
-  | FLASH
-  | FPU
-  | FSMC
-  | GPIO
-  | HASH
-  | I2C
-  | IWDG
-  | LPTIM
-  -- LTDC
-  | MPU
-  | NVIC
-  -- PF
-  | PWR
-  | QUADSPI
-  | RCC
-  | RNG
-  | RTC
-  -- SAI
-  -- SCB
-  -- SDMMC
-  -- SPDIF_RX
-  | SPI
-  -- STK
-  | SYSCFG
-  | UART
-  | USB_OTG_FS
-  | USB_OTG_HS
-  | WWDG
-  deriving (Show, Eq, Ord)
-
-supPeriphs =
- [ CAN
- , UART
- , GPIO ]
-
 periph2svdName :: Periph -> String
 periph2svdName UART = "USART"
 periph2svdName x = show x
@@ -132,7 +74,7 @@ fixAndPack = T.replace "usart" "uart"
 -- import qualified Ivory.BSP.STM32<fam>.<what> as <fam>
 familyImport fam what = T.pack $ "import qualified Ivory.BSP.STM32" ++ (show fam) ++ "." ++ what ++ " as " ++ (show fam)
 
-familyImports what = map (flip familyImport what) supFamilies
+familyImports what = map (flip familyImport what) supportedFamilies
 
 
 devFilter :: String -> Bool
@@ -221,7 +163,7 @@ stm32devs get = do
 
     forM_ [ RCC, FLASH, PWR ] genPeriph
 
-    forM_ supPeriphs $ \p -> do
+    forM_ supportedPeriphs $ \p -> do
 
       -- per mcu peripheral definitions (mkXYZ)
       -- Ivory.BSP.STM32.{{ peripheral }}
@@ -251,13 +193,13 @@ stm32devs get = do
 
 
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
--- for all supPeriphs
+-- for all supportedPeriphs
 stm32periphs get = do
   -- base non-versioned peripherals on this devices svd
   let nonVersionedBase = "STM32F765"
       nVDev = get nonVersionedBase
 
-  forM_ supPeriphs $ \p -> do
+  forM_ supportedPeriphs $ \p -> do
     case filter ((==periph2svdName p) . periphGroupName) $ devicePeripherals nVDev of
       [] -> fail $ "No peripheral found with groupName " ++ show p ++ " for device " ++ (deviceName nVDev)
       x:xs -> do
@@ -534,7 +476,7 @@ stm32toplevel = do
   -- VectorTable
   (ns, t) <- procHSTemplate "STM32.VectorTable"
     [ ("imports", T.unlines $ familyImports "Interrupt")
-    , ("byFamily", T.unlines $ map wwdgByFamily supFamilies) ]
+    , ("byFamily", T.unlines $ map wwdgByFamily supportedFamilies) ]
   writeHS ns t
 
   -- copied verbatim
@@ -584,7 +526,7 @@ renameDups xs = reverse $ snd $ foldl f (S.empty, []) xs
 
 -- Right f103 <- parseSVD "data/STMicro/STM32F103xx.svd"
 
-stm32families svds shortMCUs = forM supFamilies $ \f -> do
+stm32families svds shortMCUs = forM supportedFamilies $ \f -> do
     putStrLn $ "Processing family " ++ (show f)
     let
       fns = "STM32" ++ (show f)

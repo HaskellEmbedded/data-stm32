@@ -32,6 +32,7 @@ library
       Data.Ivory.MemMap
       Data.Ivory.Periph
       Data.Ivory.Pretty
+      Data.STM32.Types
       Data.SVD
       Data.SVD.Parse
       Data.SVD.Pretty
