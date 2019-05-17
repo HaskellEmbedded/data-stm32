@@ -1,32 +1,35 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Data.CMX.Types where
 
-import qualified Data.Set as Set
+import Data.Set (Set)
+import Data.Map (Map)
 
 import GHC.Generics
 import Data.Serialize
+import Data.STM32.Types (Family)
 
 type Kb = Int
 type Mhz = Int
 
 data MCU = MCU {
-    mcuCore :: String
-  , mcuFamily :: String
+    mcuCore        :: String
+  , mcuFamily      :: String
   , mcuHasPowerPad :: Bool
-  , mcuIoType :: String
-  , mcuDie :: String
-  , mcuLine :: String
-  , mcuPackage :: String
-  , mcuRefName :: String
-  , mcuFrequency :: Maybe Mhz
-  , mcuNumberOfIO :: Int
-  , mcuDbVersion :: String
-  , mcuRamVariants :: [Kb]
-  , mcuFlashVariants :: [Kb]
-  , mcuCcmRam :: Maybe Kb
-  , mcuLimits :: [Limit]
-  , mcuIps :: Set.Set IP
-  , mcuPins :: Set.Set Pin
+  , mcuIoType      :: String
+  , mcuDie         :: String
+  , mcuLine        :: String
+  , mcuPackage     :: String
+  , mcuRefName     :: String
+  , mcuFrequency   :: Maybe Mhz
+  , mcuNumberOfIO  :: Int
+  , mcuDbVersion   :: String
+  , mcuRam         :: Kb
+  , mcuFlash       :: Kb
+  , mcuCcmRam      :: Maybe Kb
+  , mcuEEProm      :: Maybe Kb
+  , mcuLimits      :: [Limit]
+  , mcuIps         :: Set IP
+  , mcuPins        :: Set Pin
   } deriving (Generic, Eq, Ord, Show)
 
 instance Serialize MCU
@@ -76,3 +79,23 @@ data Signal = Signal {
 
 instance Serialize Signal
 
+type Families = Map Family [SubFamily]
+
+data SubFamily = SubFamily {
+    subFamName :: String
+  , subFamMCUs :: [ShortMCU]
+  } deriving (Generic, Eq, Ord, Show)
+
+data ShortMCU = ShortMCU {
+    smcuName    :: String
+  , smcuRefName :: String
+  , smcuRPN     :: String
+  , smcuRam     :: Kb
+  , smcuFlash   :: Kb
+  , smcuPeriphs :: [ShortPeriph]
+  } deriving (Generic, Eq, Ord, Show)
+
+data ShortPeriph = ShortPeriph {
+    speriphType      :: String
+  , speriphMaxOccurs :: Integer
+  } deriving (Generic, Eq, Ord, Show)

@@ -19,7 +19,9 @@ extra-source-files:
 library
   exposed-modules:
       Data.CMX
+      Data.CMX.Extract
       Data.CMX.Parse
+      Data.CMX.Parse.MCU
       Data.CMX.Parse.Families
       Data.CMX.Parse.Util
       Data.CMX.Pretty

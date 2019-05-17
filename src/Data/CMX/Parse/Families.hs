@@ -1,17 +1,19 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE RecordWildCards #-}
-module Data.CMX.Parse.Families where
+module Data.CMX.Parse.Families (parseFamilies) where
 
 import Control.Monad
 
 import Control.Arrow.ArrowList
 import Text.XML.HXT.Core
 import qualified Data.Set as Set
+import qualified Data.Map as Map
 import Data.Maybe
 
 import Data.CMX.Types
 import Data.CMX.Parse.Util
+import Data.STM32.Types (nameToFamily)
 
 att  = getAttrValue
 text = getChildren >>> getText
@@ -21,41 +23,47 @@ textAtTag tag = text <<< atTag tag
 families = atTag "Families" >>>
   proc x -> do
     fams' <- listA family -< x
-    returnA -< fams'
+    returnA -< Map.fromList fams'
 
 family = atTag "Family" >>>
   proc x -> do
-    name <- att "Name" -< x
+    name' <- att "Name" -< x
     subFams' <- listA subFamily -< x
+    let
+      name = nameToFamily name'
     returnA -< (name, subFams')
 
 subFamily = atTag "SubFamily" >>>
   proc x -> do
     name <- att "Name" -< x
     mcus' <- listA mcu -< x
-    returnA -< (name, mcus')
+    returnA -< SubFamily name mcus'
 
 mcu = atTag "Mcu" >>>
   proc x -> do
-    name <- att "Name" -< x
-    refName <- att "RefName" -< x
-    rpn <- att "RPN" -< x
+    smcuName <- att "Name" -< x
+    smcuRefName <- att "RefName" -< x
+    smcuRPN <- att "RPN" -< x
+    smcuRam <- (arr read <<< textAtTag "Ram") -< x
+    smcuFlash <- (arr read <<< textAtTag "Flash") -< x
     -- rest of the tags are redundant as they appear
     -- in mcu/<name>.xml (handled by mcu parser)
 
-    periphs <- listA periph -< x
+    smcuPeriphs <- listA periph -< x
 
-    returnA -< (name, refName, rpn, periphs)
+    returnA -< ShortMCU {..}
 
 periph = atTag "Peripheral" >>>
   proc x -> do
     typ <- att "Type" -< x
-    maxOccurs <- att "MaxOccurs" -< x
-    returnA -< (typ, maxOccurs)
+    maxOccurs' <- att "MaxOccurs" -< x
+    let
+      maxOccurs = read maxOccurs'
 
+    returnA -< ShortPeriph typ maxOccurs
 
 parseFamilies f = do
   res <- runX (readDocument [] f >>> families)
   case res of
-    [] -> return $ Left "no families parsed"
-    xs -> return $ Right xs
+    []  -> return $ error "no families parsed"
+    [x] -> return x
