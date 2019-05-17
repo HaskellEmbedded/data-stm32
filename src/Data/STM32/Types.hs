@@ -19,7 +19,7 @@ data Family =
   | L4Plus -- L4S L4R
   | L5     -- no svd nor cmx data
   -- these are part of mcu/families.nix
-  -- but dont have svd files
+  -- but (we) dont have svd files
   | G0
   | G4
   | WB
@@ -132,3 +132,21 @@ supportedPeriphs =
  [ CAN
  , UART
  , GPIO ]
+
+genOneFamilies = [ F1, F2, F4, L1 ]
+
+isGenOne fam = fam `elem` genOneFamilies
+isGenTwo = not . isGenOne
+
+driverVersion UART fam | isGenTwo fam           = 3 -- over8, split RDR/TDR registers
+driverVersion UART fam | fam `elem` [ F2, F4 ]  = 2 -- over8 featured
+driverVersion UART _                            = 1 -- F1
+
+driverVersion GPIO F1 = 1
+driverVersion GPIO _  = 2
+
+driverVersion I2C fam | isGenTwo fam = 2
+driverVersion I2C fam | isGenOne fam = 1
+
+driverVersion SPI fam | isGenTwo fam = 2
+driverVersion SPI fam | isGenOne fam = 1
