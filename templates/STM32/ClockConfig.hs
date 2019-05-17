@@ -26,12 +26,13 @@ clockSourceHz (External rate) = rate
 clockSourceHz Internal        = 16 * 1000 * 1000
 
 clockSysClkHz :: ClockConfig -> Integer
-clockSysClkHz cc = ((source `div` m) * n) `div` p
+clockSysClkHz cc = 4 * 1000 * 1000 {-((source `div` m) * n) `div` p
   where
   source = clockSourceHz (clockconfig_source cc)
   m      = pll_m         (clockconfig_pll cc)
   n      = pll_n         (clockconfig_pll cc)
   p      = pll_p         (clockconfig_pll cc)
+-}
 
 clockPLL48ClkHz :: ClockConfig -> Integer
 clockPLL48ClkHz cc = ((source `div` m) * n) `div` q

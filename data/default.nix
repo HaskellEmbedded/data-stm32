@@ -9,4 +9,4 @@ let
   ];
   pkgs = import <nixpkgs> { inherit overlays; };
 in
-pkgs.haskellPackages.ivory-bsp-stm32
+pkgs.haskellPackages.callPackage (../../embedded/ivory-tower-helloworld/ivory-tower-helloworld.nix) {}

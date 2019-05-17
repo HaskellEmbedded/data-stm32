@@ -11,7 +11,7 @@ import Data.Ivory.MemMap
 
 ibs = "Ivory.BSP."
 --- XXX
-tdir = "/home/rmarko/git/data-stm32/templates/"
+tdir = "/home/mmilata/work/data-stm32/templates/"
 
 
 procHSTemplate :: Text -> [(Text, Text)] -> IO (Text, Text)

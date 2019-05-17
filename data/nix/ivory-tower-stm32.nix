@@ -1,10 +1,10 @@
 self: super:
 let
    src = super.fetchFromGitHub {
-    owner = "sorki";
+    owner = "mmilata";
     repo = "ivory-tower-stm32";
-    rev = "01661d12d8b3084dc8f026a1c25442d16e661346";
-    sha256 = "1f1d3fhsm7bh12rblcbr3lv5x95aid565h42s163sgv18pl1k7p4";
+    rev = "f4ccc67fa4bef6e4e2bef987ee9241ab4ccb588c";
+    sha256 = "1sxwf2n7j06j74kwqap8hl5v5976pcdccnv5ry073xf1d27409if";
   };
   subs = [
     # "ivory-bsp-stm32"
