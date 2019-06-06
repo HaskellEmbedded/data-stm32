@@ -6,14 +6,14 @@ import Data.Map (Map)
 
 import GHC.Generics
 import Data.Serialize
-import Data.STM32.Types (Family)
+import Data.STM32.Types (Core, Family)
 
 type Kb = Int
 type Mhz = Int
 
 data MCU = MCU {
-    mcuCore        :: String
-  , mcuFamily      :: String
+    mcuCore        :: Core
+  , mcuFamily      :: Family
   , mcuHasPowerPad :: Bool
   , mcuIoType      :: String
   , mcuDie         :: String

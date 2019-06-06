@@ -12,6 +12,7 @@ import qualified Data.Set as Set
 import Data.Maybe
 
 import Data.CMX.Types
+import Data.STM32.Types
 
 atTag tag = deep (isElem >>> hasName tag)
 text = getChildren >>> getText
@@ -72,7 +73,7 @@ mcu = atTag "Mcu" >>>
   proc x -> do
     mcuClockTree <- att "ClockTree" -< x
     mcuDbVersion <- att "DBVersion" -< x
-    mcuFamily <- att "Family" -< x
+    mcuFamily' <- att "Family" -< x
     mcuIoType <- att "IOType" -< x
     mcuLine <- att "Line" -< x
     mcuPackage <- att "Package" -< x
@@ -81,7 +82,9 @@ mcu = atTag "Mcu" >>>
     mcuDie <- textAtTag "Die" -< x
     mcuCcmRam <- withDefault (arr (Just . read) <<< textAtTag "CCMRam") Nothing -< x
     mcuEEProm <- withDefault (arr (Just . (`div` 1024) . read) <<< textAtTag "E2prom") Nothing -< x
-    mcuCore <- textAtTag "Core" -< x
+    -- XXX: we ignore that mcu such as MP1 family can have multiple cores
+    -- which results in multiple mcu's parsed at parseMCU, we don't currently support these anyway
+    mcuCore <- (arr parseCore <<< textAtTag "Core") -< x
 
     hasPowerPad' <- att "HasPowerPad" -< x
     ramVariants' <- listA (textAtTag "Ram") -< x
@@ -101,6 +104,7 @@ mcu = atTag "Mcu" >>>
     pins' <- listA pin -< x
 
     let
+      mcuFamily = nameToFamily mcuFamily'
       mcuIps = Set.fromList ips'
       mcuPins = Set.fromList pins'
       --mcuRamVariants = map read ramVariants'
@@ -148,9 +152,20 @@ signal = atTag "Signal" >>>
     sigIOModes <- att "IOModes" -< x
     returnA -< Signal{..}
 
+parseCore = match . drop 4
+  where
+    match "Cortex-M0" = CortexM0
+    match "Cortex-M0+" = CortexM0Plus
+    match "Cortex-M3" = CortexM3
+    match "Cortex-M4" = CortexM4F
+    match "Cortex-M7" = CortexM7F
+    match "Cortex-A7" = CortexA7
+    match unknownCore = error $ "Unknow core" ++ unknownCore
+
 parseMCU f = do
   res <- runX (readDocument [] f >>> mcu)
   case res of
     []  -> return $ error $ "no mcu parsed from " ++ f
     [x] -> return x
-    _   -> return $ error $ "multiple mcus parsed from " ++ f
+    [c1, c2]   -> return c1 -- for H7 series we get two MCUs as it has two Cores (M7 & M4)
+    _   -> error $ "multiple mcus parsed from " ++ f
