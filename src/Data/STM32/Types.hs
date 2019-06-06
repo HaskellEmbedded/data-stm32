@@ -43,7 +43,8 @@ supportedFamilies =
   , F3
   , F4
   , F7
-  , L4 ]
+  , L4
+  , L4Plus ]
 
 nameToFamily :: String -> Family
 nameToFamily = read . fix . drop 5
