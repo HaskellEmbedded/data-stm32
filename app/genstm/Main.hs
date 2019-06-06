@@ -51,6 +51,8 @@ import Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import qualified Data.Vector as V
 
+import Paths_data_stm32
+
 lit = Literal
 litList = List . V.fromList . map lit
 litObj x = List . V.fromList $ [ elemToObj e isFirst | (e, isFirst) <- zip x [False, True ..] ]
@@ -86,6 +88,10 @@ svdsFamily :: Family -> [(String, Device)] -> [Device]
 svdsFamily f = map snd . filter (\(name, svd) -> (show f) `L.isPrefixOf` name)
 
 isrsFamily f = isrs . (svdsFamily f)
+
+getTemplate x = do
+  dir <- getDataFileName "templates"
+  TIO.readFile $ dir <> x
 
 main = do
   cd "data"
@@ -172,7 +178,7 @@ stm32devs get = do
         [] -> fail $ "No peripheral found with groupName " ++ show p ++ " for device " ++ (deviceName dev)
         xs -> do
           print $ map periphName xs
-          t <- TIO.readFile "../templates/STM32DEV/UART.hs"
+          t <- getTemplate "STM32DEV/UART.hs"
           let ctx =  H.fromList [
                   ("dev", lit $ T.pack namePart)
                 , ("fam", lit $ T.take 2 $ T.pack namePart)
@@ -289,12 +295,7 @@ stm32periphs get = do
 
                 UART -> do
                       -- reexports
-                      {-
-                      (ns, t) <- procPeriphSpecificTemplate (tshow p) "STM32.Peripheral.X" Nothing
-                        [ ("type", (tshow p)) ]
-                      writeHS ns t
-                      -}
-                      t <- TIO.readFile "../templates/STM32/Peripheral/UART.hs"
+                      t <- getTemplate "STM32/Peripheral/UART.hs"
                       let ctx =  H.fromList [
                               ("modns" , lit $ "Ivory.BSP.STM32.Peripheral.UART")
                             , ("versions", litObj [ "1",  "2", "3"])
