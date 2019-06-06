@@ -46,8 +46,9 @@ supportedFamilies =
   , L4
   , L4Plus ]
 
+-- convert STM32xyz to Family
 nameToFamily :: String -> Family
-nameToFamily = read . fix . drop 5
+nameToFamily n = maybe (error $ "Cannot read family: " ++ n) id $ readMaybe . fix . drop 5 $ n
   where
     fix "L4+" = "L4Plus"
     fix x     = x
