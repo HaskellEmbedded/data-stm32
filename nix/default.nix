@@ -1,16 +1,10 @@
 { nixpkgs ? import <nixpkgs> {} }:
 let
-  izpack = nixpkgs.callPackage ./modm-devices-izpack.nix {};
-  cmxRes = nixpkgs.callPackage ./cubemx-core-resource.nix {};
+  cmxDb = import ./cubemx-database.nix {};
+  svdDb = nixpkgs.callPackage ./svd-database.nix {};
 in
-  nixpkgs.runCommand "cubemx-database" {} ''
-    mkdir tmp
-    ln -s ${cmxRes}/resources .
-
-    pushd tmp
-    ${izpack}/bin/izpack
-    popd
-
+  nixpkgs.runCommand "env" {} ''
     mkdir $out
-    mv output/db/ $out/db
+    ln -s ${cmxDb} $out/db
+    ln -s ${svdDb} $out/svds
   ''
