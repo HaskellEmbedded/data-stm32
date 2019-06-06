@@ -1,9 +1,16 @@
+{-# LANGUAGE DeriveGeneric #-}
 module Data.STM32.Types where
+
+import GHC.Generics (Generic)
+import Text.Read (readMaybe)
+import Data.Serialize
 
 -- should be kept in sync with templates/STM32/{Core,Family}.hs
 -- which is suboptimal!
-data Core = CortexM0 | CortexM0Plus | CortexM3 | CortexM4F | CortexM7F
-  deriving (Eq, Show)
+data Core = CortexM0 | CortexM0Plus | CortexM3 | CortexM4F | CortexM7F | CortexA7
+  deriving (Eq, Show, Ord, Generic)
+
+instance Serialize Core
 
 data Family =
     F0
@@ -25,7 +32,10 @@ data Family =
   | WB
   | TS
   | MP1
-  deriving (Eq, Ord, Show, Read)
+  deriving (Eq, Ord, Show, Read, Generic)
+
+instance Serialize Family
+
 
 supportedFamilies =
   [ F0
