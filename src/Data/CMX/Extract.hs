@@ -80,6 +80,6 @@ fixMCU x@MCU{..} = x { mcuIps = filterIps mcuIps }
                         , "USB_HOST"
                         ])
 
-checkMCU MCU{..} | mcuFlash == 0 = error $ "MCU Flash is 0 @" ++ mcuRefName
+checkMCU MCU{..} | mcuFlash == 0 && mcuFamily /= MP1 = error $ "MCU Flash is 0 @" ++ mcuRefName
 checkMCU MCU{..} | mcuRam   == 0 = error $ "MCU Ram is 0 @" ++ mcuRefName
 checkMCU x = x
