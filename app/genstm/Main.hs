@@ -254,7 +254,6 @@ stm32periphs get = do
               let
                   common = [ "Regs" ]
                   commonForAllVersions = [
-                      -- rename this to RegTypes
                       (UART, [ "RegTypes", "Pins" ])
                     ]
                   versionSpecific = [
@@ -458,12 +457,12 @@ procPeriph p ver x = trace (show $ mapRegs (continuityCheck . regFields) lal) la
   where
   lal = adjustRegs (\r -> r { regFields = procFields $ regFields r}) $ filterByPeriph p ver x
 
--- Special driver/peripheral regs versioning threatment
+-- Special driver/peripheral regs versioning treatment
 --
 -- UART needs UART1 & UARTv2 for old/new periph regs, has common driver
 -- USART -> UART
 -- SPI has common regs but two drivers
--- CAN needs special threatment for filters, bitArrays and composed FIFOs
+-- CAN needs special treatment for filters, bitArrays and composed FIFOs
 
 filterRegsByName f x = x { periphRegisters = filter (f . regName) $ periphRegisters x }
 
