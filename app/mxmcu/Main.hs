@@ -17,12 +17,7 @@ parseAndShow :: [String] -> IO()
 parseAndShow [] = return ()
 parseAndShow (f:fs) = do
   res <- parseMCU f
-  case res of
-    Left e -> do
-      putStrLn ("No parse of " ++ f ++ " error was " ++ e)
-      exitFailure
-    Right x -> pPrint x
-
+  pPrint res
   parseAndShow fs
 
 
