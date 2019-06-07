@@ -27,35 +27,36 @@ cmxDevices  = concat . M.elems
 filterSupported :: M.Map Family [MCU] -> M.Map Family [MCU]
 filterSupported = M.filterWithKey (\k a -> k `elem` supportedFamilies)
 
-extractCMX :: String -> IO (M.Map Family [MCU])
+extractCMX :: FilePath -> IO (M.Map Family [MCU])
 extractCMX dbPath = do
-  fs <- parseFamilies (dbPath ++ "/db/mcu/families.xml")
+  fs <- parseFamilies (encodeString dbPath ++ "/db/mcu/families.xml")
   p <- forM (M.toList . M.map (concatMap subFamMCUs) $ fs) $ \(fam, devs) -> do
     ds <- forM devs $ \dev -> do
-      mcu <- parseMCU $ dbPath ++ "/db/mcu/" ++ (smcuName dev) ++ ".xml"
+      mcu <- parseMCU $ encodeString dbPath ++ "/db/mcu/" ++ (smcuName dev) ++ ".xml"
       return $ checkMCU $ fixMCU $ mcu {
           mcuRam = smcuRam dev
         , mcuFlash = smcuFlash dev
+        , mcuRefName = smcuRefName dev
         }
 
     return (fam, ds)
   return $ M.fromList p
 
-extractCMXCached :: String -> IO (M.Map Family [MCU])
+extractCMXCached :: FilePath -> IO (M.Map Family [MCU])
 extractCMXCached dbPath = do
   hasCache <- testfile $ decodeString $ cachePath
   case hasCache of
     True -> do
-      putStrLn $ "Loading cached CubeMX database from " ++ (show cachePath)
+      putStrLn $ "Loading cached CubeMX database from " ++ cachePath
       cached <- B.readFile cachePath
       case decode cached of
         Left err -> fail err
         Right cmx -> return cmx
 
     False -> do
-      putStrLn $ "Parsing CubeMX database from " ++ (show dbPath)
+      putStrLn $ "Parsing CubeMX database from " ++ (encodeString dbPath)
       x <- extractCMX dbPath
-      putStrLn $ "Saving cache to " ++ (show cachePath)
+      putStrLn $ "Saving cache to " ++ cachePath
       B.writeFile cachePath (encode x)
       return x
   where

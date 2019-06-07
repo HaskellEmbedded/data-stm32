@@ -5,7 +5,6 @@
 module Main where
 
 import Turtle
-import System.Exit
 import Prelude hiding (FilePath)
 import Control.Monad
 import qualified Control.Foldl as Fold
@@ -109,7 +108,6 @@ main = do
   when hasGarbage $ do
     rmtree "src"
     rmtree "support"
-    rm "ivory-bsp-stm32.cabal"
 
   mktree "src"
   mktree "support"
@@ -138,9 +136,17 @@ main = do
 
   -- cabal file and support files
   cd dir
-  mods <- prefixRest . L.sort . map (T.replace ".hs" "" . T.replace "/" "." . T.replace "./src/" "" . fpToText)
-            <$> fold (find (suffix ".hs") "./src/") Fold.list
-  t <- procTemplate "ivory-bsp-stm32.cabal_template" [("exposed", T.intercalate ",\n" mods)]
+  mods <- prefixRest
+        . L.sort
+        . map (T.replace ".hs" ""
+              . T.replace "/" "."
+              . T.replace "./src/" ""
+              . fpToText)
+      <$> fold (find (suffix ".hs") "./src/") Fold.list
+
+  t <- procTemplate "ivory-bsp-stm32.cabal_template"
+         [("exposed", T.intercalate ",\n" mods)]
+
   TIO.writeFile "ivory-bsp-stm32.cabal" t
   cptree "../templates/support/" "./support/"
   where
