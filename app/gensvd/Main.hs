@@ -33,6 +33,8 @@ supSvds =
   , "l1"
   , "l4"
   , "l4plus"
+  , "g4"
+  , "mp1"
   ]
 
 main = do
