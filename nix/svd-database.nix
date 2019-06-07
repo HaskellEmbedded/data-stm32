@@ -6,8 +6,8 @@ stdenv.mkDerivation {
   src = fetchFromGitHub {
     owner = "HaskellEmbedded";
     repo = "data-stm32";
-    rev = "a402da49a77cdd5ef81d0162e8a368f63ed2cb22";
-    sha256 = "0jri7qnph5vcwi3jd0qqw0gkivpcbbbkyziixm5ihfbz7r53z8xg";
+    rev = "e2d647e6c11c7df519af3009128a922a6ebe55cb";
+    sha256 = "11z0bwpmsan4yrfasyqw5g6jjd5265hp0v79l2nhmkhn802gf2pz";
   };
 
   buildCommand = ''
