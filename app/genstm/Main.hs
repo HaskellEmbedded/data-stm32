@@ -34,7 +34,7 @@ import Data.Ivory.MemMap
 import Data.Ivory.Periph
 
 import Data.SVD hiding (svd, ppPeripheral)
---import Data.CMX
+import Data.CMX
 import Data.STM32.Types
 
 import Data.Serialize
@@ -77,12 +77,6 @@ fixAndPack = T.replace "usart" "uart"
 familyImport fam what = T.pack $ "import qualified Ivory.BSP.STM32" ++ (show fam) ++ "." ++ what ++ " as " ++ (show fam)
 
 familyImports what = map (flip familyImport what) supportedFamilies
-
-
-devFilter :: String -> Bool
-devFilter x = x =~ ("STM32.*" :: String)
---devFilter x = x =~ ("STM32F.*" :: String)
---devFilter x = x =~ ("STM32F7.*5" :: String)
 
 svdsFamily :: Family -> [(String, Device)] -> [Device]
 svdsFamily f = map snd . filter (\(name, svd) -> (show f) `L.isPrefixOf` name)

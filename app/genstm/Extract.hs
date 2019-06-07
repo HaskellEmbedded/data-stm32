@@ -7,65 +7,15 @@ import Turtle
 import System.Exit
 import Prelude hiding (FilePath)
 import Control.Monad
-import qualified Control.Foldl as Fold
-import qualified Data.ByteString.Char8 as B
 import Data.Ord (comparing)
 import qualified Data.List as L
 import qualified Data.Map as Map
 
 import Text.Regex.Posix
-
-import Data.Serialize
-
-import Data.SVD hiding (svd, ppPeripheral)
---import Data.CMX
 import Debug.Trace
 
+import Data.SVD
 import Utils
-
--- parse SVD files into ("STM32F031x", Device {..} )
-svd :: (String -> Bool) -> IO [(String, Device)]
-svd devFilter = do
-  dir <- pwd
-
-  hasCache <- testfile "svd_cache"
-  case hasCache of
-    True -> do
-      echo "Loading SVDs from cache"
-      cached <- B.readFile "svd_cache"
-      case decode cached of
-        Left err -> fail err
-        Right svds -> return svds
-
-    False -> do
-      echo "Parsing SVDs"
-
-      cd dir
-      cd "STMicro"
-      svdxmls <- fold (onFiles (grepText (prefix "./STM32" <> suffix ".svd")) (ls ".")) Fold.list
-      svds <- mapM svd1 $ filter devFilter $ map fpToString svdxmls
-
-      cd dir
-      B.writeFile "svd_cache" (encode svds)
-      return svds
-
-svd1 f = do
-  res <- parseSVD f
-  case res of
-    Left e -> do
-      putStrLn ("No parse of " ++ f ++ " error was " ++ e)
-      exitFailure
-    Right x -> do
-      return $ (drop 5 $ deviceName x, x)
-
-cmx :: IO ([String], [String], [String])
-cmx = do
-  cd "db"
-  cd "mcu"
-  mcuxmls <- fold (onFiles (grepText (prefix "./STM32" <> suffix ".xml")) (ls ".")) Fold.list
-  let shortMCUs = L.sort $ L.nub $ map (take 4 . drop 7 . fpToString) mcuxmls
-  let families  = L.sort $ L.nub $ map (take 2 . drop 7 . fpToString) mcuxmls
-  return (shortMCUs, families, map fpToString mcuxmls)
 
 -- extract all registers for peripheral `periph`
 byPeriphRegs :: String -> (a, Device) -> [Register]

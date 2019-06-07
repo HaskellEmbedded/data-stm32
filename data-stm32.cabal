@@ -34,6 +34,7 @@ library
       Data.Ivory.Pretty
       Data.STM32.Types
       Data.SVD
+      Data.SVD.Extract
       Data.SVD.Parse
       Data.SVD.Pretty
       Data.SVD.Types
