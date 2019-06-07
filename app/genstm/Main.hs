@@ -84,8 +84,22 @@ svdsFamily f = map snd . filter (\(name, svd) -> (show f) `L.isPrefixOf` name)
 isrsFamily f = isrs . (svdsFamily f)
 
 getTemplate x = do
-  dir <- getDataFileName "templates"
-  TIO.readFile $ dir <> x
+  mPath <- need "TEMPLATES_PATH"
+  tPath <- case mPath of
+    Nothing -> die "need TEMPLATES_PATH env var"
+    Just p -> return p
+
+  TIO.putStrLn $ "Loading template " <> x <> " from " <> tPath
+  TIO.readFile $ fromString $ T.unpack $ tPath <> "/" <> x
+
+loadDatabases = do
+  mPath <- need "DB_PATH"
+  dbPath <- case mPath of
+    Nothing -> die "need DB_PATH env var"
+    Just p -> return $ fromText p
+  svds <- extractSVDCached dbPath
+  cmxs <- extractCMXCached dbPath
+  return (cmxs, svds)
 
 main = do
   cd "data"
@@ -100,7 +114,7 @@ main = do
   mktree "src"
   mktree "support"
 
-  svds <- svd devFilter
+  (cmxs, svds) <- loadDatabases
 
   -- svd names look like STM32F41x, we replace x with [0-9] so we can regex match on them
   -- prefer longer pattern
@@ -112,9 +126,6 @@ main = do
                  [] -> error $ "Cannot find SVD for mcu " ++ show m
                  x:xs -> snd x
 
-  cd dir
-  (shortMCUs, families, mcuxmls) <- cmx
-
   --for STM32XY/Periph/Regs
   --print $ mergedRegistersForPeriph "USART" svds
 
@@ -122,7 +133,7 @@ main = do
   stm32toplevel
   stm32periphs getSVD
 
-  stm32families svds shortMCUs
+  stm32families svds cmxs
   stm32devs getSVD
 
   -- cabal file and support files
@@ -520,12 +531,11 @@ renameDups xs = reverse $ snd $ foldl f (S.empty, []) xs
 
 -- Right f103 <- parseSVD "data/STMicro/STM32F103xx.svd"
 
-stm32families svds shortMCUs = forM supportedFamilies $ \f -> do
+stm32families svds cmxs = forM supportedFamilies $ \f -> do
     putStrLn $ "Processing family " ++ (show f)
     let
       fns = "STM32" ++ (show f)
       svdsFam = svdsFamily f svds
-      mcusFam = filter (L.isPrefixOf (show f)) shortMCUs
       isr = replaceOne "|" "="
           $ T.pack
           $ ppISRs
