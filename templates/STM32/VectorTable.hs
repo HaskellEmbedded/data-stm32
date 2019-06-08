@@ -1,22 +1,27 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Ivory.BSP.STM32.VectorTable
+module {{ modns }}
   ( vector_table
   , reset_handler
   ) where
 
-import qualified Paths_ivory_bsp_stm32 as P
 import Ivory.Artifact
 import Ivory.Artifact.Template
 import Ivory.BSP.ARMv7M.Exception
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Family
 
-@imports@
+import qualified Paths_ivory_bsp_stm32 as P
+
+{% for fam in fams %}
+import qualified Ivory.BSP.STM32{{ fam }}.Interrupt as {{ fam }}
+{% endfor %}
 
 byFamily :: Family -> [(String, String)]
-@byFamily@
+{% for fam in fams %}
+byFamily {{ fam }} = attrs {{ fam }}.WWDG
+{% endfor %}
 
 reset_handler :: String
 reset_handler = exceptionHandlerName Reset
@@ -28,9 +33,9 @@ vector_table family =
   fname = "support/vector_table.s.template"
 
 attrs :: forall i . (STM32Interrupt i) => i -> [(String, String)]
-attrs i = [("entries", entries)
-          ,("weakdefs", weakdefs)
-          ,("reset_handler", reset_handler)
+attrs i = [ ("entries", entries)
+          , ("weakdefs", weakdefs)
+          , ("reset_handler", reset_handler)
           ]
   where
   itable :: [Maybe i]

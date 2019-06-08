@@ -6,7 +6,7 @@
 -- RegTypes.hs --- Types for register fields in GPIOF1 pin driver.
 --
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Language
 

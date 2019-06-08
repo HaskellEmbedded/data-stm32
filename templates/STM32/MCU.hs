@@ -1,4 +1,4 @@
-module @modns@
+module {{ modns }}
   ( MCU(..)
   , defMCU
   , matchMCU
@@ -57,4 +57,4 @@ kbytes :: Integer -> Integer
 kbytes = (*1024)
 
 devices :: [(String, MCU)]
-@devices@
+{{ devices }}

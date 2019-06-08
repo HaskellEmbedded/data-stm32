@@ -3,6 +3,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module @modns@ where
+module {{ modns }} where
 
-@map@
+{{ map }}

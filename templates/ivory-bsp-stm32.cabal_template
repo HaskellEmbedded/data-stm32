@@ -16,7 +16,7 @@ data-files: support/vector_table.s.template,
             support/ref_to_uint32.c
 
 library
-  exposed-modules:     @exposed@
+  exposed-modules:     {{ exposed }}
 
   other-modules:       Paths_ivory_bsp_stm32
 

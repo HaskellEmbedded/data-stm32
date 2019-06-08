@@ -3,7 +3,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ExistentialQuantification #-}
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Language
 import Ivory.Tower

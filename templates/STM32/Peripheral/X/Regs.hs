@@ -3,9 +3,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Language
-@imports@
+{{ imports }}
 
-@regs@
+{{ regs }}

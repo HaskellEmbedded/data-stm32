@@ -1,5 +1,5 @@
 
-module @modns@
+module {{ modns }}
   ( Family(..)
   , strToFamily
   , nameToFamily

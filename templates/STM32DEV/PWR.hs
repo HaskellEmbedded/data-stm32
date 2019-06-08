@@ -3,10 +3,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Language
 import Ivory.HW
-import Ivory.BSP.STM32@dev@.MemoryMap (pwr_periph_base)
+import Ivory.BSP.STM32{{ dev }}.MemoryMap (pwr_periph_base)
 
-@regs@
+{{ regs }}

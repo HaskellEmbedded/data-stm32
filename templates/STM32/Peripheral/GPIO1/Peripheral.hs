@@ -13,19 +13,19 @@
 -- All Rights Reserved.
 --
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Language
 
 import Ivory.HW
 
-import Ivory.BSP.STM32.Peripheral.@type@@version@.Regs
-import Ivory.BSP.STM32.Peripheral.@type@@version@.RegTypes
+import Ivory.BSP.STM32.Peripheral.{{ type }}{{ version }}.Regs
+import Ivory.BSP.STM32.Peripheral.{{ type }}{{ version }}.RegTypes
 
 -- | A GPIO port, defined as the set of registers that operate on all
 -- the pins for that port.
-data @type@Port = @type@Port
-@bitDataRegs@
+data {{ type }}Port = {{ type }}Port
+{{ bitDataRegs }}
   , gpioPortRCCEnable   :: forall eff . Ivory eff ()
   , gpioPortRCCDisable  :: forall eff . Ivory eff ()
   , gpioPortNumber      :: Int
@@ -33,13 +33,13 @@ data @type@Port = @type@Port
   }
 
 -- | Create a GPIO port given the base register address.
-mk@type@Port :: Integer
+mk{{ type }}Port :: Integer
            -> (forall eff . Ivory eff ())
            -> (forall eff . Ivory eff ())
            -> Int
-           -> @type@Port
-mk@type@Port base rccen rccdis idx = @type@Port
-@bitDataRegsMk@
+           -> {{ type }}Port
+mk{{ type }}Port base rccen rccdis idx = {{ type }}Port
+{{ bitDataRegsMk }}
     , gpioPortRCCEnable      = rccen
     , gpioPortRCCDisable     = rccdis
     , gpioPortNumber         = idx

@@ -1,3 +1,3 @@
-module @modns@ where
+module {{ modns }} where
 
-@mem@
+{{ mem }}

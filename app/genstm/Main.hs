@@ -16,7 +16,7 @@ import Data.Serialize
 import qualified Data.ByteString.Char8 as B
 
 import qualified Data.List as L
-import qualified Data.Map as Map
+import qualified Data.Map as M
 
 import Text.Regex.Posix
 import Text.Pretty.Simple
@@ -72,22 +72,19 @@ fixAndPack = T.replace "usart" "uart"
  . T.replace "USART" "UART"
  . T.pack
 
--- import qualified Ivory.BSP.STM32<fam>.<what> as <fam>
-familyImport fam what = T.pack $ "import qualified Ivory.BSP.STM32" ++ (show fam) ++ "." ++ what ++ " as " ++ (show fam)
-
-familyImports what = map (flip familyImport what) supportedFamilies
-
 svdsFamily :: Family -> [(String, Device)] -> [Device]
 svdsFamily f = map snd . filter (\(name, svd) -> (show f) `L.isPrefixOf` name)
 
 isrsFamily f = isrs . (svdsFamily f)
 
-getTemplate x = do
+getTemplatesPath = do
   mPath <- need "TEMPLATES_PATH"
-  tPath <- case mPath of
+  case mPath of
     Nothing -> die "need TEMPLATES_PATH env var"
     Just p -> return p
 
+getTemplate x = do
+  tPath <- getTemplatesPath
   TIO.putStrLn $ "Loading template " <> x <> " from " <> tPath
   TIO.readFile $ fromString $ T.unpack $ tPath <> "/" <> x
 
@@ -99,6 +96,39 @@ loadDatabases = do
   svds <- extractSVDCached dbPath
   cmxs <- extractCMXCached dbPath
   return (cmxs, svds)
+
+dbStats (cmxs, svds) nosvd = do
+  let hasSVD = length $ catMaybes $ map (getSVDMaybe svds . mcuRefName) (cmxDevices cmxs)
+      tot = length $ cmxDevices cmxs
+      fams = length $ cmxFamilies cmxs
+      supFams = length $ cmxFamilies $ filterSupported cmxs
+  putStrLn $ unlines [
+      "Families " ++ (show $ fams)
+    , "Supported families " ++ (show $ supFams) ++ " " ++ (show supportedFamilies)
+    , "Un-supported families " ++ (show $ fams - supFams) ++ " " ++ (show (cmxFamilies cmxs L.\\ supportedFamilies))
+    , "CMX devices " ++ (show $ tot)
+    , "SVD files " ++ (show $ length $ svds)
+    , "CMX devices with SVD files " ++ (show $ hasSVD)
+    , "CMX devices missing SVD files " ++ (show $ tot - hasSVD)
+    , "SVD file names " ++ (show $ map fst svds)
+    , "Supported but missing SVD files " ++ show (map mcuRefName nosvd)
+    ]
+
+filterHavingSVD (cmxs, svds) = M.map (filter (isJust . getSVDMaybe svds . mcuRefName)) cmxs
+
+-- svd names look like STM32F41x, we replace x with [0-9A] so we can regex match on them
+-- prefer longer pattern
+-- (A in patter match due to L4A6 which hopefully matches L4x6.svd)
+svdByMcu svds m = reverse
+           $ L.sortBy (comparing fst)
+           $ filter (\(name, dev) ->
+                        (m =~ (replace "x" "[0-9A]" $ take 4 name)) :: Bool) svds
+getSVDMaybe svds m = case svdByMcu svds m of
+           [] -> Nothing
+           x:xs -> Just $ snd x
+
+
+getSVD svds = fromJust . getSVDMaybe svds
 
 main = do
   cd "data"
@@ -114,25 +144,22 @@ main = do
 
   (cmxs, svds) <- loadDatabases
 
-  -- svd names look like STM32F41x, we replace x with [0-9] so we can regex match on them
-  -- prefer longer pattern
-  let svdByMcu m = reverse
-                 $ L.sortBy (comparing fst)
-                 $ filter (\(name, dev) ->
-                              (m =~ (replace "x" "[0-9]" $ take 4 name)) :: Bool) svds
-      getSVD m = case svdByMcu m of
-                 [] -> error $ "Cannot find SVD for mcu " ++ show m
-                 x:xs -> snd x
+  let
+    supp = filterSupported cmxs
+    cmxsWithSVD = filterHavingSVD (supp, svds)
+    nosvd = (cmxDevices supp L.\\ cmxDevices cmxsWithSVD)
+
+  dbStats (cmxs, svds) nosvd
+  -- use filtered cmxsWithSVD from now on
 
   --for STM32XY/Periph/Regs
   --print $ mergedRegistersForPeriph "USART" svds
 
   cd dir
   stm32toplevel
-  stm32periphs getSVD
-
-  stm32families svds cmxs
-  stm32devs getSVD
+  stm32periphs (getSVD svds)
+  stm32devs (getSVD svds)
+  stm32families svds cmxsWithSVD
 
   -- cabal file and support files
   cd dir
@@ -144,11 +171,12 @@ main = do
               . fpToText)
       <$> fold (find (suffix ".hs") "./src/") Fold.list
 
-  t <- procTemplate "ivory-bsp-stm32.cabal_template"
-         [("exposed", T.intercalate ",\n" mods)]
+  t <- getTemplate "ivory-bsp-stm32.cabal_template"
+  TIO.writeFile "ivory-bsp-stm32.cabal" $
+    renderTemplate (H.fromList [("exposed", lit $ T.intercalate ",\n" mods)]) t
 
-  TIO.writeFile "ivory-bsp-stm32.cabal" t
-  cptree "../templates/support/" "./support/"
+  tPath <- getTemplatesPath
+  cptree (fromText $ tPath <> "/support/") "./support/"
   where
     prefixRest (x:xs) = x:(map (\y -> T.concat [T.replicate (T.length "exposed-modules:       ") " ", y]) xs)
 
@@ -162,21 +190,20 @@ stm32devs get = do
   forM (map (\x -> (x, get $ "STM32" ++ x)) thesePlease) $ \(namePart, dev) -> do
     putStrLn $ "Processing device " ++ (show (deviceName dev))
     -- memMap
-    (ns, t) <- procDevTemplate namePart "MemoryMap"
-                [ ("dev", T.pack namePart )
-                , ("map" , T.pack $ ppMemMap $ getDevMemMap dev ) ]
-
-    writeHS ns t
+    let ns = "STM32" <> (T.pack namePart) <> ".MemoryMap"
+        ctx = [ ("dev", lit $ T.pack namePart )
+              , ("map" , lit $ T.pack $ ppMemMap $ getDevMemMap dev ) ]
+    template ctx ns "STM32DEV/MemoryMap.hs"
 
     let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals dev of
          [] -> fail $ "No " ++ (show p) ++ " found"
          [x] -> do
-               let new = procPeriph p Nothing x
-               (ns, t) <- procDevTemplate namePart (T.pack . show $ p)
-                 [ ("dev", T.pack namePart)
-                 , ("regs", T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
-
-               writeHS ns t
+                let new = procPeriph p Nothing x
+                let pName = T.pack . show $ p
+                    ns = "STM32" <> (T.pack namePart) <> "." <> pName
+                    ctx = [ ("dev", lit $ T.pack namePart )
+                          , ("regs", lit $ T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
+                template ctx ns ("STM32DEV/" <> pName <> ".hs")
 
     forM_ [ RCC, FLASH, PWR ] genPeriph
 
@@ -189,25 +216,13 @@ stm32devs get = do
         [] -> fail $ "No peripheral found with groupName " ++ show p ++ " for device " ++ (deviceName dev)
         xs -> do
           print $ map periphName xs
-          t <- getTemplate "STM32DEV/UART.hs"
-          let ctx =  H.fromList [
+          let ns = T.intercalate "." [ "STM32" <> T.pack namePart, "UART"]
+              ctx = [
                   ("dev", lit $ T.pack namePart)
-                , ("fam", lit $ T.take 2 $ T.pack namePart)
-                , ("modns" , lit $ "Ivory.BSP.STM32" <> T.pack namePart <> ".UART")
-                , ("version", lit "1")
+                , ("fam", lit $ T.take 2 $ T.pack namePart) -- XXX: < mcuFamily
+                , ("version", lit "1") -- XXX
                 ]
-
-          let re = renderTemplate ctx t
-          TIO.writeFile ("src/Ivory/BSP/STM32" ++ namePart ++ "/UART.hs") re
-
-          {-
-          (ns, t) <- procDevTemplate namePart "UART"
-            [ ("dev", T.pack namePart)
-            , ("fam", T.take 2 $ T.pack namePart)
-            , ("imports", "") ]
-          writeHS ns t
-          -}
-
+          template ctx ns "STM32DEV/UART.hs"
 
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
 -- for all supportedPeriphs
@@ -226,26 +241,27 @@ stm32periphs get = do
              -- register bitdata
             let new = procPeriph p Nothing x
                 res = ppPeriphRegs new
-            (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X.Regs" Nothing
-              [ ("regs", fixAndPack res)
-              , ("imports", "") ]
-              -- empty for CAN
-              -- "import STM32.Peripheral." <> tshow p <> ".RegTypes" ) ]
-            writeHS ns t
+                ns = "STM32.Peripheral." <> tshow p <> ".Regs"
+                ctx = [ ("regs", lit $ fixAndPack res)
+                      , ("imports", lit "") ]
+                      -- empty for CAN
+                      -- "import STM32.Peripheral." <> tshow p <> ".RegTypes" ) ]
+            template ctx ns "STM32/Peripheral/X/Regs.hs"
 
             let newP = fix4PeripheralDefinition new
             -- peripheral definition
-            (ns, t) <- procPeriphSpecificTemplate (tshow p) "STM32.Peripheral.X.Peripheral" Nothing
-              [ ("type", tshow p)
-              , ("bitDataRegs", fixAndPack $ ppBitDataRegs newP)
-              , ("bitDataRegsMk", fixAndPack $ ppBitDataRegsMk newP)
-              ]
-            writeHS ns t
+            let ns = "STM32.Peripheral." <> tshow p <> ".Peripheral"
+                ctx = [ ("type", lit $ tshow p)
+                      , ("bitDataRegs", lit $ fixAndPack $ ppBitDataRegs newP)
+                      , ("bitDataRegsMk", lit $ fixAndPack $ ppBitDataRegsMk newP)
+                      ]
+            template ctx ns ("STM32/Peripheral/" <> tshow p <> "/Peripheral.hs")
+
 
             -- reexports
-            (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X" Nothing
-              [ ("type", (tshow p)) ]
-            writeHS ns t
+            template [ ("type", lit $ tshow p) ]
+              ("STM32.Peripheral." <> tshow p)
+              ("STM32/Peripheral/X.hs")
 
           -- take a representative
           -- and build a DRIVER${version} dir out of it
@@ -257,10 +273,10 @@ stm32periphs get = do
               -- register bitdata
               let new = procPeriph p (Just ver) x'
                   res = ppPeriphRegs new
-              (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X.Regs" (Just $ tshow ver)
-                [ ("regs", fixAndPack res)
-                , ("imports", "import Ivory.BSP.STM32.Peripheral." <> tshow p <> versionedRegTypes p ver <> ".RegTypes" ) ]
-              writeHS ns t
+                  ns = "STM32.Peripheral." <> tshow p <> tshow ver <> ".Regs"
+                  ctx = [ ("regs", lit $ fixAndPack res)
+                        , ("imports", lit $ "import Ivory.BSP.STM32.Peripheral." <> tshow p <> versionedRegTypes p ver <> ".RegTypes" ) ]
+              template ctx ns "STM32/Peripheral/X/Regs.hs"
 
               let
                   common = [ "Regs" ]
@@ -276,57 +292,51 @@ stm32periphs get = do
               case (filter ((==p) . fst) commonForAllVersions) of
                 [] -> return ()
                 [(_, files)] -> forM_ files $ \file -> do
-                  (ns, t) <- procPeriphSpecificTemplate (tshow p) ("STM32.Peripheral.X." <> file) Nothing []
-                  writeHS ns t
+                  template [] ("STM32.Peripheral." <> (tshow p) <> "." <> file)
+                              ("STM32/Peripheral/" <> (tshow p) <> "/" <> file <> ".hs")
 
               -- take stuff from UART1/file to UART1/file
               case (filter ((==p) . fst) versionSpecific) of
                 [] -> return ()
                 [(_, files)] -> forM_ files $ \file -> do
-                  (ns, t) <- procPeriphSpecificTemplate (tshow p <> tshow ver) ("STM32.Peripheral.X." <> file) Nothing []
-                  writeHS ns t
+                  template [] ("STM32.Peripheral." <> (tshow p <> tshow ver) <> "." <> file)
+                              ("STM32/Peripheral/" <> (tshow p <> tshow ver) <> "/" <> file <> ".hs")
 
                -- peripheral definition
-              (ns, t) <- procPeriphSpecificTemplate (tshow p <> tshow ver) "STM32.Peripheral.X.Peripheral" Nothing
-                [ ("type", tshow p)
-                , ("bitDataRegs", fixAndPack $ ppBitDataRegs new)
-                , ("bitDataRegsMk", fixAndPack $ ppBitDataRegsMk new)
-                , ("version", tshow ver)
-                ]
-              writeHS ns t
+              let ns = "STM32.Peripheral." <> (tshow p <> tshow ver) <> ".Peripheral"
+                  ctx = [ ("type", lit $ tshow p)
+                        , ("bitDataRegs", lit $ fixAndPack $ ppBitDataRegs new)
+                        , ("bitDataRegsMk", lit $ fixAndPack $ ppBitDataRegsMk new)
+                        , ("version", lit $ tshow ver)
+                        ]
+              template ctx ns ("STM32/Peripheral/" <> (tshow p <> tshow ver) <> "/Peripheral.hs")
             -- /forM for periph representatives
 
               case p of
                 GPIO -> do
                       -- reexports
-                      (ns, t) <- procPeriphSpecificTemplate (tshow p) "STM32.Peripheral.X" Nothing
-                        [ ("type", (tshow p)) ]
-                      writeHS ns t
+                      let ns = "STM32.Peripheral." <> tshow p
+                          ctx =  [ ("type", lit (tshow p)) ]
+                      template ctx ns "STM32/Peripheral/GPIO.hs"
 
                 UART -> do
                       -- reexports
-                      t <- getTemplate "STM32/Peripheral/UART.hs"
-                      let ctx =  H.fromList [
-                              ("modns" , lit $ "Ivory.BSP.STM32.Peripheral.UART")
-                            , ("versions", litObj [ "1",  "2", "3"])
-                            ]
+                      let ns = "STM32.Peripheral.UART"
+                          ctx =  [ ("versions", litObj [ "1",  "2", "3"]) ]
 
-                      let re = renderTemplate ctx t
-                      print ctx
-                      TIO.writeFile ("src/Ivory/BSP/STM32/Peripheral/UART.hs") re
+                      template ctx ns "STM32/Peripheral/UART.hs"
 
                 _    -> do
-
                       -- reexports
-                      (ns, t) <- procPeriphTemplate (tshow p) "STM32.Peripheral.X" Nothing
-                        [ ("type", (tshow p) <> (tshow ver)) ]
-                      writeHS ns t
+                      let ns = "STM32.Peripheral." <> tshow p
+                          ctx =  [ ("type", lit $ (tshow p) <> (tshow ver)) ]
+                      template ctx ns "STM32/Peripheral/X.hs"
 
 
   -- RCC reg types common for all devs
-  (ns, t) <- procPeriphSpecificTemplate (tshow RCC) ("STM32.Peripheral.X.RegTypes") Nothing []
-  writeHS ns t
-
+  template []
+    "STM32.Peripheral.RCC.RegTypes"
+    "STM32/Peripheral/RCC/RegTypes.hs"
 
 versionedPeriphs = [GPIO, UART]
 versioned x = x `elem` versionedPeriphs
@@ -481,34 +491,37 @@ filterRegsByName f x = x { periphRegisters = filter (f . regName) $ periphRegist
 stm32toplevel = do
   m <- genMCUData "devices.data"
   -- MCU
-  (ns, t) <- procHSTemplate "STM32.MCU" [ ("devices", T.pack m) ]
-  writeHS ns t
+  let ctx = [ ("devices", lit $ T.pack m) ]
+  template ctx "STM32.MCU" "STM32/MCU.hs"
 
   -- VectorTable
-  (ns, t) <- procHSTemplate "STM32.VectorTable"
-    [ ("imports", T.unlines $ familyImports "Interrupt")
-    , ("byFamily", T.unlines $ map wwdgByFamily supportedFamilies) ]
-  writeHS ns t
+  let ctx = [ ("fams", litList $ map tshow supportedFamilies) ]
+  template ctx "STM32.VectorTable" "STM32/VectorTable.hs"
+
+  -- ClockInit
+  let ctx = [ ("fams", litList $ map tshow supportedFamilies) ]
+  template ctx "STM32.ClockInit" "STM32/ClockInit.hs"
 
   -- copied verbatim
   let copies = [
           "Core"
         , "ClockConfig"
-        , "ClockConfig.Init"
         , "Family"
         , "Interrupt"
         , "LinkerScript"
         ]
 
-  mapM_ (\x -> copyHSTemplate $ T.concat ["STM32.", x]) copies
+  mapM_ (\x -> template [] ("STM32." <> x) $ T.concat ["STM32/", x, ".hs"]) copies
 
   cptree "../templates/ARMv7M/" "./src/Ivory/BSP/ARMv7M/"
-  where
-    wwdgByFamily fam = T.pack $ "byFamily " ++ (show fam) ++ " = attrs " ++ (show fam) ++ ".WWDG"
 
-copyHSTemplate name = do
-  (ns, t) <- procHSTemplate name []
-  writeHS ns t
+template context namespace tmpl = do
+  t <- getTemplate tmpl
+  let uglyFix = "\n" <> t -- work around karver not able to deal with {- at start of the file
+  writeHS ns $ T.drop 1 $ renderTemplate (H.fromList ctx) uglyFix
+  where
+    ns = "Ivory.BSP." <> namespace
+    ctx = ("modns" , lit ns):context
 
 -- writeHS "STM32.Bla" "content"
 writeHS namespace content = do
@@ -537,7 +550,7 @@ renameDups xs = reverse $ snd $ foldl f (S.empty, []) xs
 
 -- Right f103 <- parseSVD "data/STMicro/STM32F103xx.svd"
 
-stm32families svds cmxs = forM supportedFamilies $ \f -> do
+stm32families svds _cmxs = forM supportedFamilies $ \f -> do
     putStrLn $ "Processing family " ++ (show f)
     let
       fns = "STM32" ++ (show f)
@@ -549,17 +562,10 @@ stm32families svds cmxs = forM supportedFamilies $ \f -> do
           $ renameDups
           $ isrsFamily f svds
 
-    (ns, t) <- procFamilyTemplate f "STM32XX.Interrupt" [ ("isr", isr) ]
-    writeHS ns t
+    template [ ("isr", lit isr) ]
+      ("STM32" <> tshow f <> ".Interrupt")
+       "STM32XX/Interrupt.hs"
 
-    {-
-     - memmap for family, not usable
-    let mem = T.pack
-          $ ppMemMap
-          $ S.toList
-          $ S.unions
-          $ map (S.fromList . getDevMemMap) svdsFam
-
-    (ns, t) <- procFamilyTemplate f "STM32XX.MemoryMap" [ ("mem", mem) ]
-    writeHS ns t
-    -}
+    template [ ("isr", lit isr) ]
+      ("STM32" <> tshow f <> ".ClockInit")
+       "STM32XX/ClockInit.hs"

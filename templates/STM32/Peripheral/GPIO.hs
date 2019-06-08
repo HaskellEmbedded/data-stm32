@@ -13,7 +13,7 @@
 -- All Rights Reserved.
 --
 
-module @modns@ (
+module {{ modns }} (
     pinName
   , pinEnable
   , pinDisable

@@ -1,6 +1,6 @@
 {-# LANGUAGE Rank2Types #-}
 
-module @modns@
+module {{ modns }}
   (UARTPins(..)) where
 
 import Ivory.Language

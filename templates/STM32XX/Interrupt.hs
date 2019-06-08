@@ -1,10 +1,10 @@
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.BSP.ARMv7M.Exception
 import Ivory.BSP.STM32.Interrupt
 
 data Interrupt
-@isr@
+{{ isr }}
   deriving (Eq, Show, Enum)
 
 instance STM32Interrupt Interrupt where

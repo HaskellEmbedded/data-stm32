@@ -5,11 +5,11 @@
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE TypeOperators #-}
 --
--- Peripheral.hs --- UART Peripheral Description
--- UART Peripheral type and constructor
+-- Peripheral.hs --- {{ type }} Peripheral Description
+-- {{ type }} Peripheral type and constructor
 --
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Language
 
@@ -23,13 +23,13 @@ import Ivory.BSP.STM32.ClockConfig
 --import Ivory.BSP.STM32.Peripheral.UART1.Types
 --import Ivory.BSP.STM32.Peripheral.UART1.Regs
 
-data @type@ = @type@
-@bitDataRegs@
+data {{ type }} = {{ type }}
+{{ bitDataRegs }}
   }
 
-mk@type@ :: Integer -> @type@
-mk@type@ base  = @type@
-@bitDataRegsMk@
+mk{{ type }} :: Integer -> {{ type }}
+mk{{ type }} base  = {{ type }}
+{{ bitDataRegsMk }}
   }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d

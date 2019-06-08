@@ -11,10 +11,16 @@ import Ivory.Stdlib
 import Ivory.HW
 
 import Ivory.BSP.STM32.ClockConfig
+{-
+import Ivory.BSP.STM32.Peripheral.Flash
+import Ivory.BSP.STM32.Peripheral.PWR
+import Ivory.BSP.STM32.Peripheral.RCC
+-}
+import Ivory.BSP.STM32{{ fam }}.FLASH
+import Ivory.BSP.STM32{{ fam }}.PWR
+import Ivory.BSP.STM32{{ fam }}.RCC
 
 init_clocks :: ClockConfig -> Def('[]':->())
-init_clocks
-
 init_clocks clockconfig = proc "init_clocks" $ body $ do
   comment ("platformClockConfig: " ++ (show cc)      ++ "\n" ++
            "sysclk: "  ++ (show (clockSysClkHz cc))  ++ "\n" ++

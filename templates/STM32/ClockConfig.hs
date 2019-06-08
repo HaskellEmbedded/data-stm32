@@ -1,5 +1,5 @@
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Tower.Config
 

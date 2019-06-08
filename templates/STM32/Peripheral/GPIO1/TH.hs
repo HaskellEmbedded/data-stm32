@@ -6,7 +6,7 @@
 -- All Rights Reserved.
 --
 
-module @modns@ where
+module {{ modns }} where
 
 import Language.Haskell.TH
 

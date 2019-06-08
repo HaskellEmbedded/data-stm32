@@ -1,4 +1,5 @@
 
+-- Currently unused
 --
 -- MemoryMap.hs -- Memory map (addresses) for STM32
 --

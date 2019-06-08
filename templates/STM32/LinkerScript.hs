@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module @modns@
+module {{ modns }}
   ( linker_script
   ) where
 

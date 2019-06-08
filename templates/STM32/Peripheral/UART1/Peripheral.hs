@@ -9,7 +9,7 @@
 -- UART Peripheral type and constructor
 --
 
-module @modns@ where
+module {{ modns }} where
 
 import Ivory.Language
 
@@ -21,10 +21,10 @@ import Ivory.BSP.STM32.Peripheral.GPIO
 
 import Ivory.BSP.STM32.Peripheral.UART.Pins
 import Ivory.BSP.STM32.Peripheral.UART.RegTypes
-import Ivory.BSP.STM32.Peripheral.@type@@version@.Regs
+import Ivory.BSP.STM32.Peripheral.{{ type }}{{ version }}.Regs
 
-data @type@ = @type@
-@bitDataRegs@
+data {{ type }} = {{ type }}
+{{ bitDataRegs }}
   , uartRCCEnable  :: forall eff . Ivory eff ()
   , uartRCCDisable :: forall eff . Ivory eff ()
   , uartInterrupt  :: HasSTM32Interrupt
@@ -32,16 +32,16 @@ data @type@ = @type@
   , uartName       :: String
   }
 
-mk@type@ :: (STM32Interrupt i)
+mk{{ type }} :: (STM32Interrupt i)
        => Integer
        -> (forall eff . Ivory eff ())
        -> (forall eff . Ivory eff ())
        -> i
        -> PClk
        -> String
-       -> @type@
-mk@type@ base rccen rccdis interrupt pclk n = @type@
-@bitDataRegsMk@
+       -> {{ type }}
+mk{{ type }} base rccen rccdis interrupt pclk n = {{ type }}
+{{ bitDataRegsMk }}
   , uartRCCEnable  = rccen
   , uartRCCDisable = rccdis
   , uartInterrupt  = HasSTM32Interrupt interrupt
