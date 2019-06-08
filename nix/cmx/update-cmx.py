@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# Inspired by
+# https://github.com/modm-io/modm-devices/blob/develop/tools/generator/raw-data-extractor/extract-stm32.py
 from pathlib import Path
 from multiprocessing import Pool
 import urllib.request
