@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE RecordWildCards #-}
 module Data.STM32.Types where
 
 import GHC.Generics (Generic)
@@ -36,6 +37,27 @@ data Family =
 
 instance Serialize Family
 
+data STM32DevName = STM32DevName {
+    stmFam         :: Family
+  , stmName        :: String
+  , stmPinCountId  :: Maybe Char
+  , stmFlashSizeId :: Maybe Char
+  , stmPackage     :: Maybe Char
+  , stmTempRange   :: Maybe Char
+  } deriving (Eq, Ord, Show)
+
+-- > showName $ STM32DevName F1 "03" (Just 'C') (Just '8') (Just 'T') Nothing
+-- "STM32F103C8Tx"
+showName STM32DevName{..} = concat [
+    "STM32"
+  , show stmFam
+  , stmName
+  ] ++ map (maybe 'x' id) [
+    stmPinCountId
+  , stmFlashSizeId
+  , stmPackage
+  , stmTempRange
+  ]
 
 supportedFamilies =
   [ F0
