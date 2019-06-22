@@ -11,7 +11,7 @@ module {{ modns }}
 --import Data.Char (toUpper)
 --import Ivory.Tower.Config
 
-data Family = F0 | F1 | F2 | F3 | F4 | F7 | H7 | L0 | L1 | L4 | W | T
+data Family = F0 | F1 | F2 | F3 | F4 | F7 | H7 | L0 | L1 | L4 | L4Plus | W | T
   deriving (Eq, Show)
 
 strToFamily :: String -> Family
@@ -25,6 +25,7 @@ strToFamily "H7" = H7
 strToFamily "L0" = L0
 strToFamily "L1" = L1
 strToFamily "L4" = L4
+strToFamily "L4+" = L4Plus
 strToFamily "W"  = W
 strToFamily "T"  = T
 strToFamily x    = error $ "Unable to identify family by" ++ x
