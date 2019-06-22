@@ -583,6 +583,31 @@ stm32families db = do
       ("STM32" <> tshow f <> ".Interrupt")
        "STM32FAM/Interrupt.hs"
 
-    template [ ("isr", lit isr) ]
+    template [ ("fam", lit $ tshow f) ]
       ("STM32" <> tshow f <> ".ClockInit")
-       "STM32XX/ClockInit.hs"
+      ("STM32FAM/" <> tshow f <> "/ClockInit.hs")
+
+    let dev = last $ svdsFamily db f
+    let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals dev of
+         [] -> fail $ "No " ++ (show p) ++ " found"
+         [x] -> do
+                let new = adjustPeriphFamily f $ procPeriph p Nothing x
+                let pName = tshow p
+                    ns = "STM32" <> tshow f <> "." <> pName
+                    ctx = [ ("dev", lit $ tshow f)
+                          , ("regs", lit $ T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
+                template ctx ns ("STM32DEV/" <> pName <> ".hs")
+
+    putStrLn $ "Device used as family representative (RCC, ClockInit) " ++ deviceName dev
+    forM_ [ RCC, FLASH, PWR ] genPeriph
+    let ns = "STM32" <> tshow f <> ".MemoryMap"
+        ctx = [ ("dev", lit $ tshow f)
+              , ("map" , lit $ T.pack $ ppMemMap $ getDevMemMap dev ) ]
+    template ctx ns "STM32DEV/MemoryMap.hs"
+
+adjustPeriphFamily L4 x = adjustFields fix x
+  where
+    fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK_L4" x
+    fix x | fieldName x == "PLLR" = Just $ setFieldType "RCC_PLLR" x
+    fix x = Just x
+adjustPeriphFamily _ x = x
