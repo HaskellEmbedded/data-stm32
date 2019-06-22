@@ -516,6 +516,7 @@ stm32toplevel _db = do
 
   cptree "../templates/ARMv7M/" "./src/Ivory/BSP/ARMv7M/"
 
+template :: [(Text, Value)] -> Text -> Text -> IO ()
 template context namespace tmpl = do
   t <- getTemplate tmpl
   let uglyFix = "\n" <> t -- work around karver not able to deal with {- at start of the file
@@ -525,6 +526,7 @@ template context namespace tmpl = do
     ctx = ("modns" , lit ns):context
 
 -- writeHS "STM32.Bla" "content"
+writeHS :: Text -> Text -> IO ()
 writeHS namespace content = do
   here <- pwd
   cd "src"
