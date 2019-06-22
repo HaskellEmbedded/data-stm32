@@ -198,11 +198,12 @@ stm32devs DB{..} = do
     let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals dev of
          [] -> fail $ "No " ++ (show p) ++ " found"
          [x] -> do
-                let new = procPeriph p Nothing x
+                new <- procPeriph p Nothing x
                 let pName = T.pack . show $ p
                     ns = "STM32" <> (T.pack namePart) <> "." <> pName
                     ctx = [ ("dev", lit $ T.pack namePart )
                           , ("regs", lit $ T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
+
                 template ctx ns ("STM32DEV/" <> pName <> ".hs")
 
     forM_ [ RCC, FLASH, PWR ] genPeriph
@@ -240,7 +241,8 @@ stm32periphs DB{..} = do
         case versioned p of
           False -> do
              -- register bitdata
-            let new = procPeriph p Nothing x
+            new <- procPeriph p Nothing x
+            let
                 res = ppPeriphRegs new
                 ns = "STM32.Peripheral." <> tshow p <> ".Regs"
                 ctx = [ ("regs", lit $ fixAndPack res)
@@ -272,7 +274,8 @@ stm32periphs DB{..} = do
               let x' = head . filter ((==periph2svdName p) . periphGroupName) $ devicePeripherals (get repre)
 
               -- register bitdata
-              let new = procPeriph p (Just ver) x'
+              new <- procPeriph p (Just ver) x'
+              let
                   res = ppPeriphRegs new
                   ns = "STM32.Peripheral." <> tshow p <> tshow ver <> ".Regs"
                   ctx = [ ("regs", lit $ fixAndPack res)
@@ -481,10 +484,17 @@ filterByPeriph UART _        x = dropID $ adjustUARTRegs x
 filterByPeriph RCC  _        x = adjustRCCRegs x
 filterByPeriph _    _        x = x
 
+checkPeriphRegsContinuity p new = do
+  assert ("Register of " <> (tshow p) <> " is NOT continuous")
+    $ and $ mapRegs (continuityCheck . regFields) new
+
 -- toplevel kindof
-procPeriph p ver x = trace (show $ mapRegs (continuityCheck . regFields) lal) lal
+procPeriph p ver x = do
+  checkPeriphRegsContinuity p new
+  return new
   where
-  lal = adjustRegs (\r -> r { regFields = procFields $ regFields r}) $ filterByPeriph p ver x
+    new = adjustRegs (\r -> r { regFields = procFields $ regFields r})
+        $ filterByPeriph p ver x
 
 -- Special driver/peripheral regs versioning treatment
 --
@@ -591,7 +601,8 @@ stm32families db = do
     let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals dev of
          [] -> fail $ "No " ++ (show p) ++ " found"
          [x] -> do
-                let new = adjustPeriphFamily f $ procPeriph p Nothing x
+                new <- fmap (adjustPeriphFamily f) $ procPeriph p Nothing x
+                checkPeriphRegsContinuity p new
                 let pName = tshow p
                     ns = "STM32" <> tshow f <> "." <> pName
                     ctx = [ ("dev", lit $ tshow f)
