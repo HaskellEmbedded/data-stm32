@@ -1,6 +1,6 @@
 self: super:
 let
-   src = super.fetchFromGitHub {
+  src = super.fetchFromGitHub {
     owner = "sorki";
     repo = "tower";
     rev = "cd34214adb7dd68ea33bb1e865ca6418974fe3a6";
