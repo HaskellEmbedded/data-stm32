@@ -4,6 +4,7 @@ import Turtle
 import qualified Turtle as TU
 import qualified Data.Text as T
 import qualified System.IO as SIO
+import Data.Algorithm.Diff
 
 fpToText = format fp
 fpToString = T.unpack . format fp
@@ -23,3 +24,11 @@ replaceOne pattern substitution text
   | otherwise = T.concat [front, substitution, T.drop (T.length pattern) back] 
     where
       (front, back) = T.breakOn pattern text
+
+renderDiff :: (Foldable t, Show a) => t (Diff a) -> String
+renderDiff x = concatMap renderDiffVal x
+
+renderDiffVal :: Show a => Diff a -> String
+renderDiffVal (Both a _a) = "   " ++ show a ++ "\n"
+renderDiffVal (First a)   = " - " ++ show a ++ "\n"
+renderDiffVal (Second a)  = " + " ++ show a ++ "\n"

@@ -83,6 +83,7 @@ executable genstm
     , cereal
     , containers
     , data-stm32
+    , Diff
     , foldl
     , hxt
     , hxt-xpath
