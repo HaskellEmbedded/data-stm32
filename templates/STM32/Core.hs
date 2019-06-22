@@ -4,7 +4,8 @@ module {{ modns }}
   , core
   , cpu
   , fpu
-  , eabi
+  , floatabi
+  , freertosCore
   ) where
 
 --import Ivory.Tower.Config
@@ -33,8 +34,8 @@ core T = CortexM3
 
 freertosCore :: MCU -> String
 -- only these two match CM7/r0p1 freertos port
-freertosCore mcu | "STM32F74" `L.isPrefixOf` mcuName = "CM7F"
-freertosCore mcu | "STM32F75" `L.isPrefixOf` mcuName = "CM7F"
+freertosCore mcu | "STM32F74" `L.isPrefixOf` (mcuName mcu) = "CM7F"
+freertosCore mcu | "STM32F75" `L.isPrefixOf` (mcuName mcu) = "CM7F"
 freertosCore mcu | otherwise = coreStr $ core $ mcuFamily mcu
   where
    coreStr :: Core -> String
