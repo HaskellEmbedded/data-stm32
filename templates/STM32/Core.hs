@@ -61,7 +61,7 @@ fpu CortexM4F = "fpv4-sp-d16"
 fpu CortexM7F = "fpv5-sp-d16"
 
 -- -mfloat-abi for GCC
-eabi :: Core -> Maybe String
-eabi CortexM4F = Just "hard"
-eabi CortexM7F = Just "hard"
-eabi _ = Nothing
+floatabi :: Core -> Maybe String
+floatabi CortexM4F = Just "hard"
+floatabi CortexM7F = Just "hard"
+floatabi _ = Nothing
