@@ -1,5 +1,5 @@
 name:                ivory-bsp-stm32
-version:             0.1.0.0
+version:             0.1.2.3
 -- synopsis:
 description:         data-stm32 generated version of ivory-bsp-stm32
 license:             BSD3
