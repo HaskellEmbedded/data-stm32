@@ -27,6 +27,7 @@ core H7 = CortexM7F
 core L0 = CortexM0Plus
 core L1 = CortexM3
 core L4 = CortexM4F
+core L4Plus = CortexM4F
 core W = CortexM3
 core T = CortexM3
 
