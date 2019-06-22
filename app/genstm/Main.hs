@@ -539,6 +539,8 @@ writeHS namespace content = do
     fname = fromString $ T.unpack $ T.concat [snd sp, ".hs"]
     sp = T.breakOnEnd "." namespace
 
+assert :: MonadIO f => Text -> Bool -> f ()
+assert msg cond = unless cond $ die msg
 
 normalizeISRNames xs = map (\x -> x { interruptName = norm (interruptName x) }) xs
   where norm name = replace "_IRQ" ""  -- for F0 we have WWDG_IRQ so normalize these
