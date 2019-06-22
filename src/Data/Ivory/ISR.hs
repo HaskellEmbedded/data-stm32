@@ -11,6 +11,7 @@ import Data.List.Split (splitOn)
 import Data.Ord (comparing)
 import System.Exit
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
+import Data.Algorithm.Diff
 
 
 -- take a list of devices from one family,
@@ -19,14 +20,18 @@ import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 --
 -- use ppISRs to print these
 isrs :: [Device] -> [Interrupt]
-isrs devs = sortBy (comparing (interruptValue))
-          $ nubBy (\x y -> interruptValue x == interruptValue y)
-          $ getDevISRs
+isrs devs = getDevISRs
           $ head
           $ reverse
           $ sortBy (comparing (length . devicePeripherals)) devs
 
-getDevISRs Device{..} = concatMap periphInterrupts devicePeripherals
+getDevISRs :: Device -> [Interrupt]
+getDevISRs Device{..} =
+    sortBy (comparing (interruptValue))
+  $ nubBy (\x y -> interruptValue x == interruptValue y)
+  $ concatMap periphInterrupts devicePeripherals
+
+diffISRs = getDiffBy (\a b -> interruptValue  a == interruptValue b && interruptName a == interruptName b)
 
 -- 0xDEADCODE (allinone prototype)
 -- ^^ eats STM32F4*.svd
