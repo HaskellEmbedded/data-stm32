@@ -8,8 +8,10 @@ module {{ modns }}
   ) where
 
 --import Ivory.Tower.Config
+import qualified Data.List as L
 
 import Ivory.BSP.STM32.Family
+import Ivory.BSP.STM32.MCU
 
 data Core = CortexM0 | CortexM0Plus | CortexM3 | CortexM4F | CortexM7F
   deriving (Eq, Show)
@@ -27,6 +29,19 @@ core L1 = CortexM3
 core L4 = CortexM4F
 core W = CortexM3
 core T = CortexM3
+
+freertosCore :: MCU -> String
+-- only these two match CM7/r0p1 freertos port
+freertosCore mcu | "STM32F74" `L.isPrefixOf` mcuName = "CM7F"
+freertosCore mcu | "STM32F75" `L.isPrefixOf` mcuName = "CM7F"
+freertosCore mcu | otherwise = coreStr $ core $ mcuFamily mcu
+  where
+   coreStr :: Core -> String
+   coreStr CortexM0     = "CM0"
+   coreStr CortexM0Plus = "CM0"
+   coreStr CortexM3     = "CM3"
+   coreStr CortexM4F    = "CM4F"
+   coreStr CortexM7F    = "CM4F"
 
 -- -mcpu for GCC/LD
 cpu :: Core -> String
