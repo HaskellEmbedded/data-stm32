@@ -22,6 +22,7 @@ byFamily :: Family -> [(String, String)]
 {% for fam in fams %}
 byFamily {{ fam }} = attrs {{ fam }}.WWDG
 {% endfor %}
+byFamily f = error $ "Family not supported" ++ show f
 
 reset_handler :: String
 reset_handler = exceptionHandlerName Reset

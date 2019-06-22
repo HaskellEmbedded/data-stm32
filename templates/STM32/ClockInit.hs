@@ -17,3 +17,4 @@ init_clocks :: Family -> ClockConfig -> Def('[]':->())
 {% for fam in fams %}
 init_clocks {{ fam }} = {{ fam }}.init_clocks
 {% endfor %}
+init_clocks f = error $ "Family not supported" ++ show f

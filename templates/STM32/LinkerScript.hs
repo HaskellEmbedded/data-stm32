@@ -6,7 +6,6 @@ module {{ modns }}
 import Ivory.Artifact
 import Ivory.Artifact.Template
 import qualified Paths_ivory_bsp_stm32 as P
-import Ivory.BSP.STM32.Core
 import Ivory.BSP.STM32.Family
 import Ivory.BSP.STM32.MCU
 
