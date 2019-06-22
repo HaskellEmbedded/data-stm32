@@ -36,7 +36,6 @@ import Data.SVD hiding (svd, ppPeripheral)
 import Data.CMX
 import Data.STM32.Types
 
-import Data.Serialize
 import Debug.Trace
 
 import Extract
@@ -49,8 +48,6 @@ import qualified Data.HashMap.Strict as H
 import Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import qualified Data.Vector as V
-
-import Paths_data_stm32
 
 lit = Literal
 litList = List . V.fromList . map lit
@@ -72,10 +69,6 @@ fixAndPack = T.replace "usart" "uart"
  . T.replace "USART" "UART"
  . T.pack
 
-svdsFamily :: Family -> [(String, Device)] -> [Device]
-svdsFamily f = map snd . filter (\(name, svd) -> (show f) `L.isPrefixOf` name)
-
-isrsFamily f = isrs . (svdsFamily f)
 
 getTemplatesPath = do
   mPath <- need "TEMPLATES_PATH"
@@ -95,9 +88,13 @@ loadDatabases = do
     Just p -> return $ fromText p
   svds <- extractSVDCached dbPath
   cmxs <- extractCMXCached dbPath
-  return (cmxs, svds)
+  let
+    supp = filterSupported cmxs
+    cmxsWithSVD = filterHavingSVD (supp, svds)
+    noSVD = (cmxDevices supp L.\\ cmxDevices cmxsWithSVD)
+  return DB{..}
 
-dbStats (cmxs, svds) nosvd = do
+dbStats DB{..} = do
   let hasSVD = length $ catMaybes $ map (getSVDMaybe svds . mcuRefName) (cmxDevices cmxs)
       tot = length $ cmxDevices cmxs
       fams = length $ cmxFamilies cmxs
@@ -111,8 +108,8 @@ dbStats (cmxs, svds) nosvd = do
     , "CMX devices with SVD files " ++ (show $ hasSVD)
     , "CMX devices missing SVD files " ++ (show $ tot - hasSVD)
     , "SVD file names " ++ (show $ map fst svds)
-    , "Supported but missing SVD files " ++ show (map mcuRefName nosvd)
-    ]
+    , "Supported but missing SVD files "
+    ] ++ unlines (map mcuRefName noSVD)
 
 filterHavingSVD (cmxs, svds) = M.map (filter (isJust . getSVDMaybe svds . mcuRefName)) cmxs
 
@@ -128,7 +125,15 @@ getSVDMaybe svds m = case svdByMcu svds m of
            x:xs -> Just $ snd x
 
 
+getSVD :: [(String, Device)] -> String -> Device
 getSVD svds = fromJust . getSVDMaybe svds
+
+data DB = DB {
+    cmxs :: M.Map Family [MCU]
+  , cmxsWithSVD :: M.Map Family [MCU]
+  , noSVD :: [MCU]
+  , svds :: [(String, Device)]
+  } deriving (Show)
 
 main = do
   cd "data"
@@ -142,24 +147,17 @@ main = do
   mktree "src"
   mktree "support"
 
-  (cmxs, svds) <- loadDatabases
-
-  let
-    supp = filterSupported cmxs
-    cmxsWithSVD = filterHavingSVD (supp, svds)
-    nosvd = (cmxDevices supp L.\\ cmxDevices cmxsWithSVD)
-
-  dbStats (cmxs, svds) nosvd
-  -- use filtered cmxsWithSVD from now on
+  db <- loadDatabases
+  dbStats db
 
   --for STM32XY/Periph/Regs
   --print $ mergedRegistersForPeriph "USART" svds
 
   cd dir
-  stm32toplevel
-  stm32periphs (getSVD svds)
-  stm32devs (getSVD svds)
-  stm32families svds cmxsWithSVD
+  stm32toplevel db
+  stm32periphs db
+  stm32devs db
+  stm32families db
 
   -- cabal file and support files
   cd dir
@@ -186,7 +184,9 @@ thesePlease =
   , "F427"
   , "L432" ]
 
-stm32devs get = do
+stm32devs DB{..} = do
+  let
+    get = getSVD svds
   forM (map (\x -> (x, get $ "STM32" ++ x)) thesePlease) $ \(namePart, dev) -> do
     putStrLn $ "Processing device " ++ (show (deviceName dev))
     -- memMap
@@ -226,10 +226,11 @@ stm32devs get = do
 
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
 -- for all supportedPeriphs
-stm32periphs get = do
+stm32periphs DB{..} = do
   -- base non-versioned peripherals on this devices svd
   let nonVersionedBase = "STM32F765"
       nVDev = get nonVersionedBase
+      get = getSVD svds
 
   forM_ supportedPeriphs $ \p -> do
     case filter ((==periph2svdName p) . periphGroupName) $ devicePeripherals nVDev of
@@ -488,7 +489,7 @@ procPeriph p ver x = trace (show $ mapRegs (continuityCheck . regFields) lal) la
 filterRegsByName f x = x { periphRegisters = filter (f . regName) $ periphRegisters x }
 
 -- common STM32 support (src/Ivory/BSP/STM32 and src/Ivory/BSP/ARMv7M)
-stm32toplevel = do
+stm32toplevel _db = do
   m <- genMCUData "devices.data"
   -- MCU
   let ctx = [ ("devices", lit $ T.pack m) ]
@@ -547,20 +548,25 @@ renameDups xs = reverse $ snd $ foldl f (S.empty, []) xs
   where f (seen, result) item | S.member (interruptName item) seen = f (seen, result) (item { interruptName = (interruptName item) ++ "_" })
                               | otherwise                          = (S.insert (interruptName item) seen, item:result)
 
+svdsFamily :: DB -> Family -> [Device]
+svdsFamily DB{..} f = map (getSVD svds . mcuRefName) $ fromJust $ M.lookup f cmxsWithSVD
 
--- Right f103 <- parseSVD "data/STMicro/STM32F103xx.svd"
-
-stm32families svds _cmxs = forM supportedFamilies $ \f -> do
+stm32families db = do
+  forM supportedFamilies $ \f -> do
     putStrLn $ "Processing family " ++ (show f)
+    putStrLn $ let svdSet = S.fromList $ svdsFamily db f in
+         "Distinct SVDs for this family "
+      ++ (show . S.size $ svdSet)
+      ++ " "
+      ++ (show . S.map deviceName $ svdSet)
     let
-      fns = "STM32" ++ (show f)
-      svdsFam = svdsFamily f svds
       isr = replaceOne "|" "="
           $ T.pack
           $ ppISRs
           $ normalizeISRNames
           $ renameDups
-          $ isrsFamily f svds
+          $ isrs
+          $ svdsFamily db f
 
     template [ ("isr", lit isr) ]
       ("STM32" <> tshow f <> ".Interrupt")
