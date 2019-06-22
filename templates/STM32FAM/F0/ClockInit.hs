@@ -35,6 +35,8 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     setField rcc_cfgr_ppre  rcc_pprex_none
     setField rcc_cfgr_hpre  rcc_hpre_none
     setField rcc_cfgr_sw    rcc_sysclk_hsi
+    -- XXX
+    -- setField rcc_cfgr_pllsrc   -- use HSI
 
   -- Reset HSEOn, CSSOn, PLLOn bits
   modifyReg rcc_reg_cr $ do
@@ -53,8 +55,9 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     clearBit rcc_cir_lserdyie
     clearBit rcc_cir_lsirdyie
   case clockconfig_source cc of
-    Internal -> return ()
-    External _ -> do
+    HSI8 -> return ()
+    -- HSI48 for some
+    HSE _ -> do
       -- Enable HSE
       modifyReg rcc_reg_cr $ setBit rcc_cr_hseon
 
@@ -66,19 +69,22 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
           store hserdy true
           breakOut
 
-
       success <- deref hserdy
-      --when success $ do
+      {-- XXX
+      when success $ do
         -- Set PLL to use external clock:
-        --modifyReg rcc_reg_pllcfgr $ do
-        --  setBit rcc_pllcfgr_pllsrc -- use HSE
+        modifyReg rcc_reg_cfgr $ do
+          setBit rcc_cfgr_pllsrc -- use HSE
+      --}
 
-      -- Handle exception case when HSERDY fails.
+         -- Handle exception case when HSERDY fails.
       unless success $ do
         comment "waiting for HSERDY failed: check your hardware for a fault"
         comment "XXX handle this exception case with a breakpoint or reconfigure pll values for hsi"
         assert success
         forever $ return ()
+
+    invalidSource -> error $ "Invalid clock source " ++ (show invalidSource)
 
   -- Select regulator voltage output scale 1 mode
   modifyReg rcc_reg_apb1enr $ setBit rcc_apb1enr_pwren
@@ -90,7 +96,6 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
   -- Configure main PLL:
   modifyReg rcc_reg_cfgr $ do
-    --setBit rcc_cfgr_pllsrc
     setField rcc_cfgr_pllxtpre m -- div
     setField rcc_cfgr_pllmul n   -- mul
 
@@ -116,9 +121,6 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
   where
   cc = clockconfig
-  --cc = if clockPLL48ClkHz clockconfig == 48 * 1000 * 1000
-  --        then clockconfig
-  --        else error "ClockConfig invalid: 48MHz peripheral clock is wrong speed"
   mm = pll_m (clockconfig_pll cc)
   m = if mm > 1 && mm < 64
          then fromRep (fromIntegral mm)
@@ -127,18 +129,6 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
   n = if nn > 191 && nn < 433
          then fromRep (fromIntegral nn)
          else error "platformClockConfig pll_n not in valid range"
-  {-
-  p = case pll_p (clockconfig_pll cc) of
-        2 -> rcc_pllp_div2
-        4 -> rcc_pllp_div4
-        6 -> rcc_pllp_div6
-        8 -> rcc_pllp_div8
-        _ -> error "platformClockConfig pll_p not in valid range"
-  qq = pll_q (clockconfig_pll cc)
-  q = if qq > 1 && qq < 16
-         then fromRep (fromIntegral qq)
-         else error "platformClockConfig pll_q not in valid range"
-  -}
   hpre_divider = case clockconfig_hclk_divider cc of
     1   -> rcc_hpre_none
     2   -> rcc_hpre_div2

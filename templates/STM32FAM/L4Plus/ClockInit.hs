@@ -30,20 +30,14 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
            "pclk2:  "  ++ (show (clockPClk2Hz cc)))
 
   -- RCC clock config to default reset state
-  modifyReg rcc_reg_cr $ setBit rcc_cr_hsion
+  -- we use MSI during init
+  modifyReg rcc_reg_cr $ setBit rcc_cr_msion
+
   modifyReg rcc_reg_cfgr $ do
-    {-
-    setField rcc_cfgr_mco2     rcc_mcox_sysclk
-    setField rcc_cfgr_mco2pre rcc_mcoxpre_none
-    setField rcc_cfgr_mco1pre rcc_mcoxpre_none
-    clearBit rcc_cfgr_i2ssrc
-    setField rcc_cfgr_mco1     rcc_mcox_sysclk
-    setField rcc_cfgr_rtcpre   (fromRep 0)
-    -}
     setField rcc_cfgr_ppre2    rcc_pprex_none
     setField rcc_cfgr_ppre1    rcc_pprex_none
     setField rcc_cfgr_hpre     rcc_hpre_none
-    setField rcc_cfgr_sw       rcc_sysclk_hsi
+    setField rcc_cfgr_sw       rcc_sysclk_l4_msi
 
   -- Reset HSEOn, CSSOn, PLLOn bits
   modifyReg rcc_reg_cr $ do
@@ -51,31 +45,43 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     clearBit rcc_cr_csson
     clearBit rcc_cr_pllon
 
-  -- Reset PLLCFGR register
-  modifyReg rcc_reg_pllcfgr $ do
-    setField rcc_pllcfgr_pllq   (fromRep 2)
-    setField rcc_pllcfgr_pllsrc rcc_pllsrc_off -- ??? (was: use HSI)
-    -- 7 or 17??
-    -- 0: PLLP = 7
-    -- 1: PLLP = 17
-    --setField rcc_pllcfgr_pllp   rcc_pllp_div2
-    setField rcc_pllcfgr_plln   (fromRep 192)
-    setField rcc_pllcfgr_pllm   (fromRep 16)
-
   -- Reset HSEBYP bit
   modifyReg rcc_reg_cr $ clearBit rcc_cr_hsebyp
 
   -- Disable all interrupts
   modifyReg rcc_reg_cir $ do
-    --clearBit rcc_cir_plli2s_rdyie
+    clearBit rcc_cir_hsi48rdyie
+    clearBit rcc_cir_lsecssie
+    clearBit rcc_cir_pllsai2rdyie
+    clearBit rcc_cir_pllsai1rdyie
     clearBit rcc_cir_pllrdyie
     clearBit rcc_cir_hserdyie
     clearBit rcc_cir_hsirdyie
     clearBit rcc_cir_lserdyie
     clearBit rcc_cir_lsirdyie
+
   case clockconfig_source cc of
-    Internal -> return ()
-    External _ -> do
+    HSI16 -> do
+      modifyReg rcc_reg_cr $ do
+        setBit rcc_cr_hsion
+      modifyReg rcc_reg_pllcfgr $ do
+        setField rcc_pllcfgr_pllsrc rcc_pllsrc_hsi16
+    MSI freq -> do
+      modifyReg rcc_reg_cr $ do
+        setBit rcc_cr_msion
+
+      modifyReg rcc_reg_cr $ do
+        setField rcc_cr_msirange (freqToMSIRange freq)
+        -- MSI range is provided by MSIRANGE
+        setBit rcc_cr_msirgsel
+
+      forever $ do
+        cr <- getReg rcc_reg_cr
+        when (bitToBool (cr #. rcc_cr_msirdy)) $ breakOut
+
+      modifyReg rcc_reg_pllcfgr $ do
+        setField rcc_pllcfgr_pllsrc rcc_pllsrc_msi
+    HSE _ -> do
       -- Enable HSE
       modifyReg rcc_reg_cr $ setBit rcc_cr_hseon
 
@@ -86,6 +92,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
         when (bitToBool (cr #. rcc_cr_hserdy)) $ do
           store hserdy true
           breakOut
+
 
       success <- deref hserdy
       when success $ do
@@ -100,9 +107,23 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
         assert success
         forever $ return ()
 
-  -- Select regulator voltage output scale 1 mode
+    invalidSource -> error $ "Invalid clock source " ++ (show invalidSource)
+
+  -- Select regulator voltage output scale 1 hi-perf mode (default is scale 2 mod, low power mode)
   modifyReg rcc_reg_apb1enr1 $ setBit rcc_apb1enr1_pwren
-  --modifyReg pwr_reg_cr1 $ setBit pwr_cr1_vos
+  modifyReg pwr_reg_cr1 $ setField pwr_cr1_vos (fromRep 1)
+
+   -- Wait for voltage regulator to switch modes
+  forever $ do
+    sr <- getReg pwr_reg_sr2
+    when (bitToBool (sr #. pwr_sr2_vosf) ==? false) $ breakOut
+
+  -- Configure flash prefetch, instruction cache, data cache, 4 wait states
+  modifyReg flash_reg_acr $ do
+    setBit flash_acr_prften
+    setBit flash_acr_icen
+    setBit flash_acr_dcen
+    setField flash_acr_latency (fromRep 4)
 
   -- Select bus clock dividers
   modifyReg rcc_reg_cfgr $ do
@@ -114,9 +135,11 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
   modifyReg rcc_reg_pllcfgr $ do
     setField rcc_pllcfgr_pllm m
     setField rcc_pllcfgr_plln n
-    -- not RCC_PLLP but a single bit only
-    --setField rcc_pllcfgr_pllp p
+    setField rcc_pllcfgr_pllr r
+    setField rcc_pllcfgr_pllp (boolToBit p)
     setField rcc_pllcfgr_pllq q
+    -- Main PLL PLLCLK output enable
+    setBit rcc_pllcfgr_pllren
 
   -- Enable main PLL:
   modifyReg rcc_reg_cr $ setBit rcc_cr_pllon
@@ -125,45 +148,63 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     cr <- getReg rcc_reg_cr
     when (bitToBool (cr #. rcc_cr_pllrdy)) $ breakOut
 
-  -- Configure flash prefetch, instruction cache, data cache, wait state 5
-  modifyReg flash_reg_acr $ do
-    setBit flash_acr_prften
-    setBit flash_acr_icen
-    setBit flash_acr_dcen
-    setField flash_acr_latency (fromRep 5)
-
   -- Select main PLL as system clock source
   modifyReg rcc_reg_cfgr $ do
-    setField rcc_cfgr_sw rcc_sysclk_pll
+    setField rcc_cfgr_sw rcc_sysclk_l4_pll
 
   -- Spin until main PLL is ready:
   forever $ do
     cfgr <- getReg rcc_reg_cfgr
-    when ((cfgr #. rcc_cfgr_sws) ==? rcc_sysclk_pll) $ breakOut
+    when ((cfgr #. rcc_cfgr_sws) ==? rcc_sysclk_l4_pll) $ breakOut
 
   where
   cc = clockconfig
-  --cc = if clockPLL48ClkHz clockconfig == 48 * 1000 * 1000
-  --        then clockconfig
-  --        else error "ClockConfig invalid: 48MHz peripheral clock is wrong speed"
-  mm = pll_m (clockconfig_pll cc)
-  m = if mm > 1 && mm < 64
-         then fromRep (fromIntegral mm)
-         else error "platformClockConfig pll_m not in valid range"
-  nn = pll_n (clockconfig_pll cc)
-  n = if nn > 191 && nn < 433
+  mm = pll_l4_m (clockconfig_pll cc)
+  m = if mm >= 1 && mm <= 8
+         -- we substract 1 from PLLM to get
+         -- 000: PLLM = 1
+         -- 111: PLLM = 8
+         then fromRep (fromIntegral $ mm - 1)
+         else error "platformClockConfig pll_l4_m not in valid range"
+  nn = pll_l4_n (clockconfig_pll cc)
+  n = if nn >= 8 && nn <= 86
          then fromRep (fromIntegral nn)
-         else error "platformClockConfig pll_n not in valid range"
-  p = case pll_p (clockconfig_pll cc) of
-        2 -> rcc_pllp_div2
-        4 -> rcc_pllp_div4
-        6 -> rcc_pllp_div6
-        8 -> rcc_pllp_div8
-        _ -> error "platformClockConfig pll_p not in valid range"
-  qq = pll_q (clockconfig_pll cc)
-  q = if qq > 1 && qq < 16
-         then fromRep (fromIntegral qq)
-         else error "platformClockConfig pll_q not in valid range"
+         else error "platformClockConfig pll_l4_n not in valid range"
+
+  p = case pll_l4_p (clockconfig_pll cc) of
+        7 -> false
+        17 -> true
+        _ -> error  "platformClockConfig pll_l4_p not in valid range, only 7 and 17 are valid"
+
+  q = case pll_l4_q (clockconfig_pll cc) of
+        2 -> rcc_pllq_div2
+        4 -> rcc_pllq_div4
+        6 -> rcc_pllq_div6
+        8 -> rcc_pllq_div8
+        _ -> error "platformClockConfig pll_l4_q not in valid range"
+
+  r = case pll_l4_r (clockconfig_pll cc) of
+        2 -> rcc_pllr_div2
+        4 -> rcc_pllr_div4
+        6 -> rcc_pllr_div6
+        8 -> rcc_pllr_div8
+        _ -> error "platformClockConfig pll_l4_r not in valid range"
+
+  freqToMSIRange freq = case freq of
+    100000   -> rcc_msirange_100khz
+    200000   -> rcc_msirange_200khz
+    400000   -> rcc_msirange_400khz
+    800000   -> rcc_msirange_800khz
+    1000000  -> rcc_msirange_1mhz
+    2000000  -> rcc_msirange_2mhz
+    4000000  -> rcc_msirange_4mhz
+    8000000  -> rcc_msirange_8mhz
+    16000000 -> rcc_msirange_16mhz
+    24000000 -> rcc_msirange_24mhz
+    32000000 -> rcc_msirange_32mhz
+    48000000 -> rcc_msirange_48mhz
+    _        -> error $ "Invalid frequency for MSIRANGE " ++ show freq
+
   hpre_divider = case clockconfig_hclk_divider cc of
     1   -> rcc_hpre_none
     2   -> rcc_hpre_div2
@@ -191,5 +232,4 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     8  -> rcc_pprex_div8
     16 -> rcc_pprex_div16
     _  -> error "platformClockConfig pclk2 divider not in valid range"
-  {-
-  -}
+

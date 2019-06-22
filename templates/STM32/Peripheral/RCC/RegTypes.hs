@@ -20,12 +20,6 @@ import Ivory.Language
  | rcc_pllp_div6      as 2
  | rcc_pllp_div8      as 3
 
- bitdata RCC_PLLR     :: Bits 2
- = rcc_pllr_div2      as 0
- | rcc_pllr_div4      as 1
- | rcc_pllr_div6      as 2
- | rcc_pllr_div8      as 3
-
  bitdata RCC_MCOx     :: Bits 2
  = rcc_mcox_sysclk    as 0
  | rcc_mcox_plli2s    as 1
@@ -62,16 +56,43 @@ import Ivory.Language
   | rcc_sysclk_hse    as 1
   | rcc_sysclk_pll    as 2
 
+ -- L4
  bitdata RCC_SYSCLK_L4   :: Bits 2
   = rcc_sysclk_l4_msi    as 0
   | rcc_sysclk_l4_hsi    as 1
   | rcc_sysclk_l4_hse    as 2
   | rcc_sysclk_l4_pll    as 3
 
- -- F1
- bitdata RCC_PLLSRC   :: Bits 2
+ bitdata RCC_PLLQ_L4     :: Bits 2
+ = rcc_pllq_div2      as 0
+ | rcc_pllq_div4      as 1
+ | rcc_pllq_div6      as 2
+ | rcc_pllq_div8      as 3
+
+ bitdata RCC_PLLR_L4     :: Bits 2
+ = rcc_pllr_div2      as 0
+ | rcc_pllr_div4      as 1
+ | rcc_pllr_div6      as 2
+ | rcc_pllr_div8      as 3
+
+ bitdata RCC_PLLSRC_L4   :: Bits 2
   = rcc_pllsrc_off    as 0
   | rcc_pllsrc_msi    as 1
   | rcc_pllsrc_hsi16  as 2
   | rcc_pllsrc_hse    as 3
+
+ bitdata RCC_MSIRANGE_L4 :: Bits 4
+  = rcc_msirange_100khz as 0
+  | rcc_msirange_200khz as 1
+  | rcc_msirange_400khz as 2
+  | rcc_msirange_800khz as 3
+  | rcc_msirange_1mhz   as 4
+  | rcc_msirange_2mhz   as 5
+  | rcc_msirange_4mhz   as 6 -- reset value
+  | rcc_msirange_8mhz   as 7
+  | rcc_msirange_16mhz  as 8
+  | rcc_msirange_24mhz  as 9
+  | rcc_msirange_32mhz  as 10
+  | rcc_msirange_48mhz  as 11
+
 |]

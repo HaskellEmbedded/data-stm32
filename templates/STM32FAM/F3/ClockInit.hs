@@ -32,18 +32,12 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
   -- RCC clock config to default reset state
   modifyReg rcc_reg_cr $ setBit rcc_cr_hsion
   modifyReg rcc_reg_cfgr $ do
-    {-
-    setField rcc_cfgr_mco2     rcc_mcox_sysclk
-    setField rcc_cfgr_mco2pre rcc_mcoxpre_none
-    setField rcc_cfgr_mco1pre rcc_mcoxpre_none
-    clearBit rcc_cfgr_i2ssrc
-    setField rcc_cfgr_mco1     rcc_mcox_sysclk
-    setField rcc_cfgr_rtcpre   (fromRep 0)
-    -}
+    setField rcc_cfgr_mco      rcc_mcox_sysclk
     setField rcc_cfgr_ppre2    rcc_pprex_none
     setField rcc_cfgr_ppre1    rcc_pprex_none
     setField rcc_cfgr_hpre     rcc_hpre_none
     setField rcc_cfgr_sw       rcc_sysclk_hsi
+    clearBit rcc_cfgr_pllsrc  -- use HSI
 
   -- Reset HSEOn, CSSOn, PLLOn bits
   modifyReg rcc_reg_cr $ do
@@ -63,8 +57,8 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     clearBit rcc_cir_lserdyie
     clearBit rcc_cir_lsirdyie
   case clockconfig_source cc of
-    Internal -> return ()
-    External _ -> do
+    HSI8 -> return ()
+    HSE _ -> do
       -- Enable HSE
       modifyReg rcc_reg_cr $ setBit rcc_cr_hseon
 
@@ -78,12 +72,10 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
 
       success <- deref hserdy
-      {- XXX
       when success $ do
         -- Set PLL to use external clock:
-        modifyReg rcc_reg_pllcfgr $ do
-          setBit rcc_pllcfgr_pllsrc -- use HSE
-      -}
+        modifyReg rcc_reg_cfgr $ do
+          setBit rcc_cfgr_pllsrc -- use HSE
 
       -- Handle exception case when HSERDY fails.
       unless success $ do
@@ -91,6 +83,8 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
         comment "XXX handle this exception case with a breakpoint or reconfigure pll values for hsi"
         assert success
         forever $ return ()
+
+    invalidSource -> error $ "Invalid clock source " ++ (show invalidSource)
 
   -- Select regulator voltage output scale 1 mode
   modifyReg rcc_reg_apb1enr $ setBit rcc_apb1enr_pwren

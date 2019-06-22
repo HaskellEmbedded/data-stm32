@@ -4,7 +4,12 @@ module {{ modns }} where
 
 import Ivory.Tower.Config
 
-data ClockSource = External Integer | Internal deriving (Eq, Show)
+data ClockSource =
+    HSE Integer -- High speed external   (variable) (all)
+  | HSI8        -- High speed internal   8Mhz       (F1/F0/F3)
+  | HSI16       -- High speed internal   16Mhz      (rest)
+  | MSI Integer -- Medium speed internal (variable) (L4/L4+)
+  deriving (Eq, Show)
 
 data PLLFactor = PLLFactor
   { pll_m :: Integer -- divisor
@@ -39,8 +44,10 @@ pllFactor PLLFactorF1{..} x = (x `div` pll_div) * pll_mul
 pllFactor PLLFactorL4{..} x = (x `div` pll_l4_m) * pll_l4_n `div` pll_l4_r
 
 clockSourceHz :: ClockSource -> Integer
-clockSourceHz (External rate) = rate
-clockSourceHz Internal        = 16 * 1000 * 1000
+clockSourceHz (HSE rate) = rate
+clockSourceHz (MSI rate) = rate
+clockSourceHz HSI16      = 16 * 1000 * 1000
+clockSourceHz HSI8       = 8 * 1000 * 1000
 
 -- compute frequency of system clock from clock configuration
 clockSysClkHz :: ClockConfig -> Integer
@@ -70,7 +77,7 @@ clockPClkHz PClk2 = clockPClk2Hz
 -- HSE
 externalXtal :: Integer -> Integer -> ClockConfig
 externalXtal xtal_mhz sysclk_mhz = ClockConfig
-  { clockconfig_source = External (xtal_mhz * 1000 * 1000)
+  { clockconfig_source = HSE (xtal_mhz * 1000 * 1000)
   , clockconfig_pll    = PLLFactor
       { pll_m = xtal_mhz
       , pll_n = sysclk_mhz * p

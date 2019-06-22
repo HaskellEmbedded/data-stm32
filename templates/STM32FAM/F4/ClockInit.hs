@@ -71,8 +71,8 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     clearBit rcc_cir_lserdyie
     clearBit rcc_cir_lsirdyie
   case clockconfig_source cc of
-    Internal -> return ()
-    External _ -> do
+    HSI16 -> return ()
+    HSE _ -> do
       -- Enable HSE
       modifyReg rcc_reg_cr $ setBit rcc_cr_hseon
 
@@ -97,6 +97,8 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
         comment "XXX handle this exception case with a breakpoint or reconfigure pll values for hsi"
         assert success
         forever $ return ()
+
+    invalidSource -> error $ "Invalid clock source " ++ (show invalidSource)
 
   -- Select regulator voltage output scale 1 mode
   modifyReg rcc_reg_apb1enr $ setBit rcc_apb1enr_pwren
@@ -194,5 +196,3 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     8  -> rcc_pprex_div8
     16 -> rcc_pprex_div16
     _  -> error "platformClockConfig pclk2 divider not in valid range"
-  {-
-  -}

@@ -436,7 +436,7 @@ adjustRCCRegs x = cier2cir $ merges $ adjustFields fix x
     fix x | fieldName x `matchesRe` "MCO[0-9]?PRE"      = Just $ setFieldType "RCC_MCOxPre" x
     fix x | fieldName x `matchesRe` "MCO[0-9]?"         = Just $ setFieldType "RCC_MCOx" x
     fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK" x
-    fix x | fieldName x == "PLLSRC" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLSRC" x
+    -- sometimes we get PLLP0 PLLP1 and sometimes PLLP with size 2..
     fix x | fieldName x == "PLLP" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLP" x
     fix x | otherwise                                   = Just x
     merges x = mergeFields "PLLP" [0..1] (setFieldType "RCC_PLLP")
@@ -616,9 +616,12 @@ stm32families db = do
               , ("map" , lit $ T.pack $ ppMemMap $ getDevMemMap dev ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
 
-adjustPeriphFamily L4 x = adjustFields fix x
+adjustPeriphFamily l4s x | l4s == L4 || l4s == L4Plus = adjustFields fix x
   where
     fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK_L4" x
-    fix x | fieldName x == "PLLR" = Just $ setFieldType "RCC_PLLR" x
+    fix x | fieldName x == "PLLQ" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLQ_L4" x
+    fix x | fieldName x == "PLLR" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLR_L4" x
+    fix x | fieldName x == "PLLSRC" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLSRC_L4" x
+    fix x | fieldName x == "MSIRANGE" && fieldBitWidth x == 4 = Just $ setFieldType "RCC_MSIRANGE_L4" x
     fix x = Just x
 adjustPeriphFamily _ x = x
