@@ -581,7 +581,7 @@ stm32families db = do
 
     template [ ("isr", lit isr) ]
       ("STM32" <> tshow f <> ".Interrupt")
-       "STM32XX/Interrupt.hs"
+       "STM32FAM/Interrupt.hs"
 
     template [ ("isr", lit isr) ]
       ("STM32" <> tshow f <> ".ClockInit")

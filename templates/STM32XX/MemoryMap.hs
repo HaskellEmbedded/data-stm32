@@ -1,3 +1,0 @@
-module {{ modns }} where
-
-{{ mem }}
