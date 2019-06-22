@@ -426,19 +426,26 @@ renameGPIO x = x { periphName = fix $ periphName x }
     fix x | "gpio" `L.isPrefixOf` x = ("gpio"++) . drop 5 $ x
     fix x | otherwise = x
 
-adjustRCCRegs x = merges $ adjustFields fix x
+adjustRCCRegs x = cier2cir $ merges $ adjustFields fix x
   where
     fix x | "PPRE"    `L.isPrefixOf` (fieldName x)      = Just $ setFieldType "RCC_PPREx" x
     fix x | "HPRE"    `L.isPrefixOf` (fieldName x)      = Just $ setFieldType "RCC_HPRE" x
     fix x | fieldName x `matchesRe` "MCO[0-9]?PRE"      = Just $ setFieldType "RCC_MCOxPre" x
     fix x | fieldName x `matchesRe` "MCO[0-9]?"         = Just $ setFieldType "RCC_MCOx" x
     fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK" x
+    fix x | fieldName x == "PLLSRC" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLSRC" x
+    fix x | fieldName x == "PLLP" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLP" x
     fix x | otherwise                                   = Just x
     merges x = mergeFields "PLLP" [0..1] (setFieldType "RCC_PLLP")
              . mergeFields "PLLQ" [0..3] id
              . mergeFields "PLLN" [0..8] id
              . mergeFields "PLLM" [0..5] id
+             . mergeFields "SW"   [0..1] (setFieldType "RCC_SYSCLK")
+             . mergeFields "SWS"  [0..1] (setFieldType "RCC_SYSCLK")
              $ x
+    cier2cir = adjustRegs fixCier
+    fixCier r | regName r == "CIER" = r { regName = "CIR" }
+    fixCier r = r
 
 -- given a composed field like pllp0 pllp1 merge this into multiple Bits or specific type set by adjust function
 -- mergeFields "PLLP" [0..1] id will drop pllp1 and grow pllp0, renaming it to "pllp"
