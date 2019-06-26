@@ -75,15 +75,6 @@ nameToFamily n = maybe (error $ "Cannot read family: " ++ n) id $ readMaybe . fi
     fix "L4+" = "L4Plus"
     fix x     = x
 
--- families from cubemx that we have no svd files for
-noSVDs = [
-    G0
-  , G4
-  , WB
-  , TS
-  , MP1
-  ]
-
 core :: Family -> Core
 core F0     = CortexM0
 core F1     = CortexM3
