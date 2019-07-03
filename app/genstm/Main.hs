@@ -35,6 +35,7 @@ import Data.Ivory.Periph
 import Data.SVD hiding (svd, ppPeripheral)
 import Data.CMX
 import Data.STM32.Types
+import Data.STM32.Drivers
 
 import Debug.Trace
 

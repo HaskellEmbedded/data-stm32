@@ -33,6 +33,7 @@ library
       Data.Ivory.Periph
       Data.Ivory.Pretty
       Data.STM32.Types
+      Data.STM32.Drivers
       Data.SVD
       Data.SVD.Extract
       Data.SVD.Parse
