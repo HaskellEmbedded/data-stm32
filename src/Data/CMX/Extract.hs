@@ -73,23 +73,28 @@ extractCMXCached dbPath = do
     cachePath = "/tmp/data_stm32_cmx_cache"
 
 
-fixMCU x@MCU{..} = x { mcuIps = filterIps mcuIps }
+fixMCU x@MCU{..} = x { mcuIps = coerceIPVersions . filterIps $ mcuIps }
   where
+    coerceIPVersions = S.map (\ip -> ip { ipVersion = dropCMXSuffix $ ipVersion ip })
+    dropCMXSuffix x | "_Cube" `L.isSuffixOf` x = take (length x - length ("_Cube" :: String)) x
+    dropCMXSuffix x = x
     filterIps = S.filter (\IP{..} ->
-      not $ elem ipName [ "MBEDTLS"
-                        , "CORTEX-M7"
-                        , "GRAPHICS"
-                        , "GFXSIMULATOR"
-                        , "FATFS"
-                        , "LWIP"
-                        , "LIBJPEG"
-                        , "NVIC"
-                        , "TOUCHSENSING"
-                        , "PDM2PCM"
-                        , "FREERTOS"
-                        , "USB_DEVICE"
-                        , "USB_HOST"
-                        ])
+      not $ elem (map toUpper ipName)
+          [ "CORTEX-M7"
+          , "GRAPHICS"
+          , "GFXSIMULATOR"
+          , "FATFS"
+          , "FREERTOS"
+          , "LWIP"
+          , "LIBJPEG"
+          , "NVIC"
+          , "MBEDTLS"
+          , "OPENAMP"
+          , "PDM2PCM"
+          , "TOUCHSENSING"
+          , "USB_DEVICE"
+          , "USB_HOST"
+          ])
 
 checkMCU MCU{..} | mcuFlash == 0 && mcuFamily /= MP1 = error $ "MCU Flash is 0 @" ++ mcuRefName
 checkMCU MCU{..} | mcuRam   == 0 = error $ "MCU Ram is 0 @" ++ mcuRefName
