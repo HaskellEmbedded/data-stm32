@@ -6,16 +6,26 @@ module Data.CMX.Extract (
   , extractCMX
   , extractCMXCached
   , filterSupported
+  , uniqueIpNames
+  , uniqueIpVersions
+  , uniqueIps
+  , hasIp
+  , mcusWithIp
+  , ipPerMCUCounts
+  , ipFamilies
+  , fx
   ) where
 
 import Turtle
 import System.Exit
 import Prelude hiding (FilePath)
 import Control.Monad
+import qualified Data.List as L
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.ByteString.Char8 as B
 import Data.Serialize
+import Data.Char (toUpper)
 
 import Data.STM32.Types (Family(..), supportedFamilies)
 import Data.CMX.Types
@@ -84,3 +94,39 @@ fixMCU x@MCU{..} = x { mcuIps = filterIps mcuIps }
 checkMCU MCU{..} | mcuFlash == 0 && mcuFamily /= MP1 = error $ "MCU Flash is 0 @" ++ mcuRefName
 checkMCU MCU{..} | mcuRam   == 0 = error $ "MCU Ram is 0 @" ++ mcuRefName
 checkMCU x = x
+
+uniqueIps :: M.Map Family [MCU] -> S.Set (String, String)
+uniqueIps = S.fromList
+          . concatMap (map (\IP{..} -> (ipName, ipVersion))  . S.toList . mcuIps)
+          . cmxDevices
+
+uniqueIpNames :: M.Map Family [MCU] -> S.Set String
+uniqueIpNames = S.map fst . uniqueIps
+
+uniqueIpVersions :: M.Map Family [MCU] -> S.Set String
+uniqueIpVersions = S.map snd . uniqueIps
+
+hasIp :: (String, String) -> MCU -> Bool
+hasIp (ipname, ipversion) = not . S.null
+                          . S.filter (\ip -> ipName ip == ipname
+                                          && ipVersion ip == ipversion)
+                          . mcuIps
+
+mcusWithIp :: (String, String) -> M.Map Family [MCU] -> [MCU]
+mcusWithIp p = filter (hasIp p) . cmxDevices
+
+-- returns ip with the count of devices which use it
+ipPerMCUCounts :: M.Map Family [MCU] -> [((String, String), Int)]
+ipPerMCUCounts devs = reverse
+                    $ L.sortOn snd
+                    $ map (\p -> (p, length $ mcusWithIp p devs))
+                    $ S.toList (uniqueIps $ devs)
+
+-- returns ip with the list of families which use it
+ipFamilies :: M.Map Family [MCU] -> [((String, String), [Family])]
+ipFamilies devs = map (\ip -> (ip, L.nub $ map mcuFamily $ mcusWithIp ip devs))
+                $ S.toList $ uniqueIps devs
+
+-- filter devices starting with this prefix
+fx :: M.Map Family [MCU] -> String -> [MCU]
+fx db x = filter (\m -> x `L.isPrefixOf` (mcuRefName m)) . cmxDevices $ db
