@@ -65,12 +65,6 @@ periph2svdName :: Periph -> String
 periph2svdName UART = "USART"
 periph2svdName x = show x
 
--- crap
-fixAndPack = T.replace "usart" "uart"
- . T.replace "USART" "UART"
- . T.pack
-
-
 getTemplatesPath = do
   mPath <- need "TEMPLATES_PATH"
   case mPath of
@@ -246,7 +240,7 @@ stm32periphs DB{..} = do
             let
                 res = ppPeriphRegs new
                 ns = "STM32.Peripheral." <> tshow p <> ".Regs"
-                ctx = [ ("regs", lit $ fixAndPack res)
+                ctx = [ ("regs", lit $ T.pack res)
                       , ("imports", lit "") ]
                       -- empty for CAN
                       -- "import STM32.Peripheral." <> tshow p <> ".RegTypes" ) ]
@@ -256,8 +250,8 @@ stm32periphs DB{..} = do
             -- peripheral definition
             let ns = "STM32.Peripheral." <> tshow p <> ".Peripheral"
                 ctx = [ ("type", lit $ tshow p)
-                      , ("bitDataRegs", lit $ fixAndPack $ ppBitDataRegs newP)
-                      , ("bitDataRegsMk", lit $ fixAndPack $ ppBitDataRegsMk newP)
+                      , ("bitDataRegs", lit $ T.pack $ ppBitDataRegs newP)
+                      , ("bitDataRegsMk", lit $ T.pack $ ppBitDataRegsMk newP)
                       ]
             template ctx ns ("STM32/Peripheral/" <> tshow p <> "/Peripheral.hs")
 
@@ -279,7 +273,7 @@ stm32periphs DB{..} = do
               let
                   res = ppPeriphRegs new
                   ns = "STM32.Peripheral." <> tshow p <> tshow ver <> ".Regs"
-                  ctx = [ ("regs", lit $ fixAndPack res)
+                  ctx = [ ("regs", lit $ T.pack res)
                         , ("imports", lit $ "import Ivory.BSP.STM32.Peripheral." <> tshow p <> versionedRegTypes p ver <> ".RegTypes" ) ]
               template ctx ns "STM32/Peripheral/X/Regs.hs"
 
@@ -310,8 +304,8 @@ stm32periphs DB{..} = do
                -- peripheral definition
               let ns = "STM32.Peripheral." <> (tshow p <> tshow ver) <> ".Peripheral"
                   ctx = [ ("type", lit $ tshow p)
-                        , ("bitDataRegs", lit $ fixAndPack $ ppBitDataRegs new)
-                        , ("bitDataRegsMk", lit $ fixAndPack $ ppBitDataRegsMk new)
+                        , ("bitDataRegs", lit $ T.pack $ ppBitDataRegs new)
+                        , ("bitDataRegsMk", lit $ T.pack $ ppBitDataRegsMk new)
                         , ("version", lit $ tshow ver)
                         ]
               template ctx ns ("STM32/Peripheral/" <> (tshow p <> tshow ver) <> "/Peripheral.hs")
