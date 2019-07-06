@@ -131,6 +131,9 @@ data DB = DB {
   } deriving (Show)
 
 main = do
+  seesData <- testdir "data"
+  unless seesData $ error "Directory ./data not found, running from correct directory?"
+
   cd "data"
   dir <- pwd
 
