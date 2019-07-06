@@ -33,7 +33,7 @@ ppReg Register{..} =
   <> (blue $ string regName)
   <+> (white $ ppHex regAddressOffset)
   <+> (cyan $ char '-' <+> (string regDescription))
-  <$$> indent 2 (ppList ppField (procFields regFields))
+  <$$> indent 2 (ppList ppField regFields)
 
 ppIvoryReg Peripheral{..} Register{..} =
   hardline
@@ -42,9 +42,9 @@ ppIvoryReg Peripheral{..} Register{..} =
   <> (red $ string "[ivory|\n")
   <+> (string "bitdata ")
   <> (blue $ string $ upcaseRegName)
-  <+> (string $ ":: Bits 32 = ")
+  <+> (string $ ":: Bits " ++ (show regSize) ++ " = ")
   <> (blue $ string lowcaseRegName)
-  <$$> indent 2 ((vcat $ zipWith (<+>) pattern (ppField <$> procFields (fmap (prefixRegField $ lowcaseRegName ++ "_") regFields)))
+  <$$> indent 2 ((vcat $ zipWith (<+>) pattern (ppField <$> fmap (prefixRegField $ lowcaseRegName ++ "_") regFields))
                   <$$> (string "}"))
   <$$> (red $ string "|]")
   <$$> mkPeriph

@@ -481,14 +481,14 @@ filterByPeriph _    _        x = x
 
 checkPeriphRegsContinuity p new = do
   assert ("Register of " <> (tshow p) <> " is NOT continuous")
-    $ and $ mapRegs (continuityCheck . regFields) new
+    $ and $ mapRegs continuityCheck new
 
 -- toplevel kindof
 procPeriph p ver x = do
   checkPeriphRegsContinuity p new
   return new
   where
-    new = adjustRegs (\r -> r { regFields = procFields $ regFields r})
+    new = adjustRegs (\r -> r { regFields = procFields r})
         $ filterByPeriph p ver x
 
 -- Special driver/peripheral regs versioning treatment

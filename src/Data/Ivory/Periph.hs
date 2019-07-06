@@ -34,7 +34,7 @@ ppIvoryReg Peripheral{..} r@Register{..} withDefs =
   <>   (red $ string "[ivory|\n")
   <+>  (string "bitdata ")
   <>   (blue $ string upcaseRegName)
-  <+>  (string $ ":: Bits 32 = ")
+  <+>  (string $ ":: Bits " ++ (show regSize) ++ " = ")
   <>   (blue $ string lowcaseRegName)
   <$$> indent 2 ( encloseStack "{" "}" "," (ppField maxFieldLength <$> prefixed))
   <$$> (red $ string "|]")

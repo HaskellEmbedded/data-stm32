@@ -93,7 +93,7 @@ toAccessType x = error $ "Unable to read AccessType" ++ x
 -- |Find holes in registers and create corresponding reserved fields for these
 --
 -- First finds missing missing bits and then merges them to single reserved field
-procFields fields = reverse $ sortByOffset (fields ++ missingAsReserved)
+procFields Register{..} = reverse $ sortByOffset (regFields ++ missingAsReserved)
   where
     missingAsReserved = reserved $ conts $ Set.toList missing
 
@@ -105,9 +105,9 @@ procFields fields = reverse $ sortByOffset (fields ++ missingAsReserved)
 
     missing = all `Set.difference` existing
 
-    all = Set.fromList [0..31]
+    all = Set.fromList [0..(regSize - 1)]
 
-    existing = Set.fromList $ flip concatMap (sortByOffset fields) $
+    existing = Set.fromList $ flip concatMap (sortByOffset regFields) $
       \Field{..} -> [fieldBitOffset .. (fieldBitOffset + fieldBitWidth - 1)]
 
     sortByOffset = sortOn fieldBitOffset
@@ -118,8 +118,8 @@ cont (x:xs)  = [x]
 cont [] = []
 
 -- walk processed register fields top to bottom
--- checking that the register is exactly 32 bits
-continuityCheck fields = go fields 32
+-- checking that the register is exactly n bits long
+continuityCheck Register{..} = go regFields regSize
   where
   go [] 0 = True
   go (x:xs) remainingBits | fieldBitOffset x + fieldBitWidth x == remainingBits = go xs (remainingBits - fieldBitWidth x)
