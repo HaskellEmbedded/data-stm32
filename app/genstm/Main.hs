@@ -52,7 +52,7 @@ import qualified Data.Vector as V
 
 lit = Literal
 litList = List . V.fromList . map lit
-litObj x = List . V.fromList $ [ elemToObj e isFirst | (e, isFirst) <- zip x [False, True ..] ]
+litObj x = List . V.fromList $ [ elemToObj e isFirst | (e, isFirst) <- zip x (False: [True, True ..]) ]
   where
     elemToObj e isFirst = Object (H.fromList [ ("prefix", if isFirst then "|" else " "), ("version", e) ])
 
