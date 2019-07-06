@@ -489,7 +489,7 @@ checkPeriphRegsContinuity p new = do
 -- toplevel kindof
 procPeriph p ver x = do
   checkPeriphRegsContinuity p new
-  return new
+  return $ new { periphName = show p }
   where
     new = adjustRegs (\r -> r { regFields = procFields r})
         $ filterByPeriph p ver x
