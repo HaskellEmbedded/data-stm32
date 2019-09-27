@@ -11,22 +11,23 @@ data ClockSource =
   | MSI Integer -- Medium speed internal (variable) (L4/L4+)
   deriving (Eq, Show)
 
-data PLLFactor = PLLFactor
-  { pll_m :: Integer -- divisor
-  , pll_n :: Integer -- multiplier
-  , pll_p :: Integer -- divisor for system clock
-  , pll_q :: Integer -- divisor for 48MHz clocks
+data PLLFactor =
+    PLLFactorMNP         -- common for F4,F7 series
+  { pll_m :: Integer     -- divisor
+  , pll_n :: Integer     -- multiplier
+  , pll_p :: Integer     -- divisor for system clock
+  , pll_q :: Integer     -- divisor for 48MHz clocks
   }
-  | PLLFactorF1
+  | PLLFactorMulDiv      -- F0,F1,F3 series
   { pll_mul :: Integer
   , pll_div :: Integer
   }
-  | PLLFactorL4
-  { pll_l4_m :: Integer -- divisor
-  , pll_l4_n :: Integer -- multiplier
-  , pll_l4_p :: Integer -- divisor for PLLP output
-  , pll_l4_q :: Integer -- divisor for PLLQ output
-  , pll_l4_r :: Integer -- divisor for system clock
+  | PLLFactorMNR         -- G0,G4,L4,L4+ series
+  { pll_mnr_m :: Integer -- divisor
+  , pll_mnr_n :: Integer -- multiplier
+  , pll_mnr_p :: Integer -- divisor for PLLP output
+  , pll_mnr_q :: Integer -- divisor for PLLQ output
+  , pll_mnr_r :: Integer -- divisor for system clock
   } deriving (Eq, Show)
 
 data ClockConfig =
@@ -39,9 +40,9 @@ data ClockConfig =
     } deriving (Eq, Show)
 
 pllFactor :: PLLFactor -> Integer -> Integer
-pllFactor PLLFactor{..}   x = (x `div` pll_m) * pll_n `div` pll_p
-pllFactor PLLFactorF1{..} x = (x `div` pll_div) * pll_mul
-pllFactor PLLFactorL4{..} x = (x `div` pll_l4_m) * pll_l4_n `div` pll_l4_r
+pllFactor PLLFactorMNP{..}   x = (x `div` pll_m) * pll_n `div` pll_p
+pllFactor PLLFactorMulDiv{..} x = (x `div` pll_div) * pll_mul
+pllFactor PLLFactorMNR{..} x = (x `div` pll_mnr_m) * pll_mnr_n `div` pll_mnr_r
 
 clockSourceHz :: ClockSource -> Integer
 clockSourceHz (HSE rate) = rate
@@ -75,10 +76,11 @@ clockPClkHz PClk1 = clockPClk1Hz
 clockPClkHz PClk2 = clockPClk2Hz
 
 -- HSE
+-- F4 specific
 externalXtal :: Integer -> Integer -> ClockConfig
 externalXtal xtal_mhz sysclk_mhz = ClockConfig
   { clockconfig_source = HSE (xtal_mhz * 1000 * 1000)
-  , clockconfig_pll    = PLLFactor
+  , clockconfig_pll    = PLLFactorMNP
       { pll_m = xtal_mhz
       , pll_n = sysclk_mhz * p
       , pll_p = p

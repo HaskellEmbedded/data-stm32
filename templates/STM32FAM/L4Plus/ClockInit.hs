@@ -159,36 +159,36 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
   where
   cc = clockconfig
-  mm = pll_l4_m (clockconfig_pll cc)
+  mm = pll_mnr_m (clockconfig_pll cc)
   m = if mm >= 1 && mm <= 8
          -- we substract 1 from PLLM to get
          -- 000: PLLM = 1
          -- 111: PLLM = 8
          then fromRep (fromIntegral $ mm - 1)
-         else error "platformClockConfig pll_l4_m not in valid range"
-  nn = pll_l4_n (clockconfig_pll cc)
+         else error "platformClockConfig pll_mnr_m not in valid range"
+  nn = pll_mnr_n (clockconfig_pll cc)
   n = if nn >= 8 && nn <= 86
          then fromRep (fromIntegral nn)
-         else error "platformClockConfig pll_l4_n not in valid range"
+         else error "platformClockConfig pll_mnr_n not in valid range"
 
-  p = case pll_l4_p (clockconfig_pll cc) of
+  p = case pll_mnr_p (clockconfig_pll cc) of
         7 -> false
         17 -> true
-        _ -> error  "platformClockConfig pll_l4_p not in valid range, only 7 and 17 are valid"
+        _ -> error  "platformClockConfig pll_mnr_p not in valid range, only 7 and 17 are valid"
 
-  q = case pll_l4_q (clockconfig_pll cc) of
-        2 -> rcc_pllq_div2
-        4 -> rcc_pllq_div4
-        6 -> rcc_pllq_div6
-        8 -> rcc_pllq_div8
-        _ -> error "platformClockConfig pll_l4_q not in valid range"
+  q = case pll_mnr_q (clockconfig_pll cc) of
+        2 -> rcc_pllqr_l4_div2
+        4 -> rcc_pllqr_l4_div4
+        6 -> rcc_pllqr_l4_div6
+        8 -> rcc_pllqr_l4_div8
+        _ -> error "platformClockConfig pll_mnr_q not in valid range"
 
-  r = case pll_l4_r (clockconfig_pll cc) of
-        2 -> rcc_pllr_div2
-        4 -> rcc_pllr_div4
-        6 -> rcc_pllr_div6
-        8 -> rcc_pllr_div8
-        _ -> error "platformClockConfig pll_l4_r not in valid range"
+  r = case pll_mnr_r (clockconfig_pll cc) of
+        2 -> rcc_pllqr_l4_div2
+        4 -> rcc_pllqr_l4_div4
+        6 -> rcc_pllqr_l4_div6
+        8 -> rcc_pllqr_l4_div8
+        _ -> error "platformClockConfig pll_mnr_r not in valid range"
 
   freqToMSIRange freq = case freq of
     100000   -> rcc_msirange_100khz

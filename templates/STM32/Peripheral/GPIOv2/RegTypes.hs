@@ -9,7 +9,7 @@
 -- All Rights Reserved.
 --
 
-module {{ modns }} where
+module Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes where
 
 import Ivory.Language
 

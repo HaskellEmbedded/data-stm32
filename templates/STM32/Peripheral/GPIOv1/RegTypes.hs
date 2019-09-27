@@ -6,7 +6,7 @@
 -- RegTypes.hs --- Types for register fields in GPIOF1 pin driver.
 --
 
-module {{ modns }} where
+module Ivory.BSP.STM32.Peripheral.GPIOv1.RegTypes where
 
 import Ivory.Language
 

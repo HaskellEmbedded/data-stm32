@@ -44,8 +44,8 @@ mcu = atTag "Mcu" >>>
     smcuName <- att "Name" -< x
     smcuRefName <- att "RefName" -< x
     smcuRPN <- att "RPN" -< x
-    smcuRam <- (arr read <<< textAtTag "Ram") -< x
-    smcuFlash <- (arr read <<< textAtTag "Flash") -< x
+    smcuRam <- (arr ((*1024) . read) <<< textAtTag "Ram") -< x
+    smcuFlash <- (arr ((*1024) . read) <<< textAtTag "Flash") -< x
     -- rest of the tags are redundant as they appear
     -- in mcu/<name>.xml (handled by mcu parser)
 

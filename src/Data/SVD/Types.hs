@@ -7,9 +7,12 @@ import Data.List
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 
+import Control.Monad
+
 import GHC.Generics
 import Data.Serialize
 import Data.Algorithm.Diff
+import Data.Ivory.Pretty (hexFormat)
 
 data Device = Device {
     deviceName            :: String
@@ -140,6 +143,8 @@ getPeriph :: String -> Device -> Peripheral
 getPeriph name dev = head . filter ((==name) . periphGroupName) $ devicePeripherals dev
 
 getReg rName name dev = head . filter((==rName) . regName) . periphRegisters $ getPeriph name dev
+
+getDevMemMap Device{..} = map (liftM2 (,) (hexFormat . periphBaseAddress) periphName) devicePeripherals
 
 registerNames pName dev = map regName . periphRegisters $ getPeriph pName dev
 fieldNames rName pName dev = map fieldName . regFields $ getReg rName pName dev

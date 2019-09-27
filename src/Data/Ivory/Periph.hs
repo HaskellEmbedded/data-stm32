@@ -5,7 +5,6 @@ module Data.Ivory.Periph where
 
 import Data.SVD.Types
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
-import Text.Printf
 import Data.Char (toLower, toUpper, isDigit)
 import Data.List (intersperse, isPrefixOf)
 
@@ -82,12 +81,6 @@ ppBitDataRegsMk' Peripheral{..} = indent 2 $ encloseSep "{" "" "," $
     regOrPort _ = "Reg"
     maxRegLength = maximum . ((length (periphName ++ "RCCDisable")):) . map ((+3) . (+length periphName). length . regName) $ periphRegisters
 
-hexFormat = printf "0x%x"
-ppHex = text . hexFormat
-
-rpad m xs | m <= length xs = xs
-rpad m xs | otherwise = take m $ xs ++ repeat ' '
-
 ppField maxLen f@Field{..} =
   (green $ string $ rpad maxLen (toLower <$> fieldName))
   <> fixPadding fieldReserved
@@ -102,4 +95,3 @@ ppWidth x = string "Bits" <+> int x
 
 ppWidthPad m 1 = string $ rpad m "Bit"
 ppWidthPad m x = string $ rpad m $ "Bits " ++ show x
-

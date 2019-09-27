@@ -28,6 +28,8 @@ import Data.Serialize
 import Data.Char (toUpper)
 
 import Data.STM32.Types (Family(..), supportedFamilies)
+import Data.STM32.Name
+import Data.STM32.Memory
 import Data.CMX.Types
 import Data.CMX.Parse
 
@@ -43,11 +45,17 @@ extractCMX dbPath = do
   p <- forM (M.toList . M.map (concatMap subFamMCUs) $ fs) $ \(fam, devs) -> do
     ds <- forM devs $ \dev -> do
       mcu <- parseMCU $ encodeString dbPath ++ "/db/mcu/" ++ (smcuName dev) ++ ".xml"
-      return $ checkMCU $ fixMCU $ mcu {
-          mcuRam = smcuRam dev
-        , mcuFlash = smcuFlash dev
-        , mcuRefName = smcuRefName dev
-        }
+      let m = checkMCU $ fixMCU $ mcu {
+                mcuRam = smcuRam dev
+              , mcuFlash = smcuFlash dev
+              , mcuRefName = smcuRefName dev
+              }
+
+          name = extract $ parseName (B.pack $ mcuRefName mcu)
+          extract (Left x) = error $ "Unable to parse name" ++ x
+          extract (Right x) = x
+
+      return $ snd $ adjustRAMs (name, m)
 
     return (fam, ds)
   return $ M.fromList p
@@ -95,6 +103,32 @@ fixMCU x@MCU{..} = x { mcuIps = coerceIPVersions . filterIps $ mcuIps }
           , "USB_DEVICE"
           , "USB_HOST"
           ])
+
+-- fill in missing ram2 and ram3 sizes, compute real sram1 size
+adjustRAMs nmcu@(name, mcu) = checkRAM $ calcRam1 $ g4CcmRam $ (name, mcu {
+    mcuRam2 = ram2Size nmcu
+  , mcuRam3 = ram3Size nmcu
+  })
+
+-- compute ram1 size - we substract ram2 & ram3 & ccram from
+-- total size
+calcRam1 (name, m@MCU{..}) = (name, m { mcuRam1 = ram1 })
+  where
+    total = mcuRam
+    ram1 = total - (ram2 + ram3)
+    ram2 = maybe 0 id mcuRam2
+    ram3 = maybe 0 id mcuRam3
+
+-- for G4s we don't have CCM RAM size information in svd files
+-- so we add it manually
+g4CcmRam nmcu@(name, mcu) = (name, maybeSetCcm $ mcu { mcuRam = mcuRam mcu - ccm })
+  where
+    ccm = maybe 0 id $ ccmSize nmcu
+    maybeSetCcm mcu | ccm /=0   = mcu { mcuCcmRam = ccmSize nmcu }
+    maybeSetCcm mcu | otherwise = mcu
+
+checkRAM nmcu@(name, MCU{..}) | mcuRam == mcuRam1 + (maybe 0 id mcuRam2) + (maybe 0 id mcuRam3) = nmcu
+checkRAM (name, _) | otherwise = error $ "ram1 + ram2 + ram3 is not equal mcuRam" ++ showName name
 
 checkMCU MCU{..} | mcuFlash == 0 && mcuFamily /= MP1 = error $ "MCU Flash is 0 @" ++ mcuRefName
 checkMCU MCU{..} | mcuRam   == 0 = error $ "MCU Ram is 0 @" ++ mcuRefName

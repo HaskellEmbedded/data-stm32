@@ -1,60 +1,55 @@
 module {{ modns }}
   ( MCU(..)
-  , defMCU
+  , STM32DevName(..)
+  , STM32Config(..)
+  , NamedMCU
   , matchMCU
+  , testMatch
   )
   where
 
-import Data.Char (toUpper)
 import System.Environment
-import Text.Regex.Posix
+import System.FilePath.Posix
 
-import Ivory.BSP.STM32.Family
+import qualified Data.Map as M
+import qualified Data.ByteString.Char8 as B
+import Data.Serialize
 
-data MCU = MCU {
-    mcuRAM    :: Integer
-  , mcuRAM2   :: Maybe Integer -- for L4s
-  , mcuROM    :: Integer
-  , mcuCCM    :: Maybe Integer
-  , mcuEEP    :: Maybe Integer
-  , mcuName   :: String
-  , mcuMatch  :: String
-  , mcuFamily :: Family
-  } deriving (Eq, Show)
+import qualified Paths_ivory_bsp_stm32 as P
 
-defMCU :: MCU
-defMCU = MCU {
-    mcuRAM    = 0
-  , mcuRAM2   = Nothing
-  , mcuROM    = 0
-  , mcuCCM    = Nothing
-  , mcuEEP    = Nothing
-  , mcuName   = ""
-  , mcuMatch  = ""
-  , mcuFamily = W
+import Ivory.BSP.STM32.ClockConfig
+
+import Data.CMX.Types
+import Data.STM32.Types
+
+data STM32Config = STM32Config {
+    confMCU    :: NamedMCU
+  , confClocks :: ClockConfig
   }
 
-main :: IO ()
-main = do
+testMatch :: IO ()
+testMatch = do
   args <- getArgs
   case args of
     []  -> putStrLn "invalid argument\nUSAGE: lal MCU"
-    [m] -> print $ matchMCU m
-    _   -> putStrLn "Need MCU match"
+    [m] -> matchMCU m >>= print . fst
+    _   -> putStrLn "No MCU matched"
 
 -- match string against a list of (pattern, MCU)
-matchMCU :: String -> Maybe MCU
-matchMCU name = case filter (\(pat, _dev) -> (map toUpper name) =~ pat :: Bool) devices of
-  [] -> Nothing
-  [(matched, mcu)] -> Just $ mcu { mcuName = name
-                                 , mcuMatch = matched
-                                 , mcuFamily = nameToFamily name
-                                 }
+matchMCU :: String -> IO (STM32DevName, MCU)
+matchMCU name = do
+  db <- devices
+  case findBest name (M.keys db) of
+    [] -> fail "No MCU matched"
+    [x] -> case M.lookup x db of
+            Just mcu -> return (x, mcu)
+            Nothing -> fail "Unable to lookup MCU"
+    xs -> fail $ "Multiple MCUs matched: " ++ (unwords $ map showName xs)
 
-  _ -> fail "Multiple MCUs matched"
-
-kbytes :: Integer -> Integer
-kbytes = (*1024)
-
-devices :: [(String, MCU)]
-{{ devices }}
+devices :: IO (M.Map STM32DevName MCU)
+devices = do
+  d <- P.getDataDir
+  db <- B.readFile (d </> "devices.data")
+  case decode db of
+    Left err -> fail err
+    Right dec -> return dec

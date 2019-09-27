@@ -10,9 +10,11 @@ import re
 import io
 import os
 
-cubeurl = "https://www.st.com/content/st_com/en/products/development-tools/"\
+cubeurlOld = "https://www.st.com/content/st_com/en/products/development-tools/"\
     "software-development-tools/stm32-software-development-tools/"\
     "stm32-configurators-and-code-generators/stm32cubemx.html"
+
+cubeurl = "https://www.st.com/en/development-tools/stm32cubemx.html"
 
 with urllib.request.urlopen(cubeurl) as response:
     html = response.read().decode("utf-8")

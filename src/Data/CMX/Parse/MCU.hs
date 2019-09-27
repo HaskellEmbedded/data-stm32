@@ -80,8 +80,8 @@ mcu = atTag "Mcu" >>>
     mcuRefName <- att "RefName" -< x
     mcuFrequency <- withDefault (arr (Just . read) <<< textAtTag "Frequency") Nothing -< x
     mcuDie <- textAtTag "Die" -< x
-    mcuCcmRam <- withDefault (arr (Just . read) <<< textAtTag "CCMRam") Nothing -< x
-    mcuEEProm <- withDefault (arr (Just . (`div` 1024) . read) <<< textAtTag "E2prom") Nothing -< x
+    mcuCcmRam <- withDefault (arr (Just . (*1024) . read) <<< textAtTag "CCMRam") Nothing -< x
+    mcuEEProm <- withDefault (arr (Just . read) <<< textAtTag "E2prom") Nothing -< x
     -- XXX: we ignore that mcu such as MP1 family can have multiple cores
     -- which results in multiple mcu's parsed at parseMCU, we don't currently support these anyway
     mcuCore <- (arr parseCore <<< textAtTag "Core") -< x
@@ -112,6 +112,15 @@ mcu = atTag "Mcu" >>>
       -- we fill these instead with values from mcu/families.xml
       mcuRam = 0
       mcuFlash = 0
+      -- no information about these in xml files,
+      -- added afterwards in Extract
+      mcuRam1 = 0
+      mcuRam2 = Nothing
+      mcuRam3 = Nothing
+
+      mcuItcmRam = Nothing
+      mcuBackupRam = Nothing
+
       mcuHasPowerPad = read $ capitalized hasPowerPad'
       mcuNumberOfIO = read numberOfIO'
       mcuLimits = catMaybes [

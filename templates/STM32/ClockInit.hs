@@ -7,14 +7,14 @@ module {{ modns }}
 import Ivory.Language
 
 import Ivory.BSP.STM32.ClockConfig
-import Ivory.BSP.STM32.Family
+import Data.STM32
 
-{% for fam in fams %}
-import qualified Ivory.BSP.STM32{{ fam }}.ClockInit as {{ fam }}
-{% endfor %}
+{{#families}}
+import qualified Ivory.BSP.STM32{{.}}.ClockInit as {{.}}
+{{/families}}
 
 init_clocks :: Family -> ClockConfig -> Def('[]':->())
-{% for fam in fams %}
-init_clocks {{ fam }} = {{ fam }}.init_clocks
-{% endfor %}
+{{#families}}
+init_clocks {{.}} = {{.}}.init_clocks
+{{/families}}
 init_clocks f = error $ "Family not supported" ++ show f

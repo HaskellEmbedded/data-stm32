@@ -6,9 +6,9 @@ import Data.Map (Map)
 
 import GHC.Generics
 import Data.Serialize
-import Data.STM32.Types (Core, Family)
+import Data.STM32.Family
+import Data.STM32.Core
 
-type Kb = Int
 type Mhz = Int
 
 data MCU = MCU {
@@ -23,10 +23,15 @@ data MCU = MCU {
   , mcuFrequency   :: Maybe Mhz
   , mcuNumberOfIO  :: Int
   , mcuDbVersion   :: String
-  , mcuRam         :: Kb
-  , mcuFlash       :: Kb
-  , mcuCcmRam      :: Maybe Kb
-  , mcuEEProm      :: Maybe Kb
+  , mcuRam         :: Int -- total RAM from CMX db
+  , mcuRam1        :: Int
+  , mcuRam2        :: Maybe Int
+  , mcuRam3        :: Maybe Int
+  , mcuFlash       :: Int
+  , mcuCcmRam      :: Maybe Int -- core-coupled memory
+  , mcuItcmRam     :: Maybe Int -- tightly-coupled memory
+  , mcuBackupRam   :: Maybe Int -- battery backed memory
+  , mcuEEProm      :: Maybe Int
   , mcuLimits      :: [Limit]
   , mcuIps         :: Set IP
   , mcuPins        :: Set Pin
@@ -90,8 +95,8 @@ data ShortMCU = ShortMCU {
     smcuName    :: String
   , smcuRefName :: String
   , smcuRPN     :: String
-  , smcuRam     :: Kb
-  , smcuFlash   :: Kb
+  , smcuRam     :: Int
+  , smcuFlash   :: Int
   , smcuPeriphs :: [ShortPeriph]
   } deriving (Generic, Eq, Ord, Show)
 

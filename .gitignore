@@ -6,3 +6,5 @@ dist
 dist-newstyle
 data/src
 data/support
+data/devices.data
+data/*.cabal

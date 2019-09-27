@@ -17,6 +17,7 @@ ppMCUs res = displayS (renderPretty 0.4 60 (ppMCUs' res)) ""
 ppMCUs' x =
      string "devices ="
   </> indent 2 (encloseStack "[" "]" "," $ map ppMCU x)
+
 ppMCU (pat:attrs) =
      char '('
   <> char '"'

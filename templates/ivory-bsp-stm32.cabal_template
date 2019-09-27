@@ -13,7 +13,8 @@ cabal-version:       >=1.8
 data-files: support/vector_table.s.template,
             support/linker_script.lds.template,
             support/ref_to_uint32.h,
-            support/ref_to_uint32.c
+            support/ref_to_uint32.c,
+            devices.data
 
 library
   exposed-modules:     {{ exposed }}
@@ -23,6 +24,10 @@ library
   hs-source-dirs:      src
   build-depends:       base >= 4.6,
                        array,
+                       bytestring,
+                       cereal,
+                       containers,
+                       data-stm32,
                        template-haskell,
                        filepath,
                        regex-posix,

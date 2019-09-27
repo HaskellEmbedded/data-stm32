@@ -102,7 +102,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
   -- Select regulator voltage output scale 1 mode
   modifyReg rcc_reg_apb1enr $ setBit rcc_apb1enr_pwren
-  -- XXX: not a bit byt some modes.. default mode 1
+  -- XXX: not a bit but some modes.. default mode 1
   -- is high perf scale
   --modifyReg pwr_reg_cr1 $ setBit pwr_cr1_vos
 

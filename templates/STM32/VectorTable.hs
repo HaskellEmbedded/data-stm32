@@ -10,26 +10,27 @@ import Ivory.Artifact
 import Ivory.Artifact.Template
 import Ivory.BSP.ARMv7M.Exception
 import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.Family
+import Data.CMX
+import Data.STM32
 
 import qualified Paths_ivory_bsp_stm32 as P
 
-{% for fam in fams %}
-import qualified Ivory.BSP.STM32{{ fam }}.Interrupt as {{ fam }}
-{% endfor %}
+{{#shortDevices}}
+import qualified Ivory.BSP.STM32{{.}}.Interrupt as {{.}}
+{{/shortDevices}}
 
-byFamily :: Family -> [(String, String)]
-{% for fam in fams %}
-byFamily {{ fam }} = attrs {{ fam }}.WWDG
-{% endfor %}
-byFamily f = error $ "Family not supported" ++ show f
+byDevice :: (STM32DevName, MCU) -> [(String, String)]
+{{#shortDevices}}
+byDevice (n, _d) | shortName n == "{{.}}" = attrs {{.}}.WWDG
+{{/shortDevices}}
+byDevice (n, _d) = error $ "Device not supported" ++ show n
 
 reset_handler :: String
 reset_handler = exceptionHandlerName Reset
 
-vector_table :: Family -> Located Artifact
-vector_table family =
-  Src $ artifactCabalFileTemplate P.getDataDir fname (byFamily family)
+vector_table :: (STM32DevName, MCU) -> Located Artifact
+vector_table x =
+  Src $ artifactCabalFileTemplate P.getDataDir fname (byDevice x)
   where
   fname = "support/vector_table.s.template"
 

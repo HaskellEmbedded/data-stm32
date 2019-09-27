@@ -32,7 +32,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
   -- RCC clock config to default reset state
   modifyReg rcc_reg_cr $ setBit rcc_cr_hsion
   modifyReg rcc_reg_cfgr $ do
-    setField rcc_cfgr_mco     rcc_mcox_sysclk
+    --setField rcc_cfgr_mco     rcc_mcox_sysclk
     setField rcc_cfgr_ppre2   rcc_pprex_none
     setField rcc_cfgr_ppre1   rcc_pprex_none
     setField rcc_cfgr_hpre    rcc_hpre_none
@@ -157,5 +157,3 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     8  -> rcc_pprex_div8
     16 -> rcc_pprex_div16
     _  -> error "platformClockConfig pclk2 divider not in valid range"
-  {-
-  -}

@@ -27,7 +27,7 @@ module {{ modns }} (
   , pinClear
   , pinRead
   , GPIOPin(..)
-  , module Ivory.BSP.STM32.Peripheral.GPIO2.RegTypes
+  , module Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes
   ) where
 
 import Ivory.Language
@@ -35,16 +35,17 @@ import Ivory.Stdlib
 
 import Ivory.HW
 
-import qualified Ivory.BSP.STM32.Peripheral.GPIO1.Peripheral as V1
-import qualified Ivory.BSP.STM32.Peripheral.GPIO1.RegTypes   as V1
+import qualified Ivory.BSP.STM32.Peripheral.GPIOv1.Peripheral as V1
+import qualified Ivory.BSP.STM32.Peripheral.GPIOv1.RegTypes   as V1
 
-import qualified Ivory.BSP.STM32.Peripheral.GPIO2.Peripheral as V2
-import qualified Ivory.BSP.STM32.Peripheral.GPIO2.RegTypes   as V2
+import qualified Ivory.BSP.STM32.Peripheral.GPIOv2.Peripheral as V2
+import qualified Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes   as V2
 
 -- due to re-export
-import Ivory.BSP.STM32.Peripheral.GPIO2.RegTypes
+import Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes
 
 data GPIOPin = GPIOF1 V1.GPIOPin | GPIOFX V2.GPIOPin
+data GPIOVersion = V1 | V2
 
 pinName :: GPIOPin -> String
 pinName (GPIOFX p) = V2.pinName p

@@ -6,6 +6,8 @@
 module {{ modns }} where
 
 import Ivory.Language
-{{ imports }}
+{{#imports}}
+{{.}}
+{{/imports}}
 
 {{ regs }}

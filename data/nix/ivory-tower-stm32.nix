@@ -1,14 +1,21 @@
 self: super:
 let
+
+  # update with
+  # nix-prefetch-git https://github.com/sorki/ivory-tower-stm32 <OPTIONAL_REV>
   src = super.fetchFromGitHub {
     owner = "sorki";
     repo = "ivory-tower-stm32";
-    rev = "2e40347c38ab4470e5265c243770e186c16c340a";
-    sha256 = "1k9fxsw7x697g8b2whq0q32lp4mw38yq176jxxnaqmj1r6yyk0dp";
+    rev = "8c795efcad335165e529110dca10860d37a93120";
+    sha256 = "1a6cpa3qihhvkdrlvrv1xp7md2zncncrsb1q85qxykm0a4dp11mq";
   };
+
+  # swap with src to build from this path
+  srcX = ../../../ivory-tower-stm32;
+
   subs = [
     # "ivory-bsp-stm32"
-    # "ivory-bsp-tests"
+    # "ivory-bsp-tests" # XXX: port this please
     "ivory-freertos-bindings"
     # "tower-echronos-stm32"
     "tower-freertos-stm32"

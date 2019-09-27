@@ -4,6 +4,7 @@ module Data.Ivory.Pretty where
 
 import Data.List
 import Data.List.Split (splitOn)
+import Text.Printf
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 import qualified Text.PrettyPrint.ANSI.Leijen.Internal as WL
 
@@ -21,6 +22,13 @@ encloseStack l r p ds = case ds of
 replace old new = intercalate new . splitOn old
 
 comment x = string "--" <+> x <> hardline
+
+hexFormat :: Int -> String
+hexFormat = printf "0x%x"
+ppHex = text . hexFormat
+
+rpad m xs | m <= length xs = xs
+rpad m xs | otherwise = take m $ xs ++ repeat ' '
 
 displayIvory pp = displayS (renderPretty 0 1000 pp) ""
 -- preserve indent but no colors

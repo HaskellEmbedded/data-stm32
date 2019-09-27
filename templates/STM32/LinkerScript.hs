@@ -6,42 +6,55 @@ module {{ modns }}
 import Ivory.Artifact
 import Ivory.Artifact.Template
 import qualified Paths_ivory_bsp_stm32 as P
-import Ivory.BSP.STM32.Family
+
 import Ivory.BSP.STM32.MCU
+import Data.STM32
 
-
-linker_script :: FilePath -> MCU -> Integer -> String -> Artifact
-linker_script fname mcu bl_offset reset_handler =
-  artifactCabalFileTemplate' P.getDataDir path fname (attrs mcu)
+linker_script :: FilePath -> NamedMCU -> Integer -> String -> Artifact
+linker_script fname nmcu bl_offset reset_handler =
+  artifactCabalFileTemplate' P.getDataDir path fname (attrs nmcu)
   where
   path = "support/linker_script.lds.template"
-  attrs MCU{..} =
-    [ ( "regions",       memregs mcu)
-    , ( "estack",        show $ (ramOffset mcuFamily) + mcuRAM)
+  attrs nmcu@(_name, MCU{..}) =
+    [ ( "regions",       memregs nmcu)
+    , ( "estack",        show $ (ramOffset nmcu) + sramSize nmcu)
     , ( "reset_handler", reset_handler)
     -- use ccsram if available
-    , ( "ccsramOrSram",  maybe "sram" (pure "ccsram") mcuCCM)
+    , ( "ccsramOrSram",  maybe "sram" (pure "ccsram") mcuCcmRam)
     ]
 
-  memregs MCU{..} = unlines $ map mkRegion
-    [ ("flash",  flashOffset + bl_offset, Just $ mcuROM - bl_offset)
-    , ("sram",   ramOffset mcuFamily,     Just mcuRAM)
-    , ("ccsram", ccmOffset mcuFamily,     mcuCCM)
-   -- XXX: handle these as well
-   -- , ("sram2",   ramOffset?? mcuFamily, mcuRAM2)
-   -- , ("eep",   eepOffset?? mcuFamily, mcuEEP)
+  -- if continuous use mcuRam if not just sram1
+  continuous nmcu = ramContinuos $ rams nmcu
+  sramSize nmcu@(_name, MCU{..}) = if continuous nmcu then mcuRam else mcuRam1
+
+  memregs nmcu@(_name, MCU{..}) = unlines $ map mkRegion
+    ([("flash",  Just $ flashOffset + bl_offset
+              ,  Just $ mcuFlash - fromIntegral bl_offset)
+
+    , ("sram",   Just $ fromIntegral $ ramOffset nmcu
+             ,   Just $ sramSize nmcu)
+
+    , ("ccsram", fromIntegral <$> ccmOffset nmcu
+               , mcuCcmRam)
+    , ("eeprom", fromIntegral <$> eepromOffset nmcu
+               , mcuEEProm)
+    , ("backup", fromIntegral <$> backupOffset nmcu
+               , mcuBackupRam)
+    ] ++ (extraRams nmcu (continuous nmcu)))
+
+  extraRams _                     True = []
+  extraRams nmcu@(_name, MCU{..}) False =
+    [
+      ("sram2", fromIntegral <$> ram2Offset nmcu
+              , mcuRam2)
+    , ("sram3", fromIntegral <$> ram3Offset nmcu
+              , mcuRam3)
     ]
 
-  mkRegion (_, _,         Nothing)          = ""
-  mkRegion (name, offset, (Just reglength)) =
+  mkRegion (name, (Just offset), (Just reglength)) =
     "  " ++ name ++ "(" ++ (mode name) ++ "): ORIGIN = " ++ (show offset) ++ ", LENGTH =" ++ (show reglength)
+  mkRegion _ = ""
 
   mode "flash"  = "rx"
-  mode "eeprom" = "rx"
+  mode "eep"    = "rx"
   mode _        = "rwx"
-
-{-
-    flash (rx) : ORIGIN = $flash_origin$, LENGTH = $flash_length$
-    sram (rwx) : ORIGIN = $sram_origin$, LENGTH = $sram_length$
-    ccsram (rwx) : ORIGIN = $ccsram_origin$, LENGTH = $ccsram_length$
--}

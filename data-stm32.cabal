@@ -29,11 +29,16 @@ library
       Data.Ivory
       Data.Ivory.ISR
       Data.Ivory.MCU
-      Data.Ivory.MemMap
       Data.Ivory.Periph
       Data.Ivory.Pretty
-      Data.STM32.Types
+      Data.STM32
+      Data.STM32.Core
       Data.STM32.Drivers
+      Data.STM32.Family
+      Data.STM32.Name
+      Data.STM32.Memory
+      Data.STM32.Periph
+      Data.STM32.Types
       Data.SVD
       Data.SVD.Extract
       Data.SVD.Parse
@@ -58,6 +63,7 @@ library
     , hxt
     , hxt-xpath
     , karver
+    , hastache
     , pretty-simple
     , regex-posix
     , split
@@ -70,8 +76,12 @@ library
 executable genstm
   main-is: Main.hs
   other-modules:
+      Coerce
       Extract
+      MakePeriph
       Utils
+      Types
+      Template
       Paths_data_stm32
   hs-source-dirs:
       app/genstm
@@ -89,6 +99,9 @@ executable genstm
     , hxt
     , hxt-xpath
     , karver
+    , hastache
+    , syb
+    , mtl
     , unordered-containers
     , pretty-simple
     , regex-posix

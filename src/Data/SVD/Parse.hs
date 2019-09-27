@@ -79,11 +79,12 @@ addressBlock = atTag "addressBlock" >>>
 
 interrupt = atTag "interrupt" >>>
   proc x -> do
-    interruptName <- textAtTag "name" -< x
+    name <- textAtTag "name" -< x
     desc <- textAtTag "description" -< x
     val <- textAtTag "value" -< x
 
-    let interruptValue = read val
+    let interruptName = map Char.toUpper name
+        interruptValue = read val
         interruptDescription = filterCrap desc
 
     returnA -< Interrupt{..}

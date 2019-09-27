@@ -6,8 +6,11 @@
 --
 -- Peripheral.hs --- CAN peripheral driver for the STM32F4.
 --
+-- Copyright (C) 2014, Galois, Inc.
+-- All Rights Reserved.
+--
 
-module {{ modns }} where
+module Ivory.BSP.STM32.Peripheral.CAN.Peripheral where
 
 import Control.Monad (when, forM_)
 import Data.Ratio
@@ -38,8 +41,13 @@ data CANRXRegs = CANRXRegs
   , canIntRX       :: HasSTM32Interrupt
   }
 
-data {{ type }}Periph = {{ type }}Periph
-{{ bitDataRegs }}
+data CANPeriph = CANPeriph
+  { canRegMCR      :: BitDataReg CAN_MCR
+  , canRegMSR      :: BitDataReg CAN_MSR
+  , canRegTSR      :: BitDataReg CAN_TSR
+  , canRegIER      :: BitDataReg CAN_IER
+  , canRegESR      :: BitDataReg CAN_ESR
+  , canRegBTR      :: BitDataReg CAN_BTR
   , canRegTX       :: [CANTXRegs]
   , canRegRX       :: [CANRXRegs]
   , canRCCEnable   :: forall eff . Ivory eff ()
@@ -59,9 +67,15 @@ mkCANPeriph :: (STM32Interrupt i)
             -> i -- error/status change interrupt
             -> String -- Name
             -> CANPeriph
-mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n = {{ type }}Periph
-{{ bitDataRegsMk }}
+mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n =
+  CANPeriph
+    { canRegMCR      = reg 0x000 "mcr"
+    , canRegMSR      = reg 0x004 "msr"
+    , canRegTSR      = reg 0x008 "tsr"
     -- RF0R and RF1R are grouped in CANRXRegs below
+    , canRegIER      = reg 0x014 "ier"
+    , canRegESR      = reg 0x018 "esr"
+    , canRegBTR      = reg 0x01C "btr"
     -- 0x020-0x17F reserved
     , canRegTX       =
       [ CANTXRegs

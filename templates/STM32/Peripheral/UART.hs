@@ -21,20 +21,19 @@ import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.UART.Pins (UARTPins(..))
 
-{% for item in versions %}
-import qualified Ivory.BSP.STM32.Peripheral.UART{{ item.version }}.Peripheral as P{{ item.version }}
---import qualified Ivory.BSP.STM32.Peripheral.UART@version@.Regs       as P@version@
---import qualified Ivory.BSP.STM32.Peripheral.UART@version@.Types      as P@version@
-{% endfor %}
+{{#versions}}
+import qualified Ivory.BSP.STM32.Peripheral.UARTv{{ version }}.Peripheral as P{{ version }}
+{{/versions}}
+
 data UARTVersion =
-{% for item in versions %}
-  {{ item.prefix }} V{{ item.version }}
-{% endfor %}
+{{#versions}}
+  {{ prefix }} V{{ version }}
+{{/versions}}
 
 data UART =
-{% for item in versions %}
-  {{ item.prefix }} WrappedV{{ item.version }} P{{ item.version }}.UART
-{% endfor %}
+{{#versions}}
+  {{ prefix }} WrappedV{{ version }} P{{ version }}.UART
+{{/versions}}
 
 mkUARTVersion
        :: (STM32Interrupt i)
@@ -46,6 +45,6 @@ mkUARTVersion
        -> PClk
        -> String
        -> UART
-{% for item in versions %}
-mkUARTVersion V{{ item.version }} i e1 e2 j c s = WrappedV{{ item.version }} $ P{{ item.version }}.mkUART i e1 e2 j c s
-{% endfor %}
+{{#versions}}
+mkUARTVersion V{{ version }} i e1 e2 j c s = WrappedV{{ version }} $ P{{ version }}.mkUART i e1 e2 j c s
+{{/versions}}

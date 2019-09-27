@@ -23,8 +23,8 @@ data CANPeriphFilters = CANPeriphFilters
   , canRegFS1R     :: BitDataReg CAN_FS1R
   , canRegFFA1R    :: BitDataReg CAN_FFA1R
   , canRegFA1R     :: BitDataReg CAN_FA1R
-  , canRegFiRx32   :: Array (Integer, Integer) (BitDataReg CAN_FiRx32)
-  , canRegFiRx16   :: Array (Integer, Integer) (BitDataReg CAN_FiRx16)
+  , canRegFiRx32   :: Array (Integer, Integer) (BitDataReg CAN_FIRX32)
+  , canRegFiRx16   :: Array (Integer, Integer) (BitDataReg CAN_FIRX16)
   , canRCCEnableF  :: forall eff . Ivory eff ()
   , canRCCDisableF :: forall eff . Ivory eff ()
   }

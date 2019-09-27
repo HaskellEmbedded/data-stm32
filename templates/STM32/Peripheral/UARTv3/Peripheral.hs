@@ -80,7 +80,7 @@ setBaudRate uart clockconfig baud = do
                       ( (((fpart * 8)  + 50) `iDiv` 100) .& 0x07
                       , (((fpart * 16) + 50) `iDiv` 100) .& 0x0f)))
   setReg (uartRegBRR uart) $ do
-    setField uart_brr_div (fromRep (lbits brr))
+    setField uart_brr_brr (fromRep (lbits brr))
 
 -- | Configure the stop bits for a UART.
 setStopBits :: UART -> UART_StopBits -> Ivory eff ()

@@ -11,10 +11,6 @@ import Ivory.Stdlib
 import Ivory.HW
 
 import Ivory.BSP.STM32.ClockConfig
-{-
-import Ivory.BSP.STM32.Peripheral.Flash
-import Ivory.BSP.STM32.Peripheral.PWR
--}
 import Ivory.BSP.STM32.Peripheral.RCC.RegTypes
 
 import Ivory.BSP.STM32{{ fam }}.FLASH
@@ -31,7 +27,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
   -- RCC clock config to default reset state
   modifyReg rcc_reg_cr $ setBit rcc_cr_hsion
   modifyReg rcc_reg_cfgr $ do
-    setField rcc_cfgr_mco   rcc_mcox_sysclk
+    --setField rcc_cfgr_mco   rcc_mcox_sysclk
     setField rcc_cfgr_ppre  rcc_pprex_none
     setField rcc_cfgr_hpre  rcc_hpre_none
     setField rcc_cfgr_sw    rcc_sysclk_hsi
