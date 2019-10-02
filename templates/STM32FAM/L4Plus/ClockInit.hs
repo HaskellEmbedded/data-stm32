@@ -65,7 +65,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
       modifyReg rcc_reg_cr $ do
         setBit rcc_cr_hsion
       modifyReg rcc_reg_pllcfgr $ do
-        setField rcc_pllcfgr_pllsrc rcc_pllsrc_hsi16
+        setField rcc_pllcfgr_pllsrc rcc_pllsrc_l4_hsi16
     MSI freq -> do
       modifyReg rcc_reg_cr $ do
         setBit rcc_cr_msion
@@ -80,7 +80,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
         when (bitToBool (cr #. rcc_cr_msirdy)) $ breakOut
 
       modifyReg rcc_reg_pllcfgr $ do
-        setField rcc_pllcfgr_pllsrc rcc_pllsrc_msi
+        setField rcc_pllcfgr_pllsrc rcc_pllsrc_l4_msi
     HSE _ -> do
       -- Enable HSE
       modifyReg rcc_reg_cr $ setBit rcc_cr_hseon
@@ -98,7 +98,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
       when success $ do
         -- Set PLL to use external clock:
         modifyReg rcc_reg_pllcfgr $ do
-          setField rcc_pllcfgr_pllsrc rcc_pllsrc_hse
+          setField rcc_pllcfgr_pllsrc rcc_pllsrc_l4_hse
 
       -- Handle exception case when HSERDY fails.
       unless success $ do

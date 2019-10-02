@@ -56,6 +56,19 @@ import Ivory.Language
   | rcc_sysclk_hse    as 1
   | rcc_sysclk_pll    as 2
 
+ -- F0
+ bitdata RCC_SYSCLK_F0   :: Bits 2
+  = rcc_sysclk_f0_hsi   as 0
+  | rcc_sysclk_f0_hse   as 1
+  | rcc_sysclk_f0_pll   as 2
+  | rcc_sysclk_f0_hsi48 as 3
+
+ bitdata RCC_PLLSRC_F0   :: Bits 2
+  = rcc_pllsrc_f0_hsi_div_2        as 0
+  | rcc_pllsrc_f0_hsi_div_prediv   as 1
+  | rcc_pllsrc_f0_hse_div_prediv   as 2
+  | rcc_pllsrc_f0_hsi48_div_prediv as 3
+
  -- L4
  bitdata RCC_SYSCLK_L4   :: Bits 2
   = rcc_sysclk_l4_msi    as 0
@@ -71,10 +84,10 @@ import Ivory.Language
  | rcc_pllqr_l4_div8      as 3
 
  bitdata RCC_PLLSRC_L4   :: Bits 2
-  = rcc_pllsrc_off    as 0
-  | rcc_pllsrc_msi    as 1
-  | rcc_pllsrc_hsi16  as 2
-  | rcc_pllsrc_hse    as 3
+  = rcc_pllsrc_l4_off    as 0
+  | rcc_pllsrc_l4_msi    as 1
+  | rcc_pllsrc_l4_hsi16  as 2
+  | rcc_pllsrc_l4_hse    as 3
 
  bitdata RCC_MSIRANGE_L4 :: Bits 4
   = rcc_msirange_100khz as 0

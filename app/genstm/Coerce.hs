@@ -297,6 +297,11 @@ adjustPeriphFamily l4s x | l4s == L4 || l4s == L4Plus = adjustFields fix x
     fix x | fieldName x == "PLLSRC" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLSRC_L4" x
     fix x | fieldName x == "MSIRANGE" && fieldBitWidth x == 4 = Just $ setFieldType "RCC_MSIRANGE_L4" x
     fix x = Just x
+adjustPeriphFamily F0 x = adjustFields fix $ x
+  where
+    fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK_F0" x
+    fix x | fieldName x == "PLLSRC" && fieldBitWidth x == 2 = Just $ setFieldType "RCC_PLLSRC_F0" x
+    fix x = Just x
 adjustPeriphFamily G0 x = adjustFields fix $ renamePLLSYS x
   where
     fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK_G0" x

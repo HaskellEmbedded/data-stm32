@@ -71,7 +71,6 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
           store hserdy true
           breakOut
 
-
       success <- deref hserdy
       when success $ do
         -- Set PLL to use external clock:
@@ -99,9 +98,10 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
   -- Configure main PLL:
   modifyReg rcc_reg_cfgr $ do
-    --setBit rcc_cfgr_pllsrc
-    setField rcc_cfgr_pllxtpre m -- div
-    setField rcc_cfgr_pllmul n   -- mul
+    setField rcc_cfgr_pllmul pllMul
+
+  modifyReg rcc_reg_cfgr2 $ do
+    setField rcc_cfgr2_prediv pllDiv
 
   -- Enable main PLL:
   modifyReg rcc_reg_cr $ setBit rcc_cr_pllon
@@ -126,29 +126,24 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
   where
   cc = clockconfig
-  --cc = if clockPLL48ClkHz clockconfig == 48 * 1000 * 1000
-  --        then clockconfig
-  --        else error "ClockConfig invalid: 48MHz peripheral clock is wrong speed"
-  mm = pll_m (clockconfig_pll cc)
-  m = if mm > 1 && mm < 64
-         then fromRep (fromIntegral mm)
-         else error "platformClockConfig pll_m not in valid range"
-  nn = pll_n (clockconfig_pll cc)
-  n = if nn > 191 && nn < 433
-         then fromRep (fromIntegral nn)
-         else error "platformClockConfig pll_n not in valid range"
-  {-
-  p = case pll_p (clockconfig_pll cc) of
-        2 -> rcc_pllp_div2
-        4 -> rcc_pllp_div4
-        6 -> rcc_pllp_div6
-        8 -> rcc_pllp_div8
-        _ -> error "platformClockConfig pll_p not in valid range"
-  qq = pll_q (clockconfig_pll cc)
-  q = if qq > 1 && qq < 16
-         then fromRep (fromIntegral qq)
-         else error "platformClockConfig pll_q not in valid range"
-  -}
+  -- 0000 -> *2
+  -- 0001 -> *3
+  -- ..
+  -- 1110 -> *16
+  pm = pll_mul (clockconfig_pll cc)
+  pllMul = if pm >= 2 && pm <= 16
+         then fromRep (fromIntegral $ pm - 2)
+         else error "platformClockConfig pll_mul not in valid range"
+
+  -- 0000 -> /1
+  -- 0001 -> /2
+  -- ..
+  -- 1111 -> /16
+  pd = pll_div (clockconfig_pll cc)
+  pllDiv = if pd >= 1 || pd <= 16
+         then fromRep (fromIntegral $ pd - 1)
+         else error "platformClockConfig pll_div not in valid range"
+
   hpre_divider = case clockconfig_hclk_divider cc of
     1   -> rcc_hpre_none
     2   -> rcc_hpre_div2
@@ -176,5 +171,3 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     8  -> rcc_pprex_div8
     16 -> rcc_pprex_div16
     _  -> error "platformClockConfig pclk2 divider not in valid range"
-  {-
-  -}

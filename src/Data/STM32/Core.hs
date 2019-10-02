@@ -55,16 +55,12 @@ cpu CortexM7F    = "cortex-m7"
 
 -- -mfpu for GCC
 fpu :: Core -> String
-fpu CortexM0     = "soft"
-fpu CortexM0Plus = "soft"
-fpu CortexM3     = "soft"
 fpu CortexM4F    = "fpv4-sp-d16"
 fpu CortexM7F    = "fpv5-sp-d16"
+fpu _            = "auto"
 
 -- -mfloat-abi for GCC
-floatabi :: Core -> Maybe String
-floatabi CortexM4F = Just "hard"
-floatabi CortexM7F = Just "hard"
-floatabi _         = Nothing
-
-
+floatabi :: Core -> String
+floatabi CortexM4F = "hard"
+floatabi CortexM7F = "hard"
+floatabi _         = "soft"
