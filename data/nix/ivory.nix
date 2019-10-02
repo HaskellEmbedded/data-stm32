@@ -1,11 +1,13 @@
 self: super:
 let
   src = super.fetchFromGitHub {
-    owner = "GaloisInc";
+    owner = "sorki";
     repo = "ivory";
-    rev = "6cf27e193097fceacdb3270dbd63371cc871447c";
-    sha256 = "13kanlylp9adi1p1j2h2rnfizh0bx5db63qyzmbls7ywrpbr0j0s";
+    rev = "bf9f7d8c5c60b7842572acb2dbb6927d698c8e27";
+    sha256 = "1mfrjgf3izwq7dvxj6rgxi7g5b30i3l85aqavbjll7vrmj40ny7h";
   };
+
+  srcX = ../../../ivory;
   subs = [
     "ivory"
     "ivory-artifact"
