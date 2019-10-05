@@ -127,3 +127,6 @@ svdsFamily f = do
 log :: String -> MonadGen ()
 log = liftIO . putStrLn
 
+askSVDs xs = runGen $ do
+  db <- ask
+  mapM (\x -> svdForMCU $ head $ fx (cmxs db) x) xs
