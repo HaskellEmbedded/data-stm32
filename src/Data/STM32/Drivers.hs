@@ -39,7 +39,7 @@ driverMapping = [
 
   , DriverInfo USART (Just 1) ["sci2_v1_1"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 2) ["sci2_v1_2"] CommonRegTypes VersionedDriver
-  , DriverInfo USART (Just 3) ["sci3_v1_1"] CommonRegTypes VersionedDriver
+  , DriverInfo USART (Just 3) ["sci3_v1_1", "sci3_v2_1"] CommonRegTypes VersionedDriver
   ]
 
 --    (GPIO, ["TH"])
