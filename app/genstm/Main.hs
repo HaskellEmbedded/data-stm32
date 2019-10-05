@@ -155,7 +155,7 @@ data VersionCtx = VersionCtx { prefix :: String, version :: String }
 stm32periphs = do
   DB{..} <- ask
   -- base non-versioned peripherals on this devices svd
-  let nonVersionedBase = "STM32F765"
+  let nonVersionedBase = "F765"
       nVDev = get nonVersionedBase
 
   forM_ supported $ \p -> do
@@ -356,4 +356,10 @@ stm32families = do
 tst = do
   runGen $ do
     db <- ask
-    return ()
+    let
+      f103 = head $ fx (cmxs db) "F103"
+      f427 = head $ fx (cmxs db) "F427"
+
+    f103svd <- svdForMCU f103
+    f427svd <- svdForMCU f427
+    return (f103svd, f427svd)

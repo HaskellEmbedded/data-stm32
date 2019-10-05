@@ -167,5 +167,6 @@ ipFamilies devs = map (\ip -> (ip, L.nub $ map mcuFamily $ mcusWithIp ip devs))
                 $ S.toList $ uniqueIps devs
 
 -- filter devices starting with this prefix
+-- fx (cmxs db) "F405"
 fx :: M.Map Family [MCU] -> String -> [MCU]
-fx db x = filter (\m -> x `L.isPrefixOf` (mcuRefName m)) . cmxDevices $ db
+fx db x = filter (\m -> ("STM32" ++ x) `L.isPrefixOf` (mcuRefName m)) . cmxDevices $ db
