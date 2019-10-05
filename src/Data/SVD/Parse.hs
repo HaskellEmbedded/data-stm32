@@ -22,7 +22,7 @@ attNE x = (getAttrValue x >>> isA (/= ""))
 attMaybe attname tagname = withDefault (arr Just <<< attNE attname <<< atTag tagname) Nothing
 
 
-filterCrap = unwords . words . filter ( not . (flip elem ['\n', '\t', '\r']))
+filterCrap = unwords . words . filter (\c -> Char.ord c < 127) . filter ( not . (flip elem ['\n', '\t', '\r']))
 
 -- svd parser
 svd = atTag "device" >>>
