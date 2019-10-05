@@ -142,15 +142,34 @@ diffRegs a b = getDiffBy (\x y -> regName x == regName y) (sortOn regName a) (so
 getPeriph :: String -> Device -> Peripheral
 getPeriph name dev = head . filter ((==name) . periphGroupName) $ devicePeripherals dev
 
-getReg rName name dev = head . filter((==rName) . regName) . periphRegisters $ getPeriph name dev
+getReg pName rName dev = head . filter((==rName) . regName) . periphRegisters $ getPeriph pName dev
+getRegFields pName rName dev = regFields $ getReg pName rName dev
 
 getDevMemMap Device{..} = map (liftM2 (,) (hexFormat . periphBaseAddress) periphName) devicePeripherals
 
 registerNames pName dev = map regName . periphRegisters $ getPeriph pName dev
-fieldNames rName pName dev = map fieldName . regFields $ getReg rName pName dev
+fieldNames rName pName dev = map fieldName $ getRegFields pName rName dev
 
-diffRegisterNames pName dev1 dev2 = getDiff (registerNames pName dev1) (registerNames pName dev2)
-diffFieldNames rName pName dev1 dev2 = getDiff (fieldNames rName pName dev1) (fieldNames rName pName dev2)
+diffPeriphNames dev1 dev2 = getDiff
+  (sort $ map periphName $ devicePeripherals dev1)
+  (sort $ map periphName $ devicePeripherals dev2)
+
+diffRegisterNames pName dev1 dev2 = getDiff
+  (sort $ registerNames pName dev1)
+  (sort $ registerNames pName dev2)
+
+diffFieldNames pName regName dev1 dev2 = getDiff
+  (sort $ fieldNames regName pName dev1)
+  (sort $ fieldNames regName pName dev2)
+
+cmps fn a b = fn a == fn b
+
+diffFields as bs = getDiffBy (\x y ->
+    cmps fieldName x y
+    && cmps fieldBitWidth x y
+    && cmps fieldBitOffset x y)
+  (sortOn fieldBitOffset as)
+  (sortOn fieldBitOffset bs)
 
 diffDistance x = sum $ map go x
   where
