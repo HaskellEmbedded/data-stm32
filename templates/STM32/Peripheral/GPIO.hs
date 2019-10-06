@@ -106,7 +106,6 @@ pinSetMode (GPIOF1 pin) v2mode = do
 
     , v2rep ==? toRep V2.gpio_mode_af ==> do
 
-        V1.pinSetMode pin V1.gpio_mode_output_50mhz
         --- set AF but keep pushpull/opendrain
         pp <- V1.pinIsPushPull pin
         ifte_ pp
