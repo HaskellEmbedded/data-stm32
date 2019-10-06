@@ -35,7 +35,7 @@ driverMapping = [
 
   , DriverInfo SPI (Just 1) ["spi2s1_v1_0", "spi2s1_v1_2"] CommonRegTypes VersionedDriver -- F10x
   , DriverInfo SPI (Just 2) ["spi2s1_v2_2", "spi2s1_v2_3", "spi2s1_v2_4"] CommonRegTypes VersionedDriver -- F??
-  , DriverInfo SPI (Just 3) ["spi2s1_v3_0", "spi2s1_v3_1", "spi2s1_v3_2", "spi2s1_v3_3"] CommonRegTypes VersionedDriver
+  , DriverInfo SPI (Just 3) ["spi2s1_v3_0", "spi2s1_v3_1", "spi2s1_v3_2", "spi2s1_v3_3", "spi2s1_v3_5"] CommonRegTypes VersionedDriver
 
   , DriverInfo USART (Just 1) ["sci2_v1_1"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 2) ["sci2_v1_2"] CommonRegTypes VersionedDriver
