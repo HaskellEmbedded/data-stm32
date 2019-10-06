@@ -206,12 +206,6 @@ periphInstancesData periph mcu = do
         log True = True
         log False = trace ("Missing interrupts for " ++ (name ctx) ++ " dev " ++ (mcuRefName mcu)) False
 
-    -- XXX: move to Coerce?
-    -- XXX: needs an assert whether we've found the correct number of interrupts
-    -- UART - 1
-    -- SPI - 1
-    -- I2C - 2
-    -- CAN - 2
 validISRCount UART = 1
 validISRCount USART = 1
 validISRCount SPI = 1
