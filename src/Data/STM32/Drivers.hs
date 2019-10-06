@@ -39,7 +39,7 @@ driverMapping = [
 
   , DriverInfo USART (Just 1) ["sci2_v1_1"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 2) ["sci2_v1_2"] CommonRegTypes VersionedDriver
-  , DriverInfo USART (Just 3) ["sci3_v1_1", "sci3_v2_1"] CommonRegTypes VersionedDriver
+  , DriverInfo USART (Just 3) ["sci2_v3_1", "sci3_v1_1", "sci3_v2_1"] CommonRegTypes VersionedDriver
   ]
 
 --    (GPIO, ["TH"])
@@ -58,15 +58,17 @@ versioned' p = 1 < (length $ filter (\DriverInfo{..} -> diPeriph == p) driverMap
 driverVersions = map diVersion . periphDrivers
 
 supported :: [Periph]
-supported = L.nub . map diPeriph $ driverMapping
+supported = [UART] ++ (L.nub . map diPeriph $ driverMapping)
 
 mcuPeriphDriver mcu periph = case periph of
   GPIO -> case mcuFamily mcu of
     F1 -> Just $ DriverInfo GPIO (Just 1) ["STM32F103x8_gpio_v1_0"] VersionedRegTypes NoDriver
     _  -> Just $ DriverInfo GPIO (Just 2) ["*"] VersionedRegTypes NoDriver
-  _ -> case filter (mcuCompatible mcu) (periphDrivers periph) of
+  _ -> case filter (mcuCompatible mcu) (periphDrivers $ asUSART periph) of
           [x] -> Just x
           _ -> Nothing
+  where asUSART UART = USART
+        asUSART x = x
 
 -- error $ "Multiple or no drivers found for periph and mcu: " ++ show periph ++ ", " ++ mcuRefName mcu
 

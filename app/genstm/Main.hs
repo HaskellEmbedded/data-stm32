@@ -258,9 +258,7 @@ stm32periphs = do
         ctx <- makePeriphContext periph mcu
 
         let
-            pName = usart $ tshow periph
-            usart "USART" = "UART"
-            usart x = x
+            pName = tshow periph
             target = T.concat ["STM32", (T.pack $ dev ctx), ".", pName]
 
         templateD ctx (T.concat ["STM32", (T.pack $ dev ctx), ".", pName])

@@ -49,13 +49,3 @@ data Periph =
   | USB_OTG_HS
   | WWDG
   deriving (Show, Eq, Ord)
-
-supportedPeriphs =
- [ CAN
- , I2C
- , GPIO
- , RNG
- , SPI
- , UART ]
-
-

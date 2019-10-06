@@ -221,7 +221,7 @@ adjustGPIOF1Regs x = adjustFields fix x
 
 renameGPIO x = x { periphName = fix $ periphName x }
   where
-    -- drop 5 is not an error here but we're renaming GPIO[A-Z]
+    -- drop 5 is not an error here, we're renaming GPIO[A-Z]
     fix x | "GPIO" `L.isPrefixOf` x = ("GPIO"++) . drop 5 $ x
     fix x | "gpio" `L.isPrefixOf` x = ("gpio"++) . drop 5 $ x
     fix x | otherwise = x

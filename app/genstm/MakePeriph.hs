@@ -5,6 +5,7 @@ module MakePeriph where
 
 import Control.Monad.Reader
 
+import Debug.Trace
 import Data.Maybe
 import Data.Either (rights)
 import Data.Ord (comparing)
@@ -137,7 +138,9 @@ periphInstancesData periph mcu = do
 
   case (is `L.intersect` rccis ) of
     [] -> return $ [mkData dev rcc '0' 0]
-    xs -> return $ map (uncurry (mkData dev rcc)) (zip xs [0..])
+    xs -> return $
+      filter (filterMissingInterrupt periph) $
+      map (uncurry (mkData dev rcc)) (zip xs [0..])
   where
     pName idStr = concat [show periph, idStr]
     rccEn idStr rcc = findRCCBit periph idStr "EN" rcc
@@ -163,17 +166,7 @@ periphInstancesData periph mcu = do
           $ normalizeISRNames
           $ renameDups
           $ isrs [dev]
-          -- instead of this
-          -- we use the same approach as in stm32families
-          -- (use device with largest number of perhiperals for isr map)
-          -- so we dont mismatch interrupt names
 
-    -- XXX: move to Coerce?
-    -- XXX: needs an assert whether we've found the correct number of interrupts
-    -- UART - 1
-    -- SPI - 1
-    -- I2C - 2
-    -- CAN - 2
     sharedInterrupts is = case periph of
         I2C -> case is of
           -- we duplicate this interrupt as it is shared
@@ -207,6 +200,25 @@ periphInstancesData periph mcu = do
              || (pName idStr) `L.isInfixOf` interruptName
 
       )
+
+    filterMissingInterrupt periph ctx = log $ length (interrupts ctx) == validISRCount periph
+      where
+        log True = True
+        log False = trace ("Missing interrupts for " ++ (name ctx) ++ " dev " ++ (mcuRefName mcu)) False
+
+    -- XXX: move to Coerce?
+    -- XXX: needs an assert whether we've found the correct number of interrupts
+    -- UART - 1
+    -- SPI - 1
+    -- I2C - 2
+    -- CAN - 2
+validISRCount UART = 1
+validISRCount USART = 1
+validISRCount SPI = 1
+validISRCount I2C = 2
+validISRCount RNG = 1
+validISRCount CAN = 4
+validISRCount _ = 0
 
 makePeriphContext :: Periph -> MCU -> MonadGen InstancesCtx
 makePeriphContext periph mcu = do
