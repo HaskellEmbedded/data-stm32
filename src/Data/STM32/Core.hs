@@ -22,6 +22,7 @@ core F2     = CortexM3
 core F3     = CortexM4F
 core F4     = CortexM4F
 core F7     = CortexM7F
+core G4     = CortexM4F
 core H7     = CortexM7F
 core L0     = CortexM0Plus
 core L1     = CortexM3
