@@ -52,16 +52,20 @@ mk{{ type }} base rccen rccdis interrupt pclk n = {{ type }}
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
 
-
 -- | Initialize GPIO pins for a UART.
-initPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
-initPin p af = do
+initTxPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
+initTxPin p af = do
   pinEnable        p
   pinSetSpeed      p gpio_speed_50mhz
   pinSetOutputType p gpio_outputtype_pushpull
   pinSetPUPD       p gpio_pupd_pullup
   pinSetAF         p af
   pinSetMode       p gpio_mode_af
+
+initRxPin p af = do
+  pinEnable        p
+  pinSetSpeed      p gpio_speed_50mhz
+  pinSetMode       p gpio_mode_input
 
 -- | Set the BRR register of a UART given a baud rate.
 setBaudRate :: (GetAlloc eff ~ 'Scope s)
@@ -101,8 +105,8 @@ uartInit :: (GetAlloc eff ~ 'Scope s)
 uartInit uart pins clockconfig baud useinterrupts = do
   -- Enable the peripheral clock and set up GPIOs.
   uartRCCEnable uart
-  initPin (uartPinTx pins) (uartPinAF pins)
-  initPin (uartPinRx pins) (uartPinAF pins)
+  initTxPin (uartPinTx pins) (uartPinAF pins)
+  initRxPin (uartPinRx pins) (uartPinAF pins)
 
   -- Initialize the baud rate and other settings.
   setBaudRate uart clockconfig baud
