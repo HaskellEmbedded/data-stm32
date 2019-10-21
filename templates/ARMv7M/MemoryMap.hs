@@ -19,6 +19,9 @@ systick_base = system_control_base + 0x010
 nvic_base :: Integer
 nvic_base = system_control_base + 0x100
 
+system_control_register_base :: Integer
+system_control_register_base = system_control_base + 0xD10
+
 mpu_base :: Integer
 mpu_base = system_control_base + 0xD90
 
