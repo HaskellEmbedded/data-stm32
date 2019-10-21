@@ -11,6 +11,7 @@ import Ivory.Language
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
 
+import Ivory.BSP.STM32.Peripheral.GPIO (GPIOPin, GPIO_AF)
 import Ivory.BSP.STM32.Peripheral.I2C.Pins (I2CPins(..))
 
 {{#versions}}

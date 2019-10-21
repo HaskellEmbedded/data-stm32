@@ -15,6 +15,8 @@
 
 module {{ modns }} (
     pinName
+  , pinNumber
+  , pinPort
   , pinEnable
   , pinDisable
   , pinUnconfigure
@@ -27,6 +29,8 @@ module {{ modns }} (
   , pinClear
   , pinRead
   , GPIOPin(..)
+  , pinIsV1
+  , pinIsV2
   , module Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes
   ) where
 
@@ -45,11 +49,26 @@ import qualified Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes   as V2
 import Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes
 
 data GPIOPin = GPIOF1 V1.GPIOPin | GPIOFX V2.GPIOPin
-data GPIOVersion = V1 | V2
 
 pinName :: GPIOPin -> String
 pinName (GPIOFX p) = V2.pinName p
 pinName (GPIOF1 p) = V1.pinName p
+
+pinNumber :: GPIOPin -> Int
+pinNumber (GPIOFX p) = V2.gpioPinNumber p
+pinNumber (GPIOF1 p) = V1.gpioPinNumber p
+
+pinPort :: GPIOPin -> String
+pinPort (GPIOFX p) = V2.gpioPortName $ V2.gpioPinPort p
+pinPort (GPIOF1 p) = V1.gpioPortName $ V1.gpioPinPort p
+
+pinIsV1 :: GPIOPin -> Bool
+pinIsV1 (GPIOF1 _) = True
+pinIsV1 _          = False
+
+pinIsV2 :: GPIOPin -> Bool
+pinIsV2 (GPIOFX _) = True
+pinIsV2 _          = False
 
 -- | Enable the GPIO port for a pin in the RCC.
 pinEnable :: GPIOPin -> Ivory eff ()

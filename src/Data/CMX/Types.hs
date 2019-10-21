@@ -8,8 +8,7 @@ import GHC.Generics
 import Data.Serialize
 import Data.STM32.Family
 import Data.STM32.Core
-
-type Mhz = Int
+import Data.STM32.Clock
 
 data MCU = MCU {
     mcuCore        :: Core
@@ -20,7 +19,8 @@ data MCU = MCU {
   , mcuLine        :: String
   , mcuPackage     :: String
   , mcuRefName     :: String
-  , mcuFrequency   :: Maybe Mhz
+  , mcuFrequency   :: Maybe Int
+  , mcuClocks      :: [ClockSource]
   , mcuNumberOfIO  :: Int
   , mcuDbVersion   :: String
   , mcuRam         :: Int -- total RAM from CMX db
@@ -104,3 +104,5 @@ data ShortPeriph = ShortPeriph {
     speriphType      :: String
   , speriphMaxOccurs :: Integer
   } deriving (Generic, Eq, Ord, Show)
+
+type AlternateFunctions = [(String, [(Int, [(String, Int)])])]

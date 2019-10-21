@@ -71,7 +71,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     clearBit rcc_cir_lserdyie
     clearBit rcc_cir_lsirdyie
   case clockconfig_source cc of
-    HSI16 -> return ()
+    HSI _ -> return ()
     HSE _ -> do
       -- Enable HSE
       modifyReg rcc_reg_cr $ setBit rcc_cr_hseon

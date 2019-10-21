@@ -50,8 +50,8 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     clearBit rcc_cir_lserdyie
     clearBit rcc_cir_lsirdyie
   case clockconfig_source cc of
-    HSI8 -> return ()
-    -- HSI48 for some
+    HSI _ -> return ()
+    -- XXX: HSI48 for some, we should check (HSI freq) whether its 8 or 48Mhz
     HSE _ -> do
       -- Enable HSE
       modifyReg rcc_reg_cr $ setBit rcc_cr_hseon

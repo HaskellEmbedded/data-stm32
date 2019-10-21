@@ -32,6 +32,7 @@ library
       Data.Ivory.Periph
       Data.Ivory.Pretty
       Data.STM32
+      Data.STM32.Clock
       Data.STM32.Core
       Data.STM32.Drivers
       Data.STM32.Family
@@ -52,9 +53,6 @@ library
     , base >=4.7 && <5
     , bytestring
     , cereal
-    --, hierarchical-clustering
-    --, hierarchical-clustering-diagrams
-    --, clustering
     -- temp
     , ghcid
     , Diff

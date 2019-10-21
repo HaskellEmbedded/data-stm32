@@ -4,6 +4,7 @@
 
 module Types where
 
+import Prelude hiding (log)
 import Turtle
 import Data.Maybe
 import Data.Either
@@ -28,6 +29,7 @@ import Text.Regex.Posix
 data DB = DB {
     cmxs :: M.Map Family [MCU]
   , cmxsWithSVD :: M.Map Family [MCU]
+  , afs :: M.Map String AlternateFunctions
   , noSVD :: [MCU]
   , svds :: [(String, Device)]
   , devNames :: [STM32DevName]
@@ -58,7 +60,7 @@ loadDatabases = do
     Nothing -> die "need DB_PATH env var"
     Just p -> return $ fromText p
   svds <- fmap fixSVDs $ extractSVDCached dbPath
-  cmxs <- extractCMXCached dbPath
+  (cmxs, afs) <- extractCMXCached dbPath
   let
     supp = filterSupported cmxs
     cmxsWithSVD = filterHavingSVD (supp, svds)

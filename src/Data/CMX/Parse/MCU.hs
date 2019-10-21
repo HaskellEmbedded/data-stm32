@@ -1,7 +1,7 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE RecordWildCards #-}
-module Data.CMX.Parse.MCU (parseMCU) where
+module Data.CMX.Parse.MCU (parseMCU, parseAFs, parseClockSources) where
 
 import Control.Monad
 
@@ -10,9 +10,11 @@ import Text.XML.HXT.Core
 import qualified Data.Char as Char
 import qualified Data.Set as Set
 import Data.Maybe
+import Data.List (nub, nubBy, isInfixOf, isSuffixOf)
 
 import Data.CMX.Types
 import Data.STM32.Types
+import Data.STM32.Clock
 
 atTag tag = deep (isElem >>> hasName tag)
 text = getChildren >>> getText
@@ -78,7 +80,7 @@ mcu = atTag "Mcu" >>>
     mcuLine <- att "Line" -< x
     mcuPackage <- att "Package" -< x
     mcuRefName <- att "RefName" -< x
-    mcuFrequency <- withDefault (arr (Just . read) <<< textAtTag "Frequency") Nothing -< x
+    mcuFrequency <- withDefault (arr (Just . (*(10^6)) . read) <<< textAtTag "Frequency") Nothing -< x
     mcuDie <- textAtTag "Die" -< x
     mcuCcmRam <- withDefault (arr (Just . (*1024) . read) <<< textAtTag "CCMRam") Nothing -< x
     mcuEEProm <- withDefault (arr (Just . read) <<< textAtTag "E2prom") Nothing -< x
@@ -120,6 +122,10 @@ mcu = atTag "Mcu" >>>
 
       mcuItcmRam = Nothing
       mcuBackupRam = Nothing
+
+      mcuForceSplit = False
+
+      mcuClocks = []
 
       mcuHasPowerPad = read $ capitalized hasPowerPad'
       mcuNumberOfIO = read numberOfIO'
@@ -178,3 +184,54 @@ parseMCU f = do
     [x] -> return x
     [c1, c2]   -> return c1 -- for H7 series we get two MCUs as it has two Cores (M7 & M4)
     _   -> error $ "multiple mcus parsed from " ++ f
+
+value x = any (==x) $ map (++"_VALUE") clockSourceNames
+
+getCSName = (getAttrValue "Name" >>> isA value)
+
+clockSources = atTag "RefParameter" >>>
+  proc x -> do
+    cs <- arr parseSourceValue <<< getCSName -< x
+    val <- arr read <<< att "DefaultValue" -< x
+    returnA -< cs val
+
+parseClockSources f = do
+  res <- runX (readDocument [] f >>> clockSources)
+  return $ nubBy (\a b -> clockSourceName a == clockSourceName b) res
+
+parseSourceValue = parseSource . take 3
+parseSource "HSE" = HSE
+parseSource "HSI" = HSI
+parseSource "MSI" = MSI
+parseSource "LSE" = LSE
+parseSource "LSI" = LSI
+
+afs = atTag "GPIO_Pin" >>>
+  proc x -> do
+    pin <- (arr $ parsePin . drop 1) <<< isA ((=='P') . head) <<< att "Name" -< x
+    sigs <- isA (not . null) <<< listA pinSignal -< x
+    returnA -< (pin, nub sigs)
+  where
+    parsePin :: String -> (String, Int)
+    parsePin x = (takeWhile Char.isLetter x, read $ takeWhile Char.isDigit $ dropWhile Char.isLetter x)
+
+pinSignal = atTag "PinSignal" >>> atTag "SpecificParameter" >>>
+  proc x -> do
+    (getAttrValue "Name" >>> isA (=="GPIO_AF")) -< x
+    pv <- (arr $ parseAf .  drop 5)
+       <<< isA (not . ("AFIO" `isInfixOf`)) -- AFIO is F1 specific
+       <<< isA (not . ("EVENTOUT" `isSuffixOf`))
+       <<< textAtTag "PossibleValue" -< x
+    returnA -< pv
+  where
+    parseAf :: String -> (String, Int)
+    parseAf x = (drop 1 $ dropWhile (/='_') x, read $ takeWhile (/='_') $ dropWhile Char.isLetter x)
+
+parseAFs f = do
+  res <- runX (readDocument [] f >>> afs)
+  return $ groupAFsByPort res
+
+groupAFsByPort afs =
+  let ports = nub $ map (fst . fst) afs
+      portPins x = map (\((_port, pin), xs) -> (pin, xs)) $ filter ((==x) . fst . fst) afs
+  in map (\p -> (p, portPins p)) ports

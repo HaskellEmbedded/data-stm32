@@ -10,9 +10,12 @@ module Data.CMX.Extract (
   , uniqueIpVersions
   , uniqueIps
   , hasIp
+  , hasIpVersion
   , mcusWithIp
   , ipPerMCUCounts
   , ipFamilies
+  , ipShortName
+  , getIPVersion
   , fx
   ) where
 
@@ -30,6 +33,7 @@ import Data.Char (toUpper)
 import Data.STM32.Types (Family(..), supportedFamilies)
 import Data.STM32.Name
 import Data.STM32.Memory
+import Data.STM32.Periph
 import Data.CMX.Types
 import Data.CMX.Parse
 
@@ -39,11 +43,12 @@ cmxDevices  = concat . M.elems
 filterSupported :: M.Map Family [MCU] -> M.Map Family [MCU]
 filterSupported = M.filterWithKey (\k a -> k `elem` supportedFamilies)
 
-extractCMX :: FilePath -> IO (M.Map Family [MCU])
+extractCMX :: FilePath -> IO (M.Map Family [MCU], M.Map String AlternateFunctions)
 extractCMX dbPath = do
   fs <- parseFamilies (encodeString dbPath ++ "/db/mcu/families.xml")
-  p <- forM (M.toList . M.map (concatMap subFamMCUs) $ fs) $ \(fam, devs) -> do
+  xs <- forM (M.toList . M.map (concatMap subFamMCUs) $ fs) $ \(fam, devs) -> do
     ds <- forM devs $ \dev -> do
+      putStrLn $ "Parsing " ++ smcuName dev
       mcu <- parseMCU $ encodeString dbPath ++ "/db/mcu/" ++ (smcuName dev) ++ ".xml"
       let m = checkMCU $ fixMCU $ mcu {
                 mcuRam = smcuRam dev
@@ -55,12 +60,26 @@ extractCMX dbPath = do
           extract (Left x) = error $ "Unable to parse name" ++ x
           extract (Right x) = x
 
-      return $ snd $ adjustRAMs (name, m)
+      cs <- parseClockSources $ ipXMLPath dbPath RCC m
+
+      return $ snd $ adjustRAMs (name, m { mcuClocks = cs })
 
     return (fam, ds)
-  return $ M.fromList p
 
-extractCMXCached :: FilePath -> IO (M.Map Family [MCU])
+  afModes <- extractAlternateFunctions dbPath (concatMap snd xs)
+  return $ (M.fromList xs, afModes)
+
+extractAlternateFunctions :: FilePath -> [MCU] -> IO (M.Map String AlternateFunctions)
+extractAlternateFunctions dbPath mcus = do
+  let uniqueGPIOModes = L.nub $ map (\m -> (ipShortName GPIO m, ipXMLPath dbPath GPIO m)) mcus
+  x <- forM uniqueGPIOModes $ \(name, path) -> do
+    afs <- parseAFs path
+    return (name, afs)
+
+  return $ M.fromList x
+
+extractCMXCached :: FilePath -> IO (M.Map Family [MCU], M.Map String AlternateFunctions)
+
 extractCMXCached dbPath = do
   hasCache <- testfile $ decodeString $ cachePath
   case hasCache of
@@ -150,6 +169,10 @@ hasIp (ipname, ipversion) = not . S.null
                           . S.filter (\ip -> ipName ip == ipname
                                           && ipVersion ip == ipversion)
                           . mcuIps
+hasIpVersion :: String -> MCU -> Bool
+hasIpVersion ipversion = not . S.null
+                       . S.filter (\ip -> ipVersion ip == ipversion)
+                       . mcuIps
 
 mcusWithIp :: (String, String) -> M.Map Family [MCU] -> [MCU]
 mcusWithIp p = filter (hasIp p) . cmxDevices
@@ -170,3 +193,22 @@ ipFamilies devs = map (\ip -> (ip, L.nub $ map mcuFamily $ mcusWithIp ip devs))
 -- fx (cmxs db) "F405"
 fx :: M.Map Family [MCU] -> String -> [MCU]
 fx db x = filter (\m -> ("STM32" ++ x) `L.isPrefixOf` (mcuRefName m)) . cmxDevices $ db
+
+getIPVersion :: Periph -> MCU -> String
+getIPVersion p m = case S.toList $ S.filter ((== show p) . ipName) $ mcuIps m of
+  [] -> error $ "No IP found with name " ++ (show p)
+  [x] -> ipVersion x
+  xs -> error $ "Multiple IPs found with name " ++ (show p)
+
+-- STM32F091_gpio_v1_0 -> F091
+ipShortName :: Periph -> MCU -> String
+ipShortName periph mcu = takeWhile (/='_') . drop 5 $ getIPVersion periph mcu
+
+ipXMLPath :: FilePath -> Periph -> MCU -> String
+ipXMLPath dbPath periph mcu = concat
+  [ encodeString dbPath
+  , "/db/mcu/IP/"
+  , (show periph)
+  , "-"
+  , getIPVersion periph mcu
+  , "_Modes.xml" ]

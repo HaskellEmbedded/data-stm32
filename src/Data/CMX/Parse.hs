@@ -1,6 +1,6 @@
 module Data.CMX.Parse (
-    parseMCU
-  , parseFamilies
+    parseFamilies
+  , module Data.CMX.Parse.MCU
   ) where
 
 import Data.CMX.Parse.Families
