@@ -121,3 +121,10 @@ ppMem (addr, periph) =
   <> " = "
   <> string addr
   where name = string (map toLower periph) <> "_periph_base"
+
+shortField Field{..} = unwords [
+  fieldName
+  , "offset"
+  , show fieldBitOffset
+  , "width"
+  , show fieldBitWidth ]

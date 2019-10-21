@@ -13,7 +13,11 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.ByteString.Char8 as B
+import Text.Pretty.Simple
 
+
+-- functor
+import Data.Algorithm.Diff
 import Control.Monad.Reader
 
 import Data.Ivory -- .Pretty (replace)
@@ -132,3 +136,40 @@ log = liftIO . putStrLn
 askSVDs xs = runGen $ do
   db <- ask
   mapM (\x -> svdForMCU $ head $ fx (cmxs db) x) xs
+
+
+peripheralByVersion :: Periph -> String -> MonadGen (Peripheral)
+peripheralByVersion p ver = do
+  db <- ask
+  case filter (hasIpVersion ver) (cmxDevices $ cmxsWithSVD db) of
+    [] -> error $ "No peripheral found for IP version " ++ ver
+    (x:_) -> do
+      svd <- get $ mcuRefName x
+      return $ getPeriph (show p) svd
+
+periphVersions :: Periph -> MonadGen ([String])
+periphVersions p = do
+  db <- ask
+  return $ map snd $ filter ((==show p) . fst) $ S.toList $ uniqueIps $ cmxsWithSVD db
+
+lp x = liftIO $ pPrint $ x
+
+diffPeriphs :: Periph -> MonadGen ()
+diffPeriphs p = do
+  vers <- periphVersions p
+  forM_ (zip vers (tail vers)) $ \(v1, v2) -> do
+    x <- peripheralByVersion p v1
+    y <- peripheralByVersion p v2
+    liftIO $ print (v1, v2)
+    let dr = diffRegNames x y
+    log $ renderDiff $ dr
+    lp $ diffDistance $ diffRegNames x y
+    forM_ (getBoths dr) $ \rName -> do
+      log $ renderDiff $ map (fmap shortField) $ diffFields (regNameFields rName x) (regNameFields rName y)
+      lp $ diffDistance $ diffFields (regNameFields rName x) (regNameFields rName y)
+
+instance Functor Diff where
+  fmap f (Both x y) = (Both (f x) (f y))
+  fmap f (First x) = (First (f x))
+  fmap f (Second x) = (Second (f x))
+

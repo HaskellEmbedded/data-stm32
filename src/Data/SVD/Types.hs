@@ -134,10 +134,6 @@ mapFields f Register{..} = map f regFields
 
 mapDevFields f d = concat $ concat $ flip mapPeriphs d $ mapRegs $ mapFields f
 
-diffPeriphs a b = diffRegs (periphRegisters a) (periphRegisters b)
-
-diffRegs a b = getDiffBy (\x y -> regName x == regName y) (sortOn regName a) (sortOn regName b)
-
 -- |Get peripheral by name
 getPeriph :: String -> Device -> Peripheral
 getPeriph name dev = head . filter ((==name) . periphGroupName) $ devicePeripherals dev
@@ -158,6 +154,13 @@ diffRegisterNames pName dev1 dev2 = getDiff
   (sort $ registerNames pName dev1)
   (sort $ registerNames pName dev2)
 
+regNames = map regName . periphRegisters
+diffRegNames p1 p2 = diff regNames p1 p2
+
+regNameFields rName p = regFields . head . filter((==rName) . regName) . periphRegisters $ p
+
+diff fn x y = getDiff (sort $ fn x) (sort $ fn y)
+
 diffFieldNames pName regName dev1 dev2 = getDiff
   (sort $ fieldNames regName pName dev1)
   (sort $ fieldNames regName pName dev2)
@@ -176,3 +179,8 @@ diffDistance x = sum $ map go x
     go (Both _ _) = 0
     go (First  _) = 1
     go (Second _) = 1
+
+isBoth (Both _ _) = True
+isBoth _ = False
+
+getBoths = map (\(Both x _) -> x) . filter isBoth
