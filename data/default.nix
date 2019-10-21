@@ -1,20 +1,14 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc865" }:
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc881" }:
+
 let
-  overlays = [
-    (import ./nix/ivory.nix)
-    (import ./nix/ivory-tower-stm32.nix)
-    (import ./nix/tower.nix)
+  ivory-tower-nix = nixpkgs.fetchFromGitHub {
+    owner = "HaskellEmbedded";
+    repo = "ivory-tower-nix";
+    rev = "9ffb1710aff73a43e5059e5c718327bd3f644bac";
+    sha256 = "0nrm0jax6iwjm78paw7jrq31jyi8kpd5qkaxl2dwvhpcv1n3ydpp";
+  };
 
-    (import ./nix/generated.nix)
-
-    (import ./nix/ivory-tower-helloworld.nix)
-    (import ./nix/ivory-tower-base.nix)
-    (import ./nix/ivory-tower-drivers.nix)
-
-    (import ./nix/hastache.nix)
-    (import ./nix/data-stm32.nix)
-  ];
+  overlays = (import "${ivory-tower-nix}/overlay.nix" compiler);
   pkgs = import <nixpkgs> { inherit overlays; };
 in
-#pkgs.haskellPackages.ivory-bsp-stm32
-pkgs.haskellPackages.ivory-tower-helloworld
+  pkgs.haskell.lib.dontHaddock ( pkgs.myHaskellPackages.callCabal2nix "ivory-bsp-stm32" ./. {})

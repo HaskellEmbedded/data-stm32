@@ -1,10 +1,19 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc865" }:
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc881" }:
+
 let
-  hastache = nixpkgs.haskell.packages.${compiler}.callPackage ./nix/hastache.nix {};
+  ivory-tower-nix = nixpkgs.fetchFromGitHub {
+    owner = "HaskellEmbedded";
+    repo = "ivory-tower-nix";
+    rev = "9ffb1710aff73a43e5059e5c718327bd3f644bac";
+    sha256 = "0nrm0jax6iwjm78paw7jrq31jyi8kpd5qkaxl2dwvhpcv1n3ydpp";
+  };
+
+  overlays = (import "${ivory-tower-nix}/overlay.nix" compiler);
+  pkgs = import <nixpkgs> { inherit overlays; };
 in
-nixpkgs.haskell.lib.overrideCabal
-  (nixpkgs.haskell.packages.${compiler}.callPackage ./data-stm32.nix { inherit hastache; })
+pkgs.haskell.lib.overrideCabal
+  (pkgs.myHaskellPackages.callPackage ./data-stm32.nix { })
   ( oldDrv: {
-      src = nixpkgs.nix-gitignore.gitignoreSource [] ./.;
+      src = pkgs.nix-gitignore.gitignoreSource [] ./.;
     }
 )
