@@ -3,8 +3,9 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE RecordWildCards #-}
 --
--- Peripheral.hs --- I2C peripheral driver for the STM32F4.
+-- Peripheral.hs --- I2C peripheral defs for version 2 of STM32 I2C peripheral
 --
 
 module {{ modns }} where
@@ -20,6 +21,7 @@ import Ivory.BSP.STM32.Peripheral.GPIO
 
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Peripheral.{{ type }}{{ version }}.Regs
+import Ivory.BSP.STM32.Peripheral.{{ type }}.Timings
 
 data {{ type }} = {{ type }}
 {{ bitDataRegs }}
@@ -28,6 +30,8 @@ data {{ type }} = {{ type }}
   , i2cRCCReset    :: forall eff . Ivory eff ()
   , i2cIntEvent    :: HasSTM32Interrupt
   , i2cIntError    :: HasSTM32Interrupt
+  , i2cPClk        :: PClk
+  , i2cAFLookup    :: [GPIOPin] -> GPIO_AF
   , i2cName        :: String
   }
 
@@ -38,15 +42,19 @@ mk{{ type }} :: (STM32Interrupt i)
             -> (forall eff . Ivory eff ()) -- RCC Reset
             -> i -- event interrupt
             -> i -- error interrupt
+            -> PClk   -- Clock source
+            -> ([GPIOPin] -> GPIO_AF)
             -> String -- Name
             -> {{ type }}
-mk{{ type }} base rccenable rccdisable rccreset evtint errint n = {{ type }}
+mk{{ type }} base rccenable rccdisable rccreset evtint errint pclk afLookup n = {{ type }}
 {{ bitDataRegsMk }}
     , i2cRCCEnable  = rccenable
     , i2cRCCDisable = rccdisable
     , i2cRCCReset   = rccreset
     , i2cIntEvent   = HasSTM32Interrupt evtint
     , i2cIntError   = HasSTM32Interrupt errint
+    , i2cPClk       = pclk
+    , i2cAFLookup   = afLookup
     , i2cName       = n
     }
   where
@@ -60,17 +68,22 @@ i2cInit periph sda scl clockconfig = do
   pinsetup sda
   pinsetup scl
 
+  let fpclk = clockPClkHz (i2cPClk periph) clockconfig
+      ts@I2CTiming{..} = getTimings (fromIntegral fpclk) 100000
+
   -- Reset and clear peripheral
   setReg (i2cRegCR1 periph) clear
   setReg (i2cRegCR2 periph) clear
 
+  comment $ "Computed I2C timings: " ++ show ts
+
   modifyReg (i2cRegTIMINGR periph) $ do
-    -- for 48Mhz src clock (from datasheet)
-    setField i2c_timingr_presc  (fromRep 0xB)
-    setField i2c_timingr_sdadel (fromRep 0x2)
-    setField i2c_timingr_scldel (fromRep 0x4)
-    setField i2c_timingr_scll   (fromRep 0x13)
-    setField i2c_timingr_sclh   (fromRep 0xF)
+    setField i2c_timingr_presc  (fromRep $ fromIntegral timingPrescaler)
+    setField i2c_timingr_sdadel (fromRep $ fromIntegral timingSDADelay)
+    setField i2c_timingr_scldel (fromRep $ fromIntegral timingSCLDelay)
+    setField i2c_timingr_scll   (fromRep $ fromIntegral timingSCLLow)
+    setField i2c_timingr_sclh   (fromRep $ fromIntegral timingSCLHigh)
+
 
   -- enable peripheral
   modifyReg (i2cRegCR1 periph) $ setBit i2c_cr1_pe
@@ -88,7 +101,7 @@ i2cInit periph sda scl clockconfig = do
     pinEnable        p
     pinSetOutputType p gpio_outputtype_opendrain
     pinSetPUPD       p gpio_pupd_none
-    pinSetAF         p gpio_af4 -- All I2C map AFs map to af4
+    pinSetAF         p (i2cAFLookup periph [sda, scl])
     pinSetMode       p gpio_mode_af
 
 i2cDeinit :: {{ type }} -> GPIOPin -> GPIOPin -> Ivory eff ()

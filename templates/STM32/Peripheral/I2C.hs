@@ -37,8 +37,10 @@ mkI2CVersion
        -> (forall eff . Ivory eff ()) -- RCC Reset
        -> i -- event interrupt
        -> i -- error interrupt
+       -> PClk   -- Clock source
+       -> ([GPIOPin] -> GPIO_AF)
        -> String -- Name
        -> I2C
 {{#versions}}
-mkI2CVersion V{{ version }} i e1 e2 e3 j k s = WrappedV{{ version }} $ P{{ version }}.mkI2C i e1 e2 e3 j k s
+mkI2CVersion V{{ version }} i e1 e2 e3 j k pclk afLookup name = WrappedV{{ version }} $ P{{ version }}.mkI2C i e1 e2 e3 j k pclk afLookup name
 {{/versions}}
