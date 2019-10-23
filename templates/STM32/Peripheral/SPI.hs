@@ -10,6 +10,10 @@ module Ivory.BSP.STM32.Peripheral.SPI
   ( P2.SPI(..)
   , P2.SPIDevice(..)
   , P2.mkSPI
+  , P2.SPICSActive(..)
+  , P2.SPIClockPolarity(..)
+  , P2.SPIClockPhase(..)
+  , P2.SPIBitOrder(..)
   , SPIPins(..)
   ) where
 
