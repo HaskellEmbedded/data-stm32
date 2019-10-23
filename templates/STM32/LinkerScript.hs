@@ -21,6 +21,7 @@ linker_script fname nmcu bl_offset reset_handler =
     , ( "reset_handler", reset_handler)
     -- use ccsram if available
     , ( "ccsramOrSram",  maybe "sram" (pure "ccsram") mcuCcmRam)
+    , ( "additionalSections", additionalSections nmcu)
     ]
 
   -- if continuous use mcuRam if not just sram1
@@ -50,6 +51,20 @@ linker_script fname nmcu bl_offset reset_handler =
     , ("sram3", fromIntegral <$> ram3Offset nmcu
               , mcuRam3)
     ]
+
+  additionalSections nmcu = concatMap mkSection $ extraRams nmcu (continuous nmcu)
+    where mkSection (name, (Just _), (Just _)) = unlines
+            -- e.g. .sram2Section : { ... } > sram2
+            [ "." ++ sname ++ " : {"
+            , ". = ALIGN(4);"
+            , "__" ++ sname ++ "_start__ = .;"
+            , " *(." ++ sname ++ "*)"
+            , "__" ++ sname ++ "_end = .;"
+            , "} > " ++ name
+            ]
+            where
+              sname = name ++ "Section"
+          mkSection _ = ""
 
   mkRegion (name, (Just offset), (Just reglength)) =
     "  " ++ name ++ "(" ++ (mode name) ++ "): ORIGIN = " ++ (show offset) ++ ", LENGTH =" ++ (show reglength)
