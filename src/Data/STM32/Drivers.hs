@@ -40,16 +40,9 @@ driverMapping = [
   , DriverInfo USART (Just 1) ["sci2_v1_1"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 2) ["sci2_v1_2"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 3) ["sci2_v3_1", "sci3_v1_1", "sci3_v2_1"] CommonRegTypes VersionedDriver
-  ]
 
---    (GPIO, ["TH"])
-{--
-driverCommonPeriphFiles = [
-  , (CAN, ["Filters"])
-  , (SPI, ["Pins"])
-  , (UART, ["Pins"])
-]
---}
+  , DriverInfo IWDG Nothing ["iwdg1_v1_1", "iwdg1_v2_0"] NoRegTypes CommonDriver
+  ]
 
 periphDrivers p = filter (\DriverInfo{..} -> diPeriph == p) driverMapping
 
