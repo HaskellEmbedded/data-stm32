@@ -1,7 +1,8 @@
 { mkDerivation, ansi-wl-pprint, attoparsec, base, bytestring
 , cereal, containers, Diff, foldl, ghcid, hastache, hxt, hxt-xpath
-, karver, mtl, pretty-simple, regex-posix, split, stdenv, syb, text
-, time, turtle, unordered-containers, vector
+, karver, mtl, optparse-applicative, pretty-simple, regex-posix
+, split, stdenv, syb, text, time, turtle, unordered-containers
+, vector
 }:
 mkDerivation {
   pname = "data-stm32";
@@ -16,8 +17,9 @@ mkDerivation {
   ];
   executableHaskellDepends = [
     ansi-wl-pprint attoparsec base bytestring cereal containers Diff
-    foldl hastache hxt hxt-xpath karver mtl pretty-simple regex-posix
-    split syb text time turtle unordered-containers vector
+    foldl hastache hxt hxt-xpath karver mtl optparse-applicative
+    pretty-simple regex-posix split syb text time turtle
+    unordered-containers vector
   ];
   testHaskellDepends = [
     ansi-wl-pprint attoparsec base bytestring cereal containers foldl

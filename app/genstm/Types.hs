@@ -29,6 +29,8 @@ import Coerce
 import Utils
 
 import Text.Regex.Posix
+import Options.Applicative
+
 
 data DB = DB {
     cmxs :: M.Map Family [MCU]
@@ -39,6 +41,12 @@ data DB = DB {
   , devNames :: [STM32DevName]
   , shortDevNames :: [String]
   , nameMapped :: M.Map STM32DevName MCU
+  , opts :: Options
+  } deriving (Show)
+
+data Options = Options {
+    exclude :: [String]
+  , include :: [String]
   } deriving (Show)
 
 type MonadGen a = ReaderT DB IO a
@@ -65,6 +73,7 @@ loadDatabases = do
     Just p -> return $ fromText p
   svds <- fmap fixSVDs $ extractSVDCached dbPath
   (cmxs, afs) <- extractCMXCached dbPath
+  opts <- execParser $ info (parseOptions <**> helper) (fullDesc <> progDesc "genstm")
   let
     supp = filterSupported cmxs
     cmxsWithSVD = filterHavingSVD (supp, svds)
@@ -173,3 +182,31 @@ instance Functor Diff where
   fmap f (First x) = (First (f x))
   fmap f (Second x) = (Second (f x))
 
+parseOptions :: Parser Options
+parseOptions = Options <$>
+    many (strOption (
+               long "exclude"
+            <> short 'e'
+            <> metavar "MCU"
+            <> help "Exclude MCU(s) from output"))
+  <*>
+    many (strOption (
+               long "include"
+            <> short 'i'
+            <> metavar "MCU"
+            <> help "Only process these MCU(s)"))
+
+devFilter Options{include=[], exclude = []} sn = True
+devFilter Options{include=is, exclude = []} sn = elem sn is
+devFilter Options{include=[], exclude = es} sn = not $ elem sn es
+devFilter _ _ = error "Cannot use both include and exclude"
+
+filteredDevs ::  MonadGen ([(String, MCU)])
+filteredDevs = do
+  db <- ask
+  return $ filter (devFilter (opts db) . fst) $ M.toList $ M.mapKeys shortName $ nameMapped db
+
+filteredShortNames ::  MonadGen ([String])
+filteredShortNames = do
+  db <- ask
+  return $ filter (devFilter (opts db)) $ shortDevNames db

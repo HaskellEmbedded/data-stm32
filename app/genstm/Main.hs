@@ -109,7 +109,8 @@ main = do
 
 stm32devs = do
   DB{..} <- ask
-  forM_ (M.toList $ M.mapKeys shortName $ nameMapped) $ \(name,mcu) -> do
+  devs <- filteredDevs
+  forM_ devs $ \(name, mcu) -> do
     svd <- svdForMCU mcu
 
     log $ "Processing device " ++ (show (deviceName svd))
@@ -316,7 +317,8 @@ stm32toplevel = do
   template' "STM32.MCU" "STM32/MCU.hs"
 
   -- VectorTable
-  let devctx = ShortDevicesCtx $ shortDevNames db
+  devs <- filteredShortNames
+  let devctx = ShortDevicesCtx devs
   templateD devctx "STM32.VectorTable" "STM32/VectorTable.hs"
 
   -- ClockInit

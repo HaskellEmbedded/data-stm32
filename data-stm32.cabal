@@ -101,6 +101,7 @@ executable genstm
     , syb
     , mtl
     , unordered-containers
+    , optparse-applicative
     , pretty-simple
     , regex-posix
     , split
