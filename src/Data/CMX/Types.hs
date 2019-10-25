@@ -32,6 +32,7 @@ data MCU = MCU {
   , mcuItcmRam     :: Maybe Int -- tightly-coupled memory
   , mcuBackupRam   :: Maybe Int -- battery backed memory
   , mcuEEProm      :: Maybe Int
+  , mcuForceSplit  :: Bool      -- emit split memory sections even if region is continuos
   , mcuLimits      :: [Limit]
   , mcuIps         :: Set IP
   , mcuPins        :: Set Pin

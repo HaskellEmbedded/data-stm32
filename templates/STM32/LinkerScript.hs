@@ -11,22 +11,26 @@ import Ivory.BSP.STM32.MCU
 import Data.STM32
 
 linker_script :: FilePath -> NamedMCU -> Integer -> String -> Artifact
-linker_script fname nmcu bl_offset reset_handler =
-  artifactCabalFileTemplate' P.getDataDir path fname (attrs nmcu)
+linker_script fname namedMcu bl_offset reset_handler =
+  artifactCabalFileTemplate' P.getDataDir path fname (attrs namedMcu)
   where
   path = "support/linker_script.lds.template"
-  attrs nmcu@(_name, MCU{..}) =
+  attrs nmcu@(_name, mcu) =
     [ ( "regions",       memregs nmcu)
     , ( "estack",        show $ (ramOffset nmcu) + sramSize nmcu)
     , ( "reset_handler", reset_handler)
     -- use ccsram if available
-    , ( "ccsramOrSram",  maybe "sram" (pure "ccsram") mcuCcmRam)
+    , ( "ccsramOrSram",  maybe "sram" (pure "ccsram") (mcuCcmRam mcu))
     , ( "additionalSections", additionalSections nmcu)
     ]
 
   -- if continuous use mcuRam if not just sram1
-  continuous nmcu = ramContinuos $ rams nmcu
-  sramSize nmcu@(_name, MCU{..}) = if continuous nmcu then mcuRam else mcuRam1
+  continuous nmcu@(_name, mcu) =
+    (not $ mcuForceSplit mcu) && (ramContinuos $ rams nmcu)
+
+  sramSize nmcu@(_name, MCU{..}) =
+    if continuous nmcu then mcuRam
+                       else mcuRam1
 
   memregs nmcu@(_name, MCU{..}) = unlines $ map mkRegion
     ([("flash",  Just $ flashOffset + bl_offset
@@ -43,6 +47,7 @@ linker_script fname nmcu bl_offset reset_handler =
                , mcuBackupRam)
     ] ++ (extraRams nmcu (continuous nmcu)))
 
+  extraRams :: NamedMCU -> Bool -> [(String, Maybe Integer, Maybe Int)]
   extraRams _                     True = []
   extraRams nmcu@(_name, MCU{..}) False =
     [
