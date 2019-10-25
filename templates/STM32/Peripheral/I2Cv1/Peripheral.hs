@@ -60,8 +60,13 @@ mk{{ type }} base rccenable rccdisable rccreset evtint errint pclk afLookup n = 
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
 
 i2cInit :: (GetAlloc eff ~ 'Scope cs)
-        => {{ type }} -> GPIOPin -> GPIOPin -> ClockConfig -> Ivory eff ()
-i2cInit periph sda scl clockconfig = do
+        => {{ type }}
+        -> GPIOPin
+        -> GPIOPin
+        -> ClockConfig
+        -> Integer
+        -> Ivory eff ()
+i2cInit periph sda scl clockconfig freq = do
   i2cRCCEnable periph
   pinsetup sda
   pinsetup scl
@@ -97,7 +102,7 @@ i2cInit periph sda scl clockconfig = do
   calcHSCCR pclk = do
     -- Need to divide clock to use 25 cycles (DUTY mode is 16 low + 9 high)
     -- at 400khz. Clock divider must be at least 1.
-    v <- assign $ castWith 0 (pclk `iDiv` (400000 * 25))
+    v <- assign $ castWith 0 (pclk `iDiv` (fromIntegral freq * 25))
     assign ((v <? 1) ? (1, v))
 
   pinsetup :: GPIOPin -> Ivory eff ()
@@ -121,9 +126,14 @@ i2cDeinit periph sda scl = do
 -- GPIOs. Procedure adapted from PX4/NuttX
 i2cReset
   :: (GetBreaks (AllowBreak eff) ~ 'Break,
-      GetAlloc eff ~ 'Scope cs) =>
-     {{ type }} -> GPIOPin -> GPIOPin -> ClockConfig -> Ivory eff ()
-i2cReset periph sda scl clockconfig = do
+      GetAlloc eff ~ 'Scope cs)
+  => {{ type }}
+  -> GPIOPin
+  -> GPIOPin
+  -> ClockConfig
+  -> Integer
+  -> Ivory eff ()
+i2cReset periph sda scl clockconfig freq = do
   i2cDeinit periph sda scl
   let pinSetup p = do
         pinEnable        p
@@ -151,4 +161,4 @@ i2cReset periph sda scl clockconfig = do
   -- let go of the GPIOs and reinit the peripheral
   pinUnconfigure sda
   pinUnconfigure scl
-  i2cInit periph sda scl clockconfig
+  i2cInit periph sda scl clockconfig freq

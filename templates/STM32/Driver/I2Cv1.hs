@@ -43,9 +43,10 @@ i2c_MAX_ERROR_RUN = 5
 i2cTower :: (e -> ClockConfig)
          -> I2C
          -> I2CPins
+         -> Integer
          -> Tower e ( BackpressureTransmit ('Struct "i2c_transaction_request") ('Struct "i2c_transaction_result")
                     , ChanOutput ('Stored ITime))
-i2cTower tocc periph I2CPins{..} = do
+i2cTower tocc periph I2CPins{..} freq = do
   towerDepends i2cTowerTypes
   towerModule  i2cTowerTypes
   reqchan <- channel
@@ -69,7 +70,8 @@ i2cTower tocc periph I2CPins{..} = do
                       (clearBit i2c_cr2_iterren)
                     interrupt_disable (i2cIntError periph))
   monitor ((i2cName periph) ++ "PeripheralDriver") $
-    i2cPeripheralDriver tocc periph i2cpins_sda i2cpins_scl evt_irq err_irq
+    i2cPeripheralDriver tocc periph i2cpins_sda i2cpins_scl freq
+      evt_irq err_irq
       (snd reqchan) (fst reschan) ready_per (fst readychan) watchdog_per
   return (BackpressureTransmit (fst reqchan) (snd reschan), snd readychan)
 
@@ -84,6 +86,7 @@ i2cPeripheralDriver :: forall e
                     -> I2C
                     -> GPIOPin
                     -> GPIOPin
+                    -> Integer
                     -> ChanOutput ('Stored ITime)
                     -> ChanOutput ('Stored ITime)
                     -> ChanOutput ('Struct "i2c_transaction_request")
@@ -92,7 +95,9 @@ i2cPeripheralDriver :: forall e
                     -> ChanInput  ('Stored ITime)
                     -> ChanOutput ('Stored ITime)
                     -> Monitor e ()
-i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_per ready_in watchdog_per = do
+i2cPeripheralDriver tocc periph sda scl freq
+  evt_irq err_irq req_chan res_chan ready_per ready_in watchdog_per = do
+
   clockConfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
 
@@ -106,7 +111,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       debugSetup     debugPin2
       debugSetup     debugPin3
       debugSetup     debugPin4
-      i2cInit        periph sda scl clockConfig
+      i2cInit        periph sda scl clockConfig freq
       interrupt_enable (i2cIntEvent periph)
       interrupt_enable (i2cIntError periph)
 
@@ -183,7 +188,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
         when (bitToBool (sr2 #. i2c_sr2_busy)) $ do
           -- if we're inactive but the bus is busy, reset the peripheral
           disableCRInterrupts periph
-          i2cReset periph sda scl clockConfig
+          i2cReset periph sda scl clockConfig freq
           -- increment the error run in case we need to try again
           store error_run (errs + 1)
 
@@ -193,7 +198,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
           sendresult res_emitter resbuffer 1
         -- reset the peripheral
         disableCRInterrupts periph
-        i2cReset periph sda scl clockConfig
+        i2cReset periph sda scl clockConfig freq
         -- reset the error run
         store error_run 0
 
