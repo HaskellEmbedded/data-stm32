@@ -46,8 +46,6 @@ data InstanceCtx = InstanceCtx {
   , numericIndex :: Int
   } deriving (Show, Data, Typeable)
 
-
-
 -- find enable and reset bits in RCC registers (e.g. uart{vers}{suffix} (e.g. uart1en))
 findRCCBit :: Periph
            -> String

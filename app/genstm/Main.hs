@@ -49,15 +49,6 @@ import MakePeriph
 import Types
 import Utils
 
-cdmk dir = do
-  hasdir <- testdir dir
-  when (not hasdir) (mktree dir)
-  cd dir
-
-periph2svdName :: Periph -> String
-periph2svdName UART = "USART"
-periph2svdName x = show x
-
 main = do
   seesData <- testdir "data"
   unless seesData $ error "Directory ./data not found, running from correct directory?"
@@ -175,6 +166,7 @@ stm32devs = do
         imports = map show $ filter (\periph -> hasPeriph mcu periph && hasDriver mcu periph) (supported)
         ctx = ImportsCtx name imports
     templateD ctx ns "STM32DEV.hs"
+
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
 -- for all supportedPeriphs
 stm32periphs = do
@@ -228,7 +220,7 @@ stm32periphs = do
                   typ = T.unpack $ pName
                   , bitDataRegs = ppBitDataRegs new
                   , bitDataRegsMk = ppBitDataRegsMk new
-                  , version = maybe "" (('v':) . show) diVersion
+                  , pversion = maybe "" (('v':) . show) diVersion
                   }
       templateD ctx ns ("STM32/Peripheral/" <> nameVersion <> "/Peripheral.hs")
 
@@ -346,7 +338,6 @@ stm32families = do
       ("STM32" <> tshow f <> ".ClockInit")
       ("STM32FAM/" <> tshow f <> "/ClockInit.hs")
 
-    -- XXX: heuristic
     dev <- last <$> svdsFamily f
     let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals dev of
          [] -> fail $ "No " ++ (show p) ++ " found"
@@ -365,6 +356,10 @@ stm32families = do
         ctx = listCtx [ ("dev", tshow f)
               , ("map" , T.pack $ ppMemMap $ getDevMemMap dev ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
+
+periph2svdName :: Periph -> String
+periph2svdName UART = "USART"
+periph2svdName x = show x
 
 tst = do
   runGen $ do

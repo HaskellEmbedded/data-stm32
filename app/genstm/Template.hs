@@ -15,34 +15,11 @@ import qualified Data.Text.IO as TIO
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TLIO
 import Data.Data (Data, Typeable)
---import Data.Decimal
 import Data.Generics.Aliases (extQ)
-import Control.Monad.State (MonadState)
+import Control.Monad.State (MonadState, StateT)
 import qualified Control.Monad.State as State
 
 import Types
-
-data FamiliesCtx = FamiliesCtx { families :: [String] }
-  deriving (Show, Data, Typeable)
-
---data DevicesCtx = DevicesCtx { devices :: String }
---  deriving (Show, Data, Typeable)
-
-data ShortDevicesCtx = ShortDevicesCtx { shortDevices :: [String] }
-  deriving (Show, Data, Typeable)
-
-data RegsCtx = RegsCtx {
-    imports :: [Text]
-  , regs    :: Text
-  } deriving (Show, Data, Typeable)
-
-data PeriphCtx = PeriphCtx {
-    typ           :: String
-  , version       :: String
-  , bitDataRegs   :: String
-  , bitDataRegsMk :: String
-  } deriving (Show, Data, Typeable)
-
 
 hastacheConf   :: MonadIO m => MuConfig m
 hastacheConf = defaultConfig {
@@ -50,19 +27,20 @@ hastacheConf = defaultConfig {
   }
 
 templateRename "typ" = "type"
+templateRename "pversion" = "version"
 templateRename x = x
 
 templateD context = template (mkGenericContext' templateRename defaultExt context)
 
---template :: (Data (m (MuType m)), Monad m)
---         => (T.Text -> m (MuType m))
---         -> T.Text
---         -> T.Text -> MonadGen ()
+template :: (Text -> StateT Bool IO (MuType (StateT Bool IO)))
+         -> Text
+         -> Text
+         -> MonadGen ()
 template context namespace tmpl = do
   t <- getTemplate tmpl
   out <- liftIO
       $ flip State.evalStateT True
-      $ statefull t -- hastacheStr hastacheConf t composed 
+      $ statefull t
 
   liftIO $ writeHS ns $ TL.toStrict out
   where
@@ -72,7 +50,6 @@ template context namespace tmpl = do
     statefull t = hastacheStr hastacheConf t composed
 
     composed = composeCtx (globalContext ns) context
-    --composed = context
 
 
 globalContext ns = composeCtx
@@ -94,7 +71,7 @@ prefixRest a = do
 template' :: T.Text
           -> T.Text
           -> MonadGen ()
-template' = template mempty -- (mempty :: MuContext IO)
+template' = template mempty
 
 getTemplatesPath :: MonadGen Text
 getTemplatesPath = do
@@ -128,8 +105,7 @@ writeHS namespace content = do
 emptyCtx :: Monad m => MuContext m
 emptyCtx = mempty
 
---listCtx :: (Monad m) => [(String, Text)] -> MuContext m
---listCtx :: [(String, Text)] -> MuContext IO -- (MonadGen ())
+listCtx :: (Monad m, MuVar a) => [(String, a)] -> MuContext m
 listCtx l = mkStrContext $ lookup l
   where lookup [] what = MuNothing
         lookup ((k,v):xs) what | k == what = MuVariable v

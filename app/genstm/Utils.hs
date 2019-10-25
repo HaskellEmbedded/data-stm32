@@ -8,6 +8,11 @@ import Data.Char (toLower)
 import Data.Algorithm.Diff
 import Control.Monad
 
+cdmk dir = do
+  hasdir <- testdir dir
+  when (not hasdir) (mktree dir)
+  cd dir
+
 fpToText = format fp
 fpToString = T.unpack . format fp
 
