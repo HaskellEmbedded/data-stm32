@@ -48,6 +48,7 @@ import MakePeriph
 import Types
 import Utils
 
+main :: IO ()
 main = do
   seesData <- testdir "data"
   unless seesData $ error "Directory ./data not found, running from correct directory?"
@@ -93,6 +94,7 @@ main = do
   where
     prefixRest (x:xs) = x:(map (\y -> T.concat [T.replicate (T.length "exposed-modules:       ") " ", y]) xs)
 
+stm32devs :: MonadGen ()
 stm32devs = do
   DB{..} <- ask
   devs <- filteredDevs
@@ -160,6 +162,7 @@ stm32devs = do
 
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
 -- for all supportedPeriphs
+stm32periphs :: MonadGen ()
 stm32periphs = do
   DB{..} <- ask
   -- base non-versioned peripherals on this devices svd
@@ -255,6 +258,7 @@ stm32periphs = do
     "STM32.Peripheral.RCC.RegTypes"
     "STM32/Peripheral/RCC/RegTypes.hs"
 
+stm32modes :: MonadGen ()
 stm32modes = do
   DB{..} <- ask
 
@@ -264,6 +268,9 @@ stm32modes = do
         ctx = listCtx [ ("afs", show xs) ]
     template ctx ns "STM32/Modes/AF.hs"
 
+-- generate stripped down version of MCU Map
+-- to be bundled with generated library
+strip :: M.Map k MCU -> M.Map k MCU
 strip = M.map go
   where go x = x { mcuIps = S.empty, mcuPins = S.empty }
 
