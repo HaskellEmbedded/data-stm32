@@ -126,6 +126,12 @@ stm32devs = do
 
     forM_ [ RCC, FLASH, PWR ] genPeriph
 
+    let genPeriphIfAvail p = case peripheralByName svd p of
+         Nothing -> return ()
+         Just svdPeriph -> genPeriphDev p svdPeriph name
+
+    forM_ [ SYSCFG ] genPeriphIfAvail
+
     log $ "Processing instances for " ++ name
     forM_ [ GPIO ] $ \periph -> do
       ctx <- makePeriphContext periph mcu
