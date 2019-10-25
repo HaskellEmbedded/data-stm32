@@ -54,15 +54,17 @@ mk{{ type }} base rccen rccdis interrupt pclk n = {{ type }}
 
 -- | Initialize GPIO pins for a UART.
 initTxPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
-initTxPin p af = do
+initTxPin p _af = do
   pinEnable        p
   pinSetSpeed      p gpio_speed_50mhz
   pinSetOutputType p gpio_outputtype_pushpull
   pinSetPUPD       p gpio_pupd_pullup
-  pinSetAF         p af
+  -- XXX: no AF for F1xx, instead we have remap
+  -- pinSetAF         p af
   pinSetMode       p gpio_mode_af
 
-initRxPin p af = do
+initRxPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
+initRxPin p _af = do
   pinEnable        p
   pinSetSpeed      p gpio_speed_50mhz
   pinSetMode       p gpio_mode_input

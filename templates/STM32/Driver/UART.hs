@@ -10,22 +10,15 @@ module {{ modns }}
   ) where
 
 import Ivory.Language
-import Ivory.Stdlib
 import Ivory.Tower
 import Ivory.Tower.HAL.Bus.Interface
-import Ivory.HW
 
-import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.UART
 
 {{#versions}}
 import qualified Ivory.BSP.STM32.Driver.UARTv{{ version }} as V{{ version }}
-{{/versions}}
-
-{{#versions}}
-import qualified Ivory.BSP.STM32.Peripheral.UARTv{{ version }}.Peripheral as P{{ version }}
 {{/versions}}
 
 uartTower :: IvoryString s

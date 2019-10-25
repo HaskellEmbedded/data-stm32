@@ -153,11 +153,3 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
     8  -> rcc_pprex_div8
     16 -> rcc_pprex_div16
     _  -> error "platformClockConfig pclk1 divider not in valid range"
-
-  ppre2_divider = case clockconfig_pclk2_divider cc of
-    1  -> rcc_pprex_none
-    2  -> rcc_pprex_div2
-    4  -> rcc_pprex_div4
-    8  -> rcc_pprex_div8
-    16 -> rcc_pprex_div16
-    _  -> error "platformClockConfig pclk2 divider not in valid range"

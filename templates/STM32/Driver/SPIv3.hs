@@ -23,7 +23,6 @@ import Ivory.HW
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
 
-import Ivory.BSP.STM32.Peripheral.GPIO
 import Ivory.BSP.STM32.Peripheral.SPI.Pins
 import Ivory.BSP.STM32.Peripheral.SPIv3.Regs
 import Ivory.BSP.STM32.Peripheral.SPIv3.Peripheral

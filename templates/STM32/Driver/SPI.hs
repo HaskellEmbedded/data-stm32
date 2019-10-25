@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- due to unused versions
 
 module {{ modns }}
   ( V2.spiTower
@@ -11,25 +12,11 @@ module {{ modns }}
   , module Ivory.Tower.HAL.Bus.SPI.DeviceHandle
   ) where
 
-import Ivory.Language
-import Ivory.Stdlib
-import Ivory.Tower
-import Ivory.Tower.HAL.Bus.Interface
 import Ivory.Tower.HAL.Bus.SPI
 import Ivory.Tower.HAL.Bus.SPI.DeviceHandle
-import Ivory.HW
-
-import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.ClockConfig
-
-import Ivory.BSP.STM32.Peripheral.SPI
 
 {{#versions}}
 import qualified Ivory.BSP.STM32.Driver.SPIv{{ version }} as V{{ version }}
-{{/versions}}
-
-{{#versions}}
-import qualified Ivory.BSP.STM32.Peripheral.SPIv{{ version }}.Peripheral as P{{ version }}
 {{/versions}}
 
 {--

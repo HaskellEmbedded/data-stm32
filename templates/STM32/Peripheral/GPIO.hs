@@ -37,8 +37,6 @@ module {{ modns }} (
 import Ivory.Language
 import Ivory.Stdlib
 
-import Ivory.HW
-
 import qualified Ivory.BSP.STM32.Peripheral.GPIOv1.Peripheral as V1
 import qualified Ivory.BSP.STM32.Peripheral.GPIOv1.RegTypes   as V1
 

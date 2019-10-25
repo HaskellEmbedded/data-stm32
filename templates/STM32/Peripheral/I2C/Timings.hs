@@ -6,7 +6,6 @@ module Ivory.BSP.STM32.Peripheral.I2C.Timings where
 -- only used by I2Cv2
 
 import Data.List
-import Data.Ord
 
 nsPerSec :: Int
 nsPerSec = 1000_000_000

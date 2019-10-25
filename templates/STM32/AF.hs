@@ -34,6 +34,6 @@ findAFByPins' pins periph db = foldr1 intersect $
 findAFByPins :: [GPIOPin] -> String -> AltFunctionDB -> GPIO_AF
 findAFByPins pins periph db =  case findAFByPins' pins periph db of
   [x] -> fromRep $ fromIntegral x
-  [] -> error $ "No alternate function found for peripheral: " ++ periph
-  xs -> error $ "Multiple possible alternate functions found for peripheral: " ++ periph
+  []  -> error $ "No alternate function found for peripheral: " ++ periph
+  _   -> error $ "Multiple possible alternate functions found for peripheral: " ++ periph
 

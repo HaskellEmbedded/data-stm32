@@ -12,24 +12,17 @@ module {{ modns }}
   ) where
 
 import Ivory.Language
-import Ivory.Stdlib
 import Ivory.Tower
 import Ivory.Tower.HAL.Bus.I2C
 import Ivory.Tower.HAL.Bus.I2C.DeviceAddr
 import Ivory.Tower.HAL.Bus.Interface
-import Ivory.HW
 
-import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.I2C
 
 {{#versions}}
 import qualified Ivory.BSP.STM32.Driver.I2Cv{{ version }} as V{{ version }}
-{{/versions}}
-
-{{#versions}}
-import qualified Ivory.BSP.STM32.Peripheral.I2Cv{{ version }}.Peripheral as P{{ version }}
 {{/versions}}
 
 i2cTower :: (e -> ClockConfig)

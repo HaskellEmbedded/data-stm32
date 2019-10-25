@@ -89,13 +89,6 @@ i2cInit periph sda scl clockconfig = do
   modifyReg (i2cRegCR1 periph) $ setBit i2c_cr1_pe
 
   where
-  calcHSCCR :: Uint32 -> Ivory eff Uint16
-  calcHSCCR pclk = do
-    -- Need to divide clock to use 25 cycles (DUTY mode is 16 low + 9 high)
-    -- at 400khz. Clock divider must be at least 1.
-    v <- assign $ castWith 0 (pclk `iDiv` (400000 * 25))
-    assign ((v <? 1) ? (1, v))
-
   pinsetup :: GPIOPin -> Ivory eff ()
   pinsetup p = do
     pinEnable        p

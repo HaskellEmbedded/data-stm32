@@ -1,10 +1,12 @@
 {-# LANGUAGE Rank2Types #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-} -- due to unused versions
 --
 -- SPI.hs --- SPI peripheral
 --
--- Copyright (C) 2014, Galois, Inc.
--- All Rights Reserved.
+-- We generate multiple SPI peripherals but only SPIv2
+-- which is compatible across all MCUs
 --
+-- The rest can be used for I2S
 
 module Ivory.BSP.STM32.Peripheral.SPI
   ( P2.SPI(..)
@@ -17,12 +19,8 @@ module Ivory.BSP.STM32.Peripheral.SPI
   , SPIPins(..)
   ) where
 
-import Ivory.Language
-import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.SPI.Pins
-import Ivory.BSP.STM32.Peripheral.SPI.RegTypes
 
 {{#versions}}
 import qualified Ivory.BSP.STM32.Peripheral.SPIv{{ version }}.Peripheral as P{{ version }}

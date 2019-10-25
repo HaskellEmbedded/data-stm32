@@ -12,8 +12,6 @@ module {{ modns }}
   , module Ivory.Tower.HAL.Bus.I2C.DeviceAddr
   ) where
 
-import Control.Monad (void)
-
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
@@ -269,9 +267,6 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       rx_pos <- deref resbufferpos
       rx_sz  <- deref (reqbuffer ~> rx_len)
 
-      let write_remaining = tx_sz - tx_pos
-          read_remaining  = rx_sz - rx_pos
-
       when (bitToBool (isr #. i2c_isr_txis)) $ do
         comment "TX empty, write new data"
         w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
@@ -308,10 +303,10 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       when (bitToBool (isr #. i2c_isr_tc)) $ do
         comment "Transfer complete"
 
-        rx_pos <- deref resbufferpos
-        let read_rem  = rx_sz - rx_pos
+        rx_pos' <- deref resbufferpos
+        let read_remaining  = rx_sz - rx_pos'
 
-        ifte_ (read_rem >? 0)
+        ifte_ (read_remaining >? 0)
           (initTransfer) -- repeated start
           (setStop periph)
 
