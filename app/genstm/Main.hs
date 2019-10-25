@@ -120,14 +120,7 @@ stm32devs = do
 
     let genPeriph p = case peripheralByGroupName svd p of
          Nothing -> fail $ "No " ++ (show p) ++ " found"
-         Just x  -> do
-                new <- procPeriph p Nothing x
-                let pName = T.pack . show $ p
-                    ns = "STM32" <> (T.pack name) <> "." <> pName
-                    ctx = listCtx [ ("dev", T.pack name)
-                          , ("regs", T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
-
-                template ctx ns ("STM32DEV/" <> pName <> ".hs")
+         Just svdPeriph -> genPeriphDev p svdPeriph name
 
     forM_ [ RCC, FLASH, PWR ] genPeriph
 
@@ -341,14 +334,7 @@ stm32families = do
 
     let genPeriph p = case peripheralByGroupName dev p of
          Nothing -> fail $ "No " ++ (show p) ++ " found"
-         Just x  -> do
-                new <- fmap (adjustPeriphFamily f) $ procPeriph p Nothing x
-                checkPeriphRegsContinuity p new
-                let pName = tshow p
-                    ns = "STM32" <> tshow f <> "." <> pName
-                    ctx = listCtx [ ("dev", tshow f)
-                          , ("regs", T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
-                template ctx ns ("STM32DEV/" <> pName <> ".hs")
+         Just svdPeriph -> genPeriphFamily p svdPeriph f
 
     forM_ [ RCC, FLASH, PWR ] genPeriph
 
@@ -356,6 +342,33 @@ stm32families = do
         ctx = listCtx [ ("dev", tshow f)
               , ("map" , T.pack $ ppMemMap $ getDevMemMap dev ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
+
+-- templating of non-versioned peripherals like RCC, PWR, FLASH
+genPeriphDev :: Periph -> Peripheral -> String -> MonadGen ()
+genPeriphDev periph svdPeripheral dev =
+  genPeriphCommon periph svdPeripheral
+    id (T.pack dev)
+
+genPeriphFamily :: Periph -> Peripheral -> Family -> MonadGen ()
+genPeriphFamily periph svdPeripheral family =
+  genPeriphCommon periph svdPeripheral
+    (adjustPeriphFamily family) (tshow family)
+
+genPeriphCommon :: Periph
+                -> Peripheral
+                -> (Peripheral -> Peripheral)
+                -> Text
+                -> MonadGen ()
+genPeriphCommon periph svdPeripheral adjust devName = do
+  new <- fmap adjust $ procPeriph periph Nothing svdPeripheral
+  checkPeriphRegsContinuity svdPeripheral new
+  let pName = tshow periph
+      ns = "STM32" <> devName <> "." <> pName
+      ctx = listCtx [
+              ("dev",  devName)
+            , ("regs", T.concat [ T.pack $ ppPeriphRegsWithDefs new])
+            ]
+  template ctx ns ("STM32DEV/" <> pName <> ".hs")
 
 tst = do
   runGen $ do
