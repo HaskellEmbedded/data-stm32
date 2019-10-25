@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RecordWildCards #-}
@@ -28,6 +27,7 @@ import Text.Pretty.Simple
 import Data.Char (toUpper, isDigit)
 import Data.Maybe
 import Data.Ord (comparing)
+import Data.Serialize (encode)
 
 import Data.Ivory
 import Data.Ivory.Pretty
@@ -42,16 +42,12 @@ import Data.STM32
 import Debug.Trace
 
 import Coerce
+import Contexts
 import Extract
 import Template
-import MakePeriph --as MP
+import MakePeriph
 import Types
 import Utils
-
-
--- XXX
-import Data.Data (Data, Typeable)
-import Data.Serialize (encode)
 
 cdmk dir = do
   hasdir <- testdir dir
@@ -179,22 +175,6 @@ stm32devs = do
         imports = map show $ filter (\periph -> hasPeriph mcu periph && hasDriver mcu periph) (supported)
         ctx = ImportsCtx name imports
     templateD ctx ns "STM32DEV.hs"
-
-data ClocksCtx = ClocksCtx { clocks :: [ClockCtx] }
-  deriving (Show, Data, Typeable)
-
-data ClockCtx = ClockCtx { clockName :: String, clockHz :: String }
-  deriving (Show, Data, Typeable)
-
-data ImportsCtx = ImportsCtx { imDev :: String, imImports :: [String] }
-  deriving (Show, Data, Typeable)
-
-data VersionsCtx = VersionsCtx { versions :: [VersionCtx] }
-  deriving (Show, Data, Typeable)
-
-data VersionCtx = VersionCtx { prefix :: String, version :: String }
-  deriving (Show, Data, Typeable)
-
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
 -- for all supportedPeriphs
 stm32periphs = do

@@ -75,6 +75,7 @@ executable genstm
   main-is: Main.hs
   other-modules:
       Coerce
+      Contexts
       Extract
       MakePeriph
       Utils
