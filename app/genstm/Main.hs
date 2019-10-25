@@ -24,7 +24,6 @@ import Text.Hastache
 import Text.Regex.Posix
 import Text.Pretty.Simple
 
-import Data.Char (toUpper, isDigit)
 import Data.Maybe
 import Data.Ord (comparing)
 import Data.Serialize (encode)
@@ -119,10 +118,9 @@ stm32devs = do
         ctx = listCtx [ ("isr", isr) ]
     template ctx ns "STM32DEV/Interrupt.hs"
 
-
-    let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals svd of
-         [] -> fail $ "No " ++ (show p) ++ " found"
-         [x] -> do
+    let genPeriph p = case peripheralByGroupName svd p of
+         Nothing -> fail $ "No " ++ (show p) ++ " found"
+         Just x  -> do
                 new <- procPeriph p Nothing x
                 let pName = T.pack . show $ p
                     ns = "STM32" <> (T.pack name) <> "." <> pName
@@ -339,9 +337,11 @@ stm32families = do
       ("STM32FAM/" <> tshow f <> "/ClockInit.hs")
 
     dev <- last <$> svdsFamily f
-    let genPeriph p = case filter ((==periph2svdName p) . map toUpper . periphGroupName) $ devicePeripherals dev of
-         [] -> fail $ "No " ++ (show p) ++ " found"
-         [x] -> do
+    log $ "Device used as family representative (RCC, ClockInit) " ++ deviceName dev
+
+    let genPeriph p = case peripheralByGroupName dev p of
+         Nothing -> fail $ "No " ++ (show p) ++ " found"
+         Just x  -> do
                 new <- fmap (adjustPeriphFamily f) $ procPeriph p Nothing x
                 checkPeriphRegsContinuity p new
                 let pName = tshow p
@@ -350,16 +350,12 @@ stm32families = do
                           , ("regs", T.concat [ T.pack $ ppPeriphRegsWithDefs new]) ]
                 template ctx ns ("STM32DEV/" <> pName <> ".hs")
 
-    log $ "Device used as family representative (RCC, ClockInit) " ++ deviceName dev
     forM_ [ RCC, FLASH, PWR ] genPeriph
+
     let ns = "STM32" <> tshow f <> ".MemoryMap"
         ctx = listCtx [ ("dev", tshow f)
               , ("map" , T.pack $ ppMemMap $ getDevMemMap dev ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
-
-periph2svdName :: Periph -> String
-periph2svdName UART = "USART"
-periph2svdName x = show x
 
 tst = do
   runGen $ do

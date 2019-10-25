@@ -6,6 +6,7 @@ module Types where
 
 import Prelude hiding (log)
 import Turtle
+import Data.Char (toUpper)
 import Data.Maybe
 import Data.Either
 import Data.Ord (comparing)
@@ -14,7 +15,6 @@ import qualified Data.Set as S
 import qualified Data.List as L
 import qualified Data.ByteString.Char8 as B
 import Text.Pretty.Simple
-
 
 -- functor
 import Data.Algorithm.Diff
@@ -210,3 +210,24 @@ filteredShortNames ::  MonadGen ([String])
 filteredShortNames = do
   db <- ask
   return $ filter (devFilter (opts db)) $ shortDevNames db
+
+peripheralByGroupName :: Device -> Periph -> Maybe Peripheral
+peripheralByGroupName svd periph = peripheralBy svd periph periphGroupName
+
+peripheralByName :: Device -> Periph -> Maybe Peripheral
+peripheralByName svd periph = peripheralBy svd periph periphName
+
+peripheralBy :: Device
+             -> Periph
+             -> (Peripheral -> String)
+             -> Maybe Peripheral
+peripheralBy svd periph fun = case filter
+      ((==periph2svdName periph) . map toUpper . fun)
+      $ devicePeripherals svd
+      of []  -> Nothing
+         [x] -> Just x
+         xs  -> error $ "Multiple peripherals found for " ++ show periph
+  where
+    periph2svdName :: Periph -> String
+    periph2svdName UART = "USART"
+    periph2svdName x = show x
