@@ -5,6 +5,8 @@ module {{ modns }}
   , NamedMCU
   , matchMCU
   , testMatch
+  , mcuNameParser
+  , mcuConfigParser
   )
   where
 
@@ -18,6 +20,7 @@ import Data.Serialize
 import qualified Paths_ivory_bsp_stm32 as P
 
 import Ivory.BSP.STM32.ClockConfig
+import Ivory.Tower.Config
 
 import Data.CMX.Types
 import Data.STM32.Types
@@ -53,3 +56,20 @@ devices = do
   case decode db of
     Left err -> fail err
     Right dec -> return dec
+
+mcuNameParser :: String -> ConfigParser String
+mcuNameParser def = subsection "args" $ subsection "mcu" string <|> pure def
+
+mcuConfigParser :: NamedMCU -> ConfigParser NamedMCU
+mcuConfigParser (name, mcu) = do
+  ram   <- fmap Just (subsection "args" $ subsection "ram" integer)   <|> pure Nothing
+  flash <- fmap Just (subsection "args" $ subsection "flash" integer) <|> pure Nothing
+  split <- subsection "args" $ subsection "splitmem" bool <|> pure False
+
+  return (name, mcu {
+      mcuRam = maybe (mcuRam mcu) (fromIntegral) ram
+    , mcuFlash = maybe (mcuFlash mcu) (fromIntegral) flash
+    , mcuForceSplit = split
+    })
+
+
