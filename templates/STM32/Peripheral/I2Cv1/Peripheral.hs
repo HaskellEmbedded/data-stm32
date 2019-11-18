@@ -29,7 +29,7 @@ data {{ type }} = {{ type }}
   , i2cIntEvent    :: HasSTM32Interrupt
   , i2cIntError    :: HasSTM32Interrupt
   , i2cPClk        :: PClk
-  , i2cAFLookup    :: [GPIOPin] -> GPIO_AF
+  , i2cAFLookup    :: GPIOPin -> GPIO_AF
   , i2cName        :: String
   }
 
@@ -41,7 +41,7 @@ mk{{ type }} :: (STM32Interrupt i)
             -> i -- event interrupt
             -> i -- error interrupt
             -> PClk   -- Clock source
-            -> ([GPIOPin] -> GPIO_AF)
+            -> (GPIOPin -> GPIO_AF)
             -> String -- Name
             -> {{ type }}
 mk{{ type }} base rccenable rccdisable rccreset evtint errint pclk afLookup n = {{ type }}
@@ -110,7 +110,7 @@ i2cInit periph sda scl clockconfig freq = do
     pinEnable        p
     pinSetOutputType p gpio_outputtype_opendrain
     pinSetPUPD       p gpio_pupd_none
-    pinSetAF         p (i2cAFLookup periph [sda, scl])
+    pinSetAF         p (i2cAFLookup periph p)
     pinSetMode       p gpio_mode_af
 
 i2cDeinit :: {{ type }} -> GPIOPin -> GPIOPin -> Ivory eff ()

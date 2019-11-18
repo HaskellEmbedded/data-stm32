@@ -19,6 +19,7 @@ import Ivory.Language
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
 
+import Ivory.BSP.STM32.Peripheral.GPIO (GPIOPin, GPIO_AF)
 import Ivory.BSP.STM32.Peripheral.UART.Pins (UARTPins(..))
 
 {{#versions}}
@@ -43,8 +44,9 @@ mkUARTVersion
        -> (forall eff . Ivory eff ())
        -> i
        -> PClk
+       -> (GPIOPin -> GPIO_AF)
        -> String
        -> UART
 {{#versions}}
-mkUARTVersion V{{ version }} i e1 e2 j c s = WrappedV{{ version }} $ P{{ version }}.mkUART i e1 e2 j c s
+mkUARTVersion V{{ version }} i e1 e2 j c af s = WrappedV{{ version }} $ P{{ version }}.mkUART i e1 e2 j c af s
 {{/versions}}

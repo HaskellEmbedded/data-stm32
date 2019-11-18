@@ -38,7 +38,7 @@ mkI2CVersion
        -> i -- event interrupt
        -> i -- error interrupt
        -> PClk   -- Clock source
-       -> ([GPIOPin] -> GPIO_AF)
+       -> (GPIOPin -> GPIO_AF)
        -> String -- Name
        -> I2C
 {{#versions}}

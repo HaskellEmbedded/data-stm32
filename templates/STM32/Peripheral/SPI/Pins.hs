@@ -7,5 +7,4 @@ data SPIPins = SPIPins
   { spiPinMiso     :: GPIOPin
   , spiPinMosi     :: GPIOPin
   , spiPinSck      :: GPIOPin
-  , spiPinAF       :: GPIO_AF
   }

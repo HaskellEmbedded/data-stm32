@@ -26,6 +26,7 @@ data {{ type }} = {{ type }}
   , spiRCCDisable  :: forall eff . Ivory eff ()
   , spiInterrupt   :: HasSTM32Interrupt
   , spiPClk        :: PClk
+  , spiAFLookup    :: GPIOPin -> GPIO_AF
   , spiName        :: String
   }
 
@@ -35,14 +36,16 @@ mk{{ type }} :: (STM32Interrupt i)
             -> (forall eff . Ivory eff ())
             -> i
             -> PClk
+            -> (GPIOPin -> GPIO_AF)
             -> String
             -> {{ type }}
-mk{{ type }} base rccen rccdis inter pclk n = {{ type }}
+mk{{ type }} base rccen rccdis inter pclk afLookup n = {{ type }}
 {{ bitDataRegsMk }}
     , spiRCCEnable   = rccen
     , spiRCCDisable  = rccdis
     , spiInterrupt   = HasSTM32Interrupt inter
     , spiPClk        = pclk
+    , spiAFLookup    = afLookup
     , spiName        = n
     }
   where
@@ -50,20 +53,20 @@ mk{{ type }} base rccen rccdis inter pclk n = {{ type }}
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
 
 
-initInPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
-initInPin pin af = do
+initInPin :: {{ type }} -> GPIOPin -> Ivory eff ()
+initInPin periph pin = do
   comment ("init spi input pin " ++ pinName pin)
   pinEnable  pin
-  pinSetAF   pin af
+  pinSetAF   pin (spiAFLookup periph pin)
   pinSetMode pin gpio_mode_af
   pinSetPUPD pin gpio_pupd_none
   pinSetSpeed pin gpio_speed_50mhz
 
-initOutPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
-initOutPin pin af = do
+initOutPin :: {{ type }} -> GPIOPin -> Ivory eff ()
+initOutPin periph pin = do
   comment ("init spi output pin " ++ pinName pin)
   pinEnable        pin
-  pinSetAF         pin af
+  pinSetAF         pin (spiAFLookup periph pin)
   pinSetMode       pin gpio_mode_af
   pinSetOutputType pin gpio_outputtype_pushpull
   pinSetSpeed      pin gpio_speed_50mhz
@@ -75,9 +78,9 @@ spiInit spi pins = do
   spiRCCEnable spi
   spiClearCr1 spi
   spiClearCr2 spi
-  initInPin  (spiPinMiso pins) (spiPinAF pins)
-  initOutPin (spiPinMosi pins) (spiPinAF pins)
-  initOutPin (spiPinSck  pins) (spiPinAF pins)
+  initInPin  spi (spiPinMiso pins)
+  initOutPin spi (spiPinMosi pins)
+  initOutPin spi (spiPinSck  pins)
 
 spiInitISR :: (GetAlloc eff ~ 'Scope s)
            => {{ type }} -> Ivory eff ()

@@ -23,7 +23,7 @@ import Ivory.BSP.STM32.Peripheral.I2C
                 rccenable rccdisable rccreset
                {{#interrupts}} {{ dev }}.{{.}}{{/interrupts}}
                 {{ clockSource }}
-                (\pins -> findAFByPins pins "{{ name }}" afDB)
+                (\pin -> findAFByPin pin "{{ name }}" afDB)
                 "{{ name }}"
 
   where

@@ -37,3 +37,5 @@ findAFByPins pins periph db =  case findAFByPins' pins periph db of
   []  -> error $ "No alternate function found for peripheral: " ++ periph
   _   -> error $ "Multiple possible alternate functions found for peripheral: " ++ periph
 
+findAFByPin :: GPIOPin -> String -> AltFunctionDB -> GPIO_AF
+findAFByPin pin = findAFByPins [pin]

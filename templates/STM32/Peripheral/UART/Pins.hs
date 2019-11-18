@@ -8,5 +8,4 @@ import Ivory.BSP.STM32.Peripheral.GPIO
 data UARTPins = UARTPins
   { uartPinTx      :: GPIOPin
   , uartPinRx      :: GPIOPin
-  , uartPinAF      :: GPIO_AF
   }
