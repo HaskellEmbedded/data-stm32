@@ -168,3 +168,9 @@ setRXNEIE :: UART -> IBool -> Ivory eff ()
 setRXNEIE uart x =
   modifyReg (uartRegCR1 uart) $
     setField uart_cr1_rxneie (boolToBit x)
+
+-- clear overrun (ORE) flag
+clearORE :: UART -> Ivory eff ()
+clearORE uart =
+  modifyReg (uartRegICR uart) $
+    setBit uart_icr_orecf

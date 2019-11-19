@@ -140,6 +140,8 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
         emit i (constRef bref)
         rxoverruns %= (+1) -- This is basically an error we can't handle, but its
                            -- useful to be able to check them with gdb
+        clearORE uart -- clear ORE flag
+
       when (bitToBool (sr #. uart_isr_rxne)) $ do
         byte <- readDR uart
         bref <- local (ival byte)
