@@ -40,7 +40,9 @@ familyParser :: Parser Family
 familyParser = do
   f <- asum
     [ pure MP1 <$> string "MP1"
-    , (\a b -> read $ [a, b]) <$> anyChar <*> anyChar
+    , pure G4  <$> string "GB"
+    , (\a b -> maybe (error $ "Cannot read family out of " ++ [a, b]) id $
+               readMaybe $ [a, b]) <$> anyChar <*> anyChar
     ]
 
   return f
