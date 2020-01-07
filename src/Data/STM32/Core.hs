@@ -10,7 +10,14 @@ import qualified Data.List as L
 
 import Data.STM32.Family
 
-data Core = CortexM0 | CortexM0Plus | CortexM3 | CortexM4F | CortexM7F | CortexA7
+data Core =
+    CortexM0
+  | CortexM0Plus
+  | CortexM3
+  | CortexM33
+  | CortexM4F
+  | CortexM7F
+  | CortexA7
   deriving (Eq, Show, Ord, Generic)
 
 instance Serialize Core
@@ -43,6 +50,7 @@ freertosCore shortName family | otherwise = coreStr $ core family
    coreStr CortexM0     = "CM0"
    coreStr CortexM0Plus = "CM0"
    coreStr CortexM3     = "CM3"
+   coreStr CortexM33    = "CM4F"
    coreStr CortexM4F    = "CM4F"
    coreStr CortexM7F    = "CM4F"
 
@@ -51,6 +59,7 @@ cpu :: Core -> String
 cpu CortexM0     = "cortex-m0"
 cpu CortexM0Plus = "cortex-m0plus"
 cpu CortexM3     = "cortex-m3"
+cpu CortexM33    = "cortex-m33"
 cpu CortexM4F    = "cortex-m4"
 cpu CortexM7F    = "cortex-m7"
 

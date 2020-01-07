@@ -175,12 +175,13 @@ signal = atTag "Signal" >>>
 
 parseCore = match . drop 4
   where
-    match "Cortex-M0" = CortexM0
+    match "Cortex-M0"  = CortexM0
     match "Cortex-M0+" = CortexM0Plus
-    match "Cortex-M3" = CortexM3
-    match "Cortex-M4" = CortexM4F
-    match "Cortex-M7" = CortexM7F
-    match "Cortex-A7" = CortexA7
+    match "Cortex-M3"  = CortexM3
+    match "Cortex-M33" = CortexM33
+    match "Cortex-M4"  = CortexM4F
+    match "Cortex-M7"  = CortexM7F
+    match "Cortex-A7"  = CortexA7
     match unknownCore = error $ "Unknow core" ++ unknownCore
 
 parseMCU f = do
