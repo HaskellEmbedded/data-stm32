@@ -91,8 +91,9 @@ mcu = atTag "Mcu" >>>
     mcuCore <- (arr parseCore <<< textAtTag "Core") -< x
 
     hasPowerPad' <- att "HasPowerPad" -< x
-    ramVariants' <- listA (textAtTag "Ram") -< x
-    flashVariants' <- listA (textAtTag "Flash") -< x
+    --these are added/computed from families.xml later
+    --ramVariants' <- listA (textAtTag "Ram") -< x
+    --flashVariants' <- listA (textAtTag "Flash") -< x
     numberOfIO' <- textAtTag "IONb" -< x
 
     voltageMin <- attMaybe "Min" "Voltage" -< x
