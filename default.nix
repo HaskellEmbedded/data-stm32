@@ -14,6 +14,7 @@ in
 pkgs.haskell.lib.overrideCabal
   (pkgs.myHaskellPackages.callPackage ./data-stm32.nix { })
   ( oldDrv: {
+      doCheck = false;
       src = pkgs.nix-gitignore.gitignoreSource [] ./.;
     }
 )

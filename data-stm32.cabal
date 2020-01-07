@@ -175,32 +175,24 @@ executable updaterepo
     , turtle
   default-language: Haskell2010
 
-test-suite data-cubemx-test
+test-suite test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      RamSpec
       Paths_data_stm32
   hs-source-dirs:
       test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ansi-wl-pprint
-    , attoparsec
-    , base >=4.7 && <5
+      base >=4.7 && <5
+    , ansi-wl-pprint
     , bytestring
-    , cereal
-    , containers
+    , hspec
+    , system-filepath
     , data-stm32
-    , foldl
-    , hxt
-    , hxt-xpath
-    , pretty-simple
-    , regex-posix
-    , split
-    , text
-    , time
-    , turtle
-    , vector
+  build-tool-depends:
+      hspec-discover:hspec-discover == 2.*
   default-language: Haskell2010
 
 source-repository head
