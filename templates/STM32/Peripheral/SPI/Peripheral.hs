@@ -7,6 +7,7 @@
 
 module {{ modns }} where
 
+import Control.Monad (when)
 import Ivory.Language
 
 import Ivory.HW
@@ -15,8 +16,8 @@ import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.SPI.Pins
+import Ivory.BSP.STM32.Peripheral.SPI.Regs
 import Ivory.BSP.STM32.Peripheral.SPI.RegTypes
-import Ivory.BSP.STM32.Peripheral.{{ type }}{{ version }}.Regs
 
 import Ivory.BSP.STM32.Peripheral.GPIO
 
@@ -27,6 +28,7 @@ data {{ type }} = {{ type }}
   , spiInterrupt   :: HasSTM32Interrupt
   , spiPClk        :: PClk
   , spiAFLookup    :: GPIOPin -> GPIO_AF
+  , spiVersion     :: Int
   , spiName        :: String
   }
 
@@ -37,15 +39,17 @@ mk{{ type }} :: (STM32Interrupt i)
             -> i
             -> PClk
             -> (GPIOPin -> GPIO_AF)
+            -> Int
             -> String
             -> {{ type }}
-mk{{ type }} base rccen rccdis inter pclk afLookup n = {{ type }}
+mk{{ type }} base rccen rccdis inter pclk afLookup version n = {{ type }}
 {{ bitDataRegsMk }}
     , spiRCCEnable   = rccen
     , spiRCCDisable  = rccdis
     , spiInterrupt   = HasSTM32Interrupt inter
     , spiPClk        = pclk
     , spiAFLookup    = afLookup
+    , spiVersion     = version
     , spiName        = n
     }
   where
@@ -134,6 +138,12 @@ spiBusBegin clockconfig dev = do
       LSBFirst -> setBit   spi_cr1_lsbfirst
       MSBFirst -> clearBit spi_cr1_lsbfirst
 
+
+  -- FIFO reception threshold to 8 bits (default is 16)
+  when (spiVersion periph > 2) $ do
+    modifyReg (spiRegCR2 periph) $ setBit   spi_cr2_frxth
+
+  -- Enable SPI
   modifyReg (spiRegCR1 periph) $ setBit   spi_cr1_spe
   where
   periph = spiDevPeripheral dev
@@ -167,10 +177,20 @@ spiGetDR spi = do
   r <- getReg (spiRegDR spi)
   return (toRep (r #. spi_dr_dr))
 
+spiGetDR16 :: {{ type }} -> Ivory eff Uint16
+spiGetDR16 spi = do
+  r <- getReg (spiRegDR16 spi)
+  return (toRep (r #. spi_dr16_dr))
+
 spiSetDR :: {{ type }} -> Uint8 -> Ivory eff ()
 spiSetDR spi b =
   setReg (spiRegDR spi) $
     setField spi_dr_dr (fromRep b)
+
+spiSetDR16 :: {{ type }} -> Uint16 -> Ivory eff ()
+spiSetDR16 spi b =
+  setReg (spiRegDR16 spi) $
+    setField spi_dr16_dr (fromRep b)
 
 -- Internal Helper Functions ---------------------------------------------------
 

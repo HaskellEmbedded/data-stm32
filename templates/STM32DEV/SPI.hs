@@ -25,6 +25,7 @@ import Ivory.BSP.STM32.Peripheral.SPI
          {{#interrupts}} {{ dev }}.{{.}}{{/interrupts}}
           {{ clockSource }}
           (\pin -> findAFByPin pin "{{ name }}" afDB)
+          {{ version }}
           "{{ name }}"
   where
   rccenable  = modifyReg rcc_reg_{{ rccEnableReg }} $ setBit   rcc_{{ rccEnableReg }}_{{ rccEnableBit }}

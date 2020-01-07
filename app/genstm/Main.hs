@@ -184,7 +184,9 @@ stm32periphs = do
       let
           svdPeriph = getPeriph (show p) repreSVD
           pName = usart $ tshow p
-          nameVersion = pName <> (maybe mempty (("v"<>) . tshow) diVersion)
+          nameVersion = case diDriver of
+            CommonDriver -> pName
+            _            -> pName <> (maybe mempty (("v"<>) . tshow) diVersion)
           usart "USART" = "UART"
           usart x = x
 
