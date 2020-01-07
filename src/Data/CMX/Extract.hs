@@ -134,9 +134,10 @@ adjustRAMs nmcu@(name, mcu) = checkRAM $ calcRam1 $ g4CcmRam $ (name, mcu {
 calcRam1 (name, m@MCU{..}) = (name, m { mcuRam1 = ram1 })
   where
     total = mcuRam
-    ram1 = total - (ram2 + ram3)
+    ram1 = total - (ram2 + ram3 + ccram)
     ram2 = maybe 0 id mcuRam2
     ram3 = maybe 0 id mcuRam3
+    ccram = maybe 0 id mcuCcmRam
 
 -- for G4s we don't have CCM RAM size information in svd files
 -- so we add it manually
@@ -146,8 +147,8 @@ g4CcmRam nmcu@(name, mcu) = (name, maybeSetCcm $ mcu { mcuRam = mcuRam mcu - ccm
     maybeSetCcm mcu | ccm /=0   = mcu { mcuCcmRam = ccmSize nmcu }
     maybeSetCcm mcu | otherwise = mcu
 
-checkRAM nmcu@(name, MCU{..}) | mcuRam == mcuRam1 + (maybe 0 id mcuRam2) + (maybe 0 id mcuRam3) = nmcu
-checkRAM (name, _) | otherwise = error $ "ram1 + ram2 + ram3 is not equal mcuRam" ++ showName name
+checkRAM nmcu@(name, MCU{..}) | mcuRam == mcuRam1 + (maybe 0 id mcuRam2) + (maybe 0 id mcuRam3) + (maybe 0 id mcuCcmRam) = nmcu
+checkRAM (name, _) | otherwise = error $ "ram1 + ram2 + ram3 + ccram is not equal mcuRam" ++ showName name
 
 checkMCU MCU{..} | mcuFlash == 0 && mcuFamily /= MP1 = error $ "MCU Flash is 0 @" ++ mcuRefName
 checkMCU MCU{..} | mcuRam   == 0 = error $ "MCU Ram is 0 @" ++ mcuRefName
