@@ -9,12 +9,14 @@ import Control.Arrow.ArrowList
 import Text.XML.HXT.Core
 import qualified Data.Char as Char
 import qualified Data.Set as Set
+import qualified Data.ByteString.Char8 as B
 import Data.Maybe
 import Data.List (nub, nubBy, isInfixOf, isSuffixOf)
 
 import Data.CMX.Types
 import Data.STM32.Types
 import Data.STM32.Clock
+import Data.STM32.Name
 
 atTag tag = deep (isElem >>> hasName tag)
 text = getChildren >>> getText
@@ -107,6 +109,9 @@ mcu = atTag "Mcu" >>>
 
     let
       mcuFamily = nameToFamily mcuFamily'
+      mcuName = case parseName $ B.pack mcuRefName of
+        Left err -> error $ "Unable to parse mcu name out of " ++ mcuRefName
+        Right x -> x
       mcuIps = Set.fromList ips'
       mcuPins = Set.fromList pins'
       --mcuRamVariants = map read ramVariants'

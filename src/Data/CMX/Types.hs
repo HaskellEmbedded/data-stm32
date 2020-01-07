@@ -9,10 +9,12 @@ import Data.Serialize
 import Data.STM32.Family
 import Data.STM32.Core
 import Data.STM32.Clock
+import Data.STM32.Name
 
 data MCU = MCU {
     mcuCore        :: Core
   , mcuFamily      :: Family
+  , mcuName        :: STM32DevName
   , mcuHasPowerPad :: Bool
   , mcuIoType      :: String
   , mcuDie         :: String
