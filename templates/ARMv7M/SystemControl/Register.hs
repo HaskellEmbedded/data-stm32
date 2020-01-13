@@ -18,12 +18,12 @@ import Ivory.BSP.ARMv7M.MemoryMap
 
 [ivory|
   bitdata SCR :: Bits 32 = sbr_scr
-    { _ :: Bits 27
-    , scr_sendEventOnPending :: Bit -- SEVONPEND
-    , _  :: Bit
-    , scr_sleepDeep   :: Bit  -- Controls whether the processor uses sleep or deep sleep as its low power mode
-    , scr_sleepOnExit :: Bit  -- Indicates sleep-on-exit when returning from Handler mode to Thread mode
-    , _  :: Bit
+    { _                      :: Bits 27
+    , scr_sendEventOnPending :: Bit  -- SEVONPEND
+    , _                      :: Bit
+    , scr_sleepDeep          :: Bit  -- Controls whether the processor uses sleep or deep sleep as its low power mode
+    , scr_sleepOnExit        :: Bit  -- Indicates sleep-on-exit when returning from Handler mode to Thread mode
+    , _                      :: Bit
     }
 |]
 
