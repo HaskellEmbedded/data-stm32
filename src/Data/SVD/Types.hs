@@ -186,3 +186,46 @@ isBoth (Both _ _) = True
 isBoth _ = False
 
 getBoths = map (\(Both x _) -> x) . filter isBoth
+
+defaultDevice = Device {
+    deviceName            = "defaultDev"
+  , deviceVersion         = mempty
+  , deviceDescription     = mempty
+  , deviceAddressUnitBits = 0
+  , deviceWidth           = 0
+  , deviceSize            = 0
+  , deviceResetValue      = 0
+  , deviceResetMask       = 0
+  , devicePeripherals     = []
+  }
+
+defaultPeripheral = Peripheral {
+    periphName         = "defaultPeriph"
+  , periphDescription  = mempty
+  , periphDerivedFrom  = Nothing
+  , periphGroupName    = mempty
+  , periphBaseAddress  = 0
+  , periphAddressBlock = Nothing
+  , periphInterrupts   = []
+  , periphRegisters    = []
+  }
+
+defaultRegister = Register {
+    regName          = "defaultRegister"
+  , regDisplayName   = mempty
+  , regDescription   = mempty
+  , regAddressOffset = 0
+  , regSize          = 0
+  , regAccess        = ReadOnly
+  , regResetValue    = Nothing
+  , regFields        = []
+  }
+
+defaultField = Field {
+    fieldName        = "defaultField"
+  , fieldDescription = mempty
+  , fieldBitOffset   = 0
+  , fieldBitWidth    = 0
+  , fieldReserved    = False
+  , fieldRegType     = Nothing
+  }
