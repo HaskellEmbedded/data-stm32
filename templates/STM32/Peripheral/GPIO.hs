@@ -17,6 +17,7 @@ module {{ modns }} (
     pinName
   , pinNumber
   , pinPort
+  , pinPortNumber
   , pinEnable
   , pinDisable
   , pinUnconfigure
@@ -59,6 +60,10 @@ pinNumber (GPIOF1 p) = V1.gpioPinNumber p
 pinPort :: GPIOPin -> String
 pinPort (GPIOFX p) = V2.gpioPortName $ V2.gpioPinPort p
 pinPort (GPIOF1 p) = V1.gpioPortName $ V1.gpioPinPort p
+
+pinPortNumber :: GPIOPin -> Int
+pinPortNumber (GPIOFX p) = V2.gpioPortNumber $ V2.gpioPinPort p
+pinPortNumber (GPIOF1 p) = V1.gpioPortNumber $ V1.gpioPinPort p
 
 pinIsV1 :: GPIOPin -> Bool
 pinIsV1 (GPIOF1 _) = True
