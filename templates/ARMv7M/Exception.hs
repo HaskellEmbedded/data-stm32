@@ -2,6 +2,7 @@
 module Ivory.BSP.ARMv7M.Exception where
 
 newtype IRQn = IRQn { unIRQn :: Integer }
+  deriving (Eq, Show, Ord)
 
 data Exception
   = Reset

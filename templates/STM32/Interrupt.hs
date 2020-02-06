@@ -20,6 +20,12 @@ class STM32Interrupt i where
 data HasSTM32Interrupt = forall i. (STM32Interrupt i)
                        => HasSTM32Interrupt i
 
+instance Show HasSTM32Interrupt where
+  show (HasSTM32Interrupt i) = show $ interruptIRQn i
+
+instance Eq HasSTM32Interrupt where
+  (==) (HasSTM32Interrupt a) (HasSTM32Interrupt b) = interruptIRQn a == interruptIRQn b
+
 instance STM32Interrupt HasSTM32Interrupt where
   interruptIRQn (HasSTM32Interrupt i) = interruptIRQn i
   interruptTable (HasSTM32Interrupt i) = map (fmap HasSTM32Interrupt) (interruptTable i)
