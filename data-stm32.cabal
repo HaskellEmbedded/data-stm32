@@ -18,6 +18,7 @@ extra-source-files:
 
 library
   exposed-modules:
+      Data.Bits.Pretty
       Data.CMX
       Data.CMX.Extract
       Data.CMX.Parse
