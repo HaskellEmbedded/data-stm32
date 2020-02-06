@@ -2,6 +2,8 @@
 {-# LANGUAGE DeriveGeneric #-}
 module Data.SVD.Types where
 
+import Data.Bits
+import Data.Char (toLower)
 import Data.Ord
 import Data.List
 import qualified Data.Set as Set
@@ -149,18 +151,88 @@ mapFields f Register{..} = map f regFields
 
 mapDevFields f d = concat $ concat $ flip mapPeriphs d $ mapRegs $ mapFields f
 
+-- |Get peripheral by groupName
+getPeriphByGroup :: String -> Device -> Peripheral
+getPeriphByGroup name dev = headNote ("getPeriphByGroup " ++ name) . filterLowerBy name periphGroupName $ devicePeripherals dev
+
 -- |Get peripheral by name
 getPeriph :: String -> Device -> Peripheral
-getPeriph name dev = head . filter ((==name) . periphGroupName) $ devicePeripherals dev
+getPeriph name dev = headNote ("getPeriph " ++ name) . filterLowerBy name periphName $ devicePeripherals dev
+
+-- |Get peripheral by name iff found, Nothing otherwise
+getPeriphMay :: String -> Device -> Maybe Peripheral
+getPeriphMay name dev = headMay . filterLowerBy name periphName $ devicePeripherals dev
+
+-- |Get register of the peripheral by their names iff found, Nothing otherwise
+getPeriphRegMay :: String -> Peripheral -> Maybe Register
+getPeriphRegMay rName = headMay . filterLowerBy rName regName . periphRegisters
+
+-- |Filter elements matching lowercased `eqTo` after applying `by`
+filterLowerBy :: String -> (a -> String) -> [a] -> [a]
+filterLowerBy eqTo by = filter $ (==(map toLower eqTo)) . map toLower . by
+
+-- |Get peripheral by name or its parent peripheral if it's
+-- a derived peripheral (for example USART2 is typically derived from USART1)
+getPeriphFollow :: String -> Device -> Either String Peripheral
+getPeriphFollow pName dev = case getPeriphMay pName dev of
+  Nothing -> Left $ "No peripheral found: " ++ pName
+  Just p  -> case periphDerivedFrom p of
+    Nothing -> Right p
+    Just fromName -> case getPeriphMay fromName dev of
+      Nothing -> Left $ "Parent peripheral not found: " ++ fromName ++ " for peripheral " ++ pName
+      Just parentPeriph -> Right $ parentPeriph
+
+-- |Get registers of the peripheral
+getPeriphRegs :: String -> Device -> Either String [Register]
+getPeriphRegs pName dev = periphRegisters <$> getPeriphFollow pName dev
+
+-- |Get specific register of the peripheral
+getPeriphReg :: String -> String -> Device -> Either String Register
+getPeriphReg pName rName dev = either Left (maybeToEither errMsg . getPeriphRegMay rName) (getPeriphFollow pName dev)
+  where
+    errMsg = "No register found: " ++ rName ++ " for peripheral " ++ pName
+    maybeToEither msg m = case m of
+      Just x -> Right x
+      Nothing -> Left msg
+
+-- |Get address of the specific register of the peripheral with `pName`
+getPeriphRegAddr :: String -> String -> Device -> Either String Int
+getPeriphRegAddr pName rName dev = (\p r -> periphBaseAddress p + regAddressOffset r) <$> getPeriphFollow pName dev <*> getPeriphReg pName rName dev
+
+-- |Get fields of the specific register of the peripheral with `pName`
+getPeriphRegFields :: String -> String -> Device -> Either String [Field]
+getPeriphRegFields pName rName dev = regFields <$> getPeriphReg pName rName dev
 
 -- old
 getReg pName rName dev = headNote "getReg" . filter((==rName) . regName) . periphRegisters $ getPeriph pName dev
 getRegFields pName rName dev = regFields $ getReg pName rName dev
 
+-- |Get value of specific Field according to input `x`
+getFieldVal :: (Bits a, Num a) => a -> Field -> a
+getFieldVal x f = (x `shiftR` fieldBitOffset f) .&. (2 ^ fieldBitWidth f - 1)
+
+-- |Decode integer `x` according to Fields `fs`
+getFieldValues :: (Bits a, Num a) => a -> [Field] -> [(a, Field)]
+getFieldValues x fs = zip (map (getFieldVal x) fs) fs
+
+-- |Same as `getFieldValues` but with processed fields (reserved fields included)
+getProcdFieldValues x fs = getFieldValues x $ procFields fs
+
+-- |Check if any reserved field has value other than 0
+anyReservedSet :: (Eq a, Num a) => [(a, Field)] -> Bool
+anyReservedSet = any (\(val, f) -> val /= 0 && fieldReserved f)
+
+-- |Filter fields with non zero value
+filterSet :: (Eq a, Num a) => [(a, Field)] -> [(a, Field)]
+filterSet = filter ((/= 0) . fst)
+
+-- |Get memory map of the device according to its perhiperal addresses
 getDevMemMap Device{..} = map (liftM2 (,) (hexFormat . periphBaseAddress) periphName) devicePeripherals
 
 registerNames pName dev = map regName . periphRegisters $ getPeriph pName dev
 fieldNames rName pName dev = map fieldName $ getRegFields pName rName dev
+
+-- Diffing
 
 diffPeriphNames dev1 dev2 = getDiff
   (sort $ map periphName $ devicePeripherals dev1)
