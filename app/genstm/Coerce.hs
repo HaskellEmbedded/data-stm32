@@ -152,7 +152,7 @@ makeReg name fields = let
   , regAddressOffset = 0
   , regSize = 32
   , regAccess = ReadWrite
-  , regResetValue = 0
+  , regResetValue = Just 0
   , regFields = mkFields fields }
   in (if continuityCheck r then r else error "Continuity check failed for mkReg")
   where

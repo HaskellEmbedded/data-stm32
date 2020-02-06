@@ -17,6 +17,7 @@ import Data.SVD.Types
 atTag tag = getChildren >>> hasName tag
 text = getChildren >>> getText
 textAtTag tag = text <<< atTag tag
+textAtTagOrEmpty tag = withDefault (text <<< atTag tag) ""
 att  = getAttrValue
 -- nonempty attr value
 attNE x = (getAttrValue x >>> isA (/= ""))
@@ -48,6 +49,12 @@ svd = atTag "device" >>>
     devicePeripherals <- listA peripheral <<< atTag "peripherals" -< x
 
     returnA -< Device{..}
+
+-- loose version of svd that doesn't require device properties
+svdPeripherals = atTag "device" >>>
+  proc x -> do
+    devicePeripherals <- listA peripheral <<< atTag "peripherals" -< x
+    returnA -< devicePeripherals
 
 peripheral = atTag "peripheral" >>>
   proc x -> do
@@ -93,20 +100,19 @@ interrupt = atTag "interrupt" >>>
 register = atTag "registers" >>> atTag "register" >>>
   proc x -> do
     regName <- textAtTag "name" -< x
-    regDisplayName <- textAtTag "displayName" -< x
-    desc <- textAtTag "description" -< x
+    regDisplayName <- textAtTagOrEmpty "displayName" -< x
+    desc <- textAtTagOrEmpty "description" -< x
 
     offset <- textAtTag "addressOffset" -< x
     size <- textAtTag "size" -< x
     access <- withDefault (textAtTag "access") "read-write" -< x
-    resetValue <- textAtTag "resetValue" -< x
 
-    regFields <- listA field <<< atTag "fields" -< x
+    regResetValue <- withDefault (arr (Just . read) <<< textAtTag "resetValue") Nothing -< x
+    regFields <- withDefault (listA field <<< atTag "fields") [] -< x
 
     let regAddressOffset = read offset
         regSize = read size
         regAccess = toAccessType access
-        regResetValue = read resetValue
         regDescription = filterCrap desc
 
     returnA -< Register{..}
@@ -115,20 +121,42 @@ field = atTag "field" >>>
   proc x -> do
     fieldName <- textAtTag "name" -< x
     desc <- textAtTag "description" -< x
-    bitOffset <- textAtTag "bitOffset" -< x
-    bitWidth <- textAtTag "bitWidth" -< x
 
-    let fieldBitOffset = read bitOffset
-        fieldBitWidth = read bitWidth
+    bitOffsetMay <- withDefault (arr (Just . read) <<< textAtTag "bitOffset") Nothing -< x
+    bitWidthMay <- withDefault (arr (Just . read) <<< textAtTag "bitWidth") Nothing -< x
+
+    -- bitRange [MSB:LSB]
+    bitRange <- withDefault (arr (Just . splitRange) <<< textAtTag "bitRange") Nothing -< x
+
+    -- XXX: one more possibility is lsb msb tags format, handle if needed
+
+    let err = error "Neither bitRange nor bitOffset + bitWidth defined"
+        (fieldBitOffset, fieldBitWidth) = case bitRange of
+            Nothing -> (maybe err id bitOffsetMay, maybe err id bitWidthMay)
+            Just (msb, lsb) -> (lsb, msb - lsb + 1)
+
         fieldDescription = filterCrap desc
         fieldReserved = False
         fieldRegType = Nothing
 
     returnA -< Field{..}
+    where
+      splitRange :: String -> (Int, Int)
+      splitRange r = (readNote "splitRange" $ takeWhile (/=':') raw,
+                      readNote "splitRange" $ drop 1 $ dropWhile (/=':') raw)
+        where
+          raw = drop 1 $ init r
 
 parseSVD f = do
   res <- runX (readDocument [] f >>> svd)
   case res of
     [] -> return $ Left "no device parsed"
+    [x] -> return $ Right x
+    _ -> return $ Left $ "multiple devices parsed"
+
+parseSVDPeripherals f = do
+  res <- runX (readDocument [] f >>> svdPeripherals)
+  case res of
+    [] -> return $ Left "no peripherals parsed"
     [x] -> return $ Right x
     _ -> return $ Left $ "multiple devices parsed"

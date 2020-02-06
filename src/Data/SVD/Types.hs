@@ -65,7 +65,7 @@ data Register = Register {
   , regAddressOffset :: Int
   , regSize          :: Int
   , regAccess        :: AccessType
-  , regResetValue    :: Int
+  , regResetValue    :: Maybe Int
   , regFields        :: [Field]
   } deriving (Generic, Eq, Ord, Show)
 
