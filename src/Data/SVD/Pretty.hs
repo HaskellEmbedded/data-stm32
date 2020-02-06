@@ -3,6 +3,8 @@
 
 module Data.SVD.Pretty where
 
+import Data.Bits.Pretty
+import Data.Word
 import Data.SVD.Types
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 import Text.Printf
@@ -128,3 +130,40 @@ shortField Field{..} = unwords [
   , show fieldBitOffset
   , "width"
   , show fieldBitWidth ]
+
+-- |Print currently set (non-zero) fields
+printSetFields :: (Show a, Eq a, Num a) => [(a, Field)] -> String
+printSetFields = unlines . map printSetField . filterSet
+
+printSetField :: (Show a, Eq a, Num a) => (a, Field) -> String
+printSetField (v,f) | fieldBitWidth f == 1 = concat ["Bit ", show (fieldBitOffset f), " ", fieldName f]
+printSetField (v,f) | otherwise = concat [
+    "Bits ["
+  , show (fieldBitOffset f)
+  , ":"
+  , show (fieldBitOffset f + fieldBitWidth f - 1)
+  , "]"
+  , " "
+  , fieldName f
+  , " value ", show v]
+
+-- |Show `Field` with its range, e.g BRR[15:0] (16 bit wide)
+showField f@Field{..} | fieldReserved = "◦" ++ (fieldRange f)
+showField f@Field{..} | otherwise = fieldName ++ (fieldRange f)
+
+-- datasheeeet like
+fieldRange Field{..} | fieldBitWidth == 1 = ""
+fieldRange Field{..} | otherwise = concat ["[", show $ fieldBitWidth - 1, ":0]"]
+
+-- |Format field value in hex, padded according to `fieldBitWidth`
+hexFieldVal :: (Integral x, Show x) => Field -> x -> String
+hexFieldVal _ 0                         = "0"
+hexFieldVal f x | fieldBitWidth f ==  1 = showBit x
+hexFieldVal f x | fieldBitWidth f <=  8 = showHex (fromIntegral x :: Word8)
+hexFieldVal f x | fieldBitWidth f <= 16 = showHex (fromIntegral x :: Word16)
+hexFieldVal f x | fieldBitWidth f <= 32 = showHex (fromIntegral x :: Word32)
+hexFieldVal f x | otherwise             = showHex (fromIntegral x :: Word64)
+
+showBit 0 = "0"
+showBit 1 = "1"
+showBit x = error $ "Not a bit: " ++ show x
