@@ -13,6 +13,7 @@ import qualified Data.Map as Map
 
 import Text.Regex.Posix
 import Debug.Trace
+import Safe
 
 import Data.SVD
 import Utils
@@ -21,7 +22,7 @@ import Utils
 byPeriphRegs :: String -> (a, Device) -> [Register]
 byPeriphRegs periph dev = case ((filter ((== periph) . periphGroupName)) . devicePeripherals . snd $ dev) of
   [] -> trace ("Device " ++ (deviceName . snd $ dev) ++ " has no " ++ periph) []
-  x -> periphRegisters . head $ x
+  x -> periphRegisters . headNote "byPeriphRegs" $ x
 
 -- get merged register map (containing regs for all families) for specific peripheral
 mergedRegistersForPeriph p svds = (getPeriph p (snd fstDev)) { periphRegisters = merged }
@@ -30,7 +31,7 @@ mergedRegistersForPeriph p svds = (getPeriph p (snd fstDev)) { periphRegisters =
 
       merged = mergeRegisterFields $ concatMap (byPeriphRegs p) svds
 
-      fstDev = head $ svds
+      fstDev = headNote "mergedRegistersForPeriph fstDev" $ svds
       -- make a test of this (check if regName groups contain all devices)
       --wtf = L.groupBy (\a b -> regName a == regName b) $ L.sortBy (comparing $ regName) $ concatMap byPeriphRegs p svds
       --print $ map length wtf
@@ -50,7 +51,7 @@ mergeRegFields :: [[Register]] -> [Register]
 mergeRegFields groups = map mf groups
   where
     mf :: [Register] -> Register
-    mf rs = (head rs) { regFields = mergedFields rs }
+    mf rs = (headNote "mergeRegFields" rs) { regFields = mergedFields rs }
     mergedFields rs = Map.elems $ Map.unionsWith preferred (map toMap rs)
     toMap r = Map.fromList (map (\f -> (fieldBitOffset f, f)) (regFields r))
 

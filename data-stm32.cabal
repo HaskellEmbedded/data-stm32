@@ -65,6 +65,7 @@ library
     , hastache
     , pretty-simple
     , regex-posix
+    , safe
     , split
     , text
     , time
@@ -100,6 +101,7 @@ executable genstm
     , hxt-xpath
     , karver
     , hastache
+    , safe
     , syb
     , mtl
     , unordered-containers

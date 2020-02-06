@@ -6,6 +6,7 @@ import Data.Ord
 import Data.List
 import qualified Data.Set as Set
 import qualified Data.Map as Map
+import Safe
 
 import Control.Monad
 
@@ -138,7 +139,8 @@ mapDevFields f d = concat $ concat $ flip mapPeriphs d $ mapRegs $ mapFields f
 getPeriph :: String -> Device -> Peripheral
 getPeriph name dev = head . filter ((==name) . periphGroupName) $ devicePeripherals dev
 
-getReg pName rName dev = head . filter((==rName) . regName) . periphRegisters $ getPeriph pName dev
+-- old
+getReg pName rName dev = headNote "getReg" . filter((==rName) . regName) . periphRegisters $ getPeriph pName dev
 getRegFields pName rName dev = regFields $ getReg pName rName dev
 
 getDevMemMap Device{..} = map (liftM2 (,) (hexFormat . periphBaseAddress) periphName) devicePeripherals
@@ -157,7 +159,7 @@ diffRegisterNames pName dev1 dev2 = getDiff
 regNames = map regName . periphRegisters
 diffRegNames p1 p2 = diff regNames p1 p2
 
-regNameFields rName p = regFields . head . filter((==rName) . regName) . periphRegisters $ p
+regNameFields rName p = regFields . headNote "regNameFields" . filter((==rName) . regName) . periphRegisters $ p
 
 diff fn x y = getDiff (sort $ fn x) (sort $ fn y)
 

@@ -13,6 +13,7 @@ import Data.Char (toLower, toUpper, isDigit)
 import Data.Data (Data, Typeable)
 import qualified Data.List as L
 import qualified Data.Set as S
+import Safe
 
 import Data.CMX
 import Data.SVD
@@ -108,7 +109,7 @@ periphInstancesRCC periph mcu = do
   return
     $ L.sort
     $ L.nub
-    $ map (\Field{..} -> L.head $ fromJust $ L.stripPrefix pName $ fieldName)
+    $ map (\Field{..} -> headNote "periphInstancesRCC" $ fromJust $ L.stripPrefix pName $ fieldName)
     $ concatMap (\(r, fs) -> fs)
     $ filterRegFields (\Field{..} ->
            pName `L.isPrefixOf` fieldName

@@ -4,6 +4,7 @@
 
 module Data.SVD.Parse where
 
+import Safe
 import Control.Monad
 
 import Control.Arrow.ArrowList

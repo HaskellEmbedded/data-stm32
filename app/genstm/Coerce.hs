@@ -7,6 +7,7 @@ import Data.Char (toUpper, isDigit)
 import Data.Maybe
 import qualified Data.List as L
 import Text.Regex.Posix
+import Safe
 
 import Data.SVD
 import Data.Ivory.ISR (fillMissing)
@@ -262,7 +263,7 @@ adjustSPIRegs p = addDR16 . (adjustRegs makeDR8Bit) . adjustFields fix $ p
         fix x | fieldName x == "BR"                         = Just $ setFieldType "SPIBaud" x
         fix x | otherwise                                   = Just x
         addDR16 x = x { periphRegisters = periphRegisters x ++ [dr16Reg] }
-        getDR = head . filter ((== "DR") . regName) $ periphRegisters p
+        getDR = headNote "adjustSPIRegs getDR" . filter ((== "DR") . regName) $ periphRegisters p
         dr16Reg = getDR { regName = "DR16" , regDescription = "DR register with 16 bit DR field" }
         makeDR8Bit reg | regName reg == "DR" = reg { regSize = 8 }
         makeDR8Bit reg | otherwise = reg
@@ -343,7 +344,7 @@ fixSVDs svds = map fixIncompletes svds
     -- fill missing of L4x5 with L462
     l462 = single svds "L4x2"
 
-    single svds what = snd . head . filter (\(name, _) -> name == what) $ svds
+    single svds what = snd . headNote "fixSVDs single" . filter (\(name, _) -> name == what) $ svds
     isrFilled = fillMissing f401 f405
     isrFilledF41X dev = fillMissing dev f413
     isrFilledL4X5 dev = fillMissing dev l462
