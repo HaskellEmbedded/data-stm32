@@ -1,6 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Data.SVD.Extract (
     extractSVDCached
+  , svd1
   ) where
 
 import Turtle
