@@ -53,6 +53,9 @@ pinName :: GPIOPin -> String
 pinName (GPIOFX p) = V2.pinName p
 pinName (GPIOF1 p) = V1.pinName p
 
+instance Show GPIOPin where
+  show = pinName
+
 pinNumber :: GPIOPin -> Int
 pinNumber (GPIOFX p) = V2.gpioPinNumber p
 pinNumber (GPIOF1 p) = V1.gpioPinNumber p
