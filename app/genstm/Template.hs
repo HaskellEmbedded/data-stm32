@@ -14,6 +14,8 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TLIO
+import Data.List (intercalate)
+import Data.List.Split (splitOn)
 import Data.Data (Data, Typeable)
 import Data.Generics.Aliases (extQ)
 import Control.Monad.State (MonadState, StateT)
@@ -53,10 +55,11 @@ template context namespace tmpl = do
 
 
 globalContext ns = composeCtx
-                    (mkStrContext $ namespaceContext ns)
-                    (mkStrContext prefixCtx)
+                     (mkStrContext $ namespaceContext ns)
+                     (mkStrContext prefixCtx)
 
 namespaceContext ns "modns" = MuVariable ns
+namespaceContext ns "init_modns" = MuVariable (nsInit ns)
 namespaceContext ns _ = MuNothing
 
 prefixCtx "prefixRest" = MuLambdaM $ prefixRest . decodeStr
@@ -67,6 +70,9 @@ prefixRest a = do
     first <- State.get
     if first then State.put False >> return ("    " ++ a)
              else return ("  , " ++ a)
+
+nsInit :: Text -> Text
+nsInit = T.intercalate "." . map T.pack . init . splitOn "." . T.unpack
 
 template' :: T.Text
           -> T.Text
