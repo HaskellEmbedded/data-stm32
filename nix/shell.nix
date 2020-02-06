@@ -15,7 +15,7 @@ pkgs.stdenv.mkDerivation {
 
   shellHook = ''
     figlet "YOLO"
-    export DB_PATH=${dbs}
+    export DB_PATH=${dbs.combined}
     export TEMPLATES_PATH=$( pwd )/../templates
   '';
 }
