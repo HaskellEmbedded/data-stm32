@@ -7,7 +7,7 @@ homepage:       https://github.com/sorki/data-stm32#readme
 bug-reports:    https://github.com/sorki/data-stm32/issues
 author:         Richard Marko
 maintainer:     srk@48.io
-copyright:      2018 Richard Marko
+copyright:      2020 Richard Marko
 license:        BSD3
 license-file:   LICENSE
 build-type:     Simple

@@ -19,6 +19,7 @@ fs = [
     "cabal.project"
   , "devices.data"
   , "ivory-bsp-stm32.cabal"
+  , "LICENSE"
   ]
 
 ds = [ "src", "support" ]
