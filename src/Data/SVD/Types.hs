@@ -87,12 +87,21 @@ data Field = Field {
 
 instance Serialize Field
 
-toAccessType "read-only" = ReadOnly
-toAccessType "write-only" = WriteOnly
-toAccessType "read-write" = ReadWrite
-toAccessType "writeOnce" = WriteOnce
+toAccessType :: String -> AccessType
+toAccessType "read-only"      = ReadOnly
+toAccessType "write-only"     = WriteOnly
+toAccessType "read-write"     = ReadWrite
+toAccessType "writeOnce"      = WriteOnce
 toAccessType "read-writeOnce" = ReadWriteOnce
-toAccessType x = error $ "Unable to read AccessType" ++ x
+toAccessType x                = error $ "Unable to read AccessType" ++ x
+
+showAccessType :: AccessType -> String
+showAccessType ReadOnly       = "read-only"
+showAccessType WriteOnly      = "write-only"
+showAccessType ReadWrite      = "read-write"
+showAccessType WriteOnce      = "writeOnce"
+showAccessType ReadWriteOnce  = "read-writeOnce"
+
 
 -- |Find holes in registers and create corresponding reserved fields for these
 --
