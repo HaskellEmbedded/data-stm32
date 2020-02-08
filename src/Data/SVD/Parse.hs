@@ -120,7 +120,7 @@ register = atTag "registers" >>> atTag "register" >>>
 field = atTag "field" >>>
   proc x -> do
     fieldName <- textAtTag "name" -< x
-    desc <- textAtTag "description" -< x
+    desc <- textAtTagOrEmpty "description" -< x
 
     bitOffsetMay <- withDefault (arr (Just . read) <<< textAtTag "bitOffset") Nothing -< x
     bitWidthMay <- withDefault (arr (Just . read) <<< textAtTag "bitWidth") Nothing -< x
