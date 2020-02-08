@@ -4,10 +4,14 @@ module Data.Bits.Pretty (
   , showBinGroups
   , showDec
   , platformSizeOfInt
+  , showHex8
+  , showHex16
+  , showHex32
   ) where
 
 import Data.Int
 import Data.Bits
+import Data.Word
 import Text.Printf
 
 -- |Format number using hexadecimal notation with leading 0x, padded according to its bit size
@@ -35,3 +39,14 @@ showBinGroups groupSize x = unwords $ flip map [gs, gs - 1 ..0] $ \g -> ((printf
 -- |Size of `Int` at current platform
 platformSizeOfInt :: Int
 platformSizeOfInt = finiteBitSize (0 :: Int)
+
+-- shortcuts
+
+showHex32 :: Int -> String
+showHex32 = showHex . (fromIntegral :: Int -> Word32)
+
+showHex16 :: Int -> String
+showHex16 = showHex . (fromIntegral :: Int -> Word16)
+
+showHex8 :: Int -> String
+showHex8  = showHex . (fromIntegral :: Int -> Word8)
