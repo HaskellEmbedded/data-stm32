@@ -106,7 +106,7 @@ showAccessType ReadWriteOnce  = "read-writeOnce"
 -- |Find holes in registers and create corresponding reserved fields for these
 --
 -- First finds missing missing bits and then merges them to single reserved field
-procFields Register{..} = reverse $ sortByOffset (regFields ++ missingAsReserved)
+procFields Register{..} = dataIfSingleReserved $ reverse $ sortByOffset (regFields ++ missingAsReserved)
   where
     missingAsReserved = reserved $ conts $ Set.toList missing
 
@@ -124,6 +124,11 @@ procFields Register{..} = reverse $ sortByOffset (regFields ++ missingAsReserved
       \Field{..} -> [fieldBitOffset .. (fieldBitOffset + fieldBitWidth - 1)]
 
     sortByOffset = sortOn fieldBitOffset
+
+    -- this handles a case when there are no fields and code above creates a single full-sized reserved field
+    -- which we turn into non-reserved "data" field
+    dataIfSingleReserved [f] | fieldReserved f == True = [ f { fieldName = "DATA", fieldReserved = False } ]
+    dataIfSingleReserved fs  | otherwise             = fs
 
 -- find longest increasing sequence
 cont (x:y:xs) | (x + 1 == y) = [x] ++ cont (y:xs)
