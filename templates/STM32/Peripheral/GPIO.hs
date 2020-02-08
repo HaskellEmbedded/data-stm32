@@ -25,11 +25,13 @@ module {{ modns }} (
   , pinSetOutputType
   , pinSetSpeed
   , pinSetPUPD
+  , pinSetPull
   , pinSetAF
   , pinSet
   , pinClear
   , pinRead
   , GPIOPin(..)
+  , GPIOPull(..)
   , pinIsV1
   , pinIsV2
   , module Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes
@@ -48,6 +50,10 @@ import qualified Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes   as V2
 import Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes
 
 data GPIOPin = GPIOF1 V1.GPIOPin | GPIOFX V2.GPIOPin
+
+-- | Pull up/down resistor configuration
+data GPIOPull = PullUp | PullDown | NoPull
+  deriving (Show, Eq, Ord)
 
 pinName :: GPIOPin -> String
 pinName (GPIOFX p) = V2.pinName p
@@ -201,3 +207,9 @@ pinSetPUPD (GPIOF1 pin) v2pupd = do
           ]
     ]
   where v2rep = toRep v2pupd
+
+-- | Alternative to `pinSetPUPD` using `GPIOPull` type
+pinSetPull :: GPIOPin -> GPIOPull -> Ivory eff ()
+pinSetPull p PullUp   = pinSetPUPD  p gpio_pupd_pullup
+pinSetPull p PullDown = pinSetPUPD  p gpio_pupd_pulldown
+pinSetPull p NoPull   = return ()
