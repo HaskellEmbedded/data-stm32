@@ -49,12 +49,17 @@ import qualified Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes   as V2
 -- due to re-export
 import Ivory.BSP.STM32.Peripheral.GPIOv2.RegTypes
 
+-- | Wrapper around GPIO versions
 data GPIOPin = GPIOF1 V1.GPIOPin | GPIOFX V2.GPIOPin
 
 -- | Pull up/down resistor configuration
 data GPIOPull = PullUp | PullDown | NoPull
   deriving (Show, Eq, Ord)
 
+-- | Return pretty name of the `GPIOPin`
+--
+-- >>> pinName gpioA7
+-- "gpioA7"
 pinName :: GPIOPin -> String
 pinName (GPIOFX p) = V2.pinName p
 pinName (GPIOF1 p) = V1.pinName p
@@ -62,22 +67,38 @@ pinName (GPIOF1 p) = V1.pinName p
 instance Show GPIOPin where
   show = pinName
 
+-- | Return index of the `GPIOPin`
+--
+-- >>> pinNumber gpioA7
+-- 7
 pinNumber :: GPIOPin -> Int
 pinNumber (GPIOFX p) = V2.gpioPinNumber p
 pinNumber (GPIOF1 p) = V1.gpioPinNumber p
 
+-- | Return name of the port for `GPIOPin`
+--
+-- >>> pinPort gpioA0
+-- "gpioA"
 pinPort :: GPIOPin -> String
 pinPort (GPIOFX p) = V2.gpioPortName $ V2.gpioPinPort p
 pinPort (GPIOF1 p) = V1.gpioPortName $ V1.gpioPinPort p
 
+-- | Return port index for `GPIOPin`
+--
+-- >>> pinPortNumber gpioA0
+-- 0
+-- >>> pinPortNumber gpioB0
+-- 1
 pinPortNumber :: GPIOPin -> Int
 pinPortNumber (GPIOFX p) = V2.gpioPortNumber $ V2.gpioPinPort p
 pinPortNumber (GPIOF1 p) = V1.gpioPortNumber $ V1.gpioPinPort p
 
+-- | Is version 1 `GPIOPin` (F1 like)
 pinIsV1 :: GPIOPin -> Bool
 pinIsV1 (GPIOF1 _) = True
 pinIsV1 _          = False
 
+-- | Is version 2 `GPIOPin` (F4 and others)
 pinIsV2 :: GPIOPin -> Bool
 pinIsV2 (GPIOFX _) = True
 pinIsV2 _          = False
@@ -117,6 +138,7 @@ pinSetAF (GPIOFX pin) af = V2.pinSetAF pin af
 pinSetAF (GPIOF1 _pin) _af = return ()
 -- XXX: ^ silently ignore AF for F1??
 
+-- | Configure pin mode - input, output, analog or alternate function
 pinSetMode :: GPIOPin -> V2.GPIO_Mode -> Ivory eff ()
 pinSetMode (GPIOFX pin) v2mode = V2.pinSetMode pin v2mode
 pinSetMode (GPIOF1 pin) v2mode = do
@@ -145,6 +167,7 @@ pinSetMode (GPIOF1 pin) v2mode = do
     ]
   where v2rep = toRep v2mode
 
+-- | Configure pin speed
 pinSetSpeed :: GPIOPin -> V2.GPIO_Speed -> Ivory eff ()
 pinSetSpeed (GPIOFX pin) v2speed = V2.pinSetSpeed pin v2speed
 pinSetSpeed (GPIOF1 pin) v2speed = do
@@ -158,6 +181,7 @@ pinSetSpeed (GPIOF1 pin) v2speed = do
 
   where v2rep = toRep v2speed
 
+-- | Set output type of the `GPIOPin`, either `push-pull` or `open-drain`
 pinSetOutputType :: GPIOPin -> V2.GPIO_OutputType -> Ivory eff ()
 pinSetOutputType (GPIOFX pin) v2typ = V2.pinSetOutputType pin v2typ
 pinSetOutputType (GPIOF1 pin) v2typ = do
@@ -176,6 +200,7 @@ pinSetOutputType (GPIOF1 pin) v2typ = do
     ]
   where v2rep = toRep v2typ
 
+-- | Configure pull-up/down reistor or no pullup for `GPIOPin`
 pinSetPUPD :: GPIOPin -> V2.GPIO_PUPD -> Ivory eff ()
 pinSetPUPD (GPIOFX pin) v2pupd = V2.pinSetPUPD pin v2pupd
 pinSetPUPD (GPIOF1 pin) v2pupd = do
