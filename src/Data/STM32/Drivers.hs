@@ -33,6 +33,8 @@ driverMapping = [
 
   , DriverInfo RNG Nothing  ["rng1_v1_1", "rng1_v2_0"] NoRegTypes CommonDriver
 
+  , DriverInfo RTC Nothing ["rtc2_v2_4"] NoRegTypes NoDriver
+
   , DriverInfo SPI (Just 1) ["spi2s1_v1_0", "spi2s1_v1_2"] CommonRegTypes CommonDriver -- F10x
   , DriverInfo SPI (Just 2) ["spi2s1_v2_2", "spi2s1_v2_3", "spi2s1_v2_4"] CommonRegTypes CommonDriver -- F4 and co
   , DriverInfo SPI (Just 3) ["spi2s1_v3_0", "spi2s1_v3_1", "spi2s1_v3_2", "spi2s1_v3_3", "spi2s1_v3_5"] CommonRegTypes CommonDriver -- F7 / L4
