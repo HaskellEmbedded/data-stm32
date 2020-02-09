@@ -40,8 +40,12 @@ driverMapping = [
   , DriverInfo USART (Just 1) ["sci2_v1_1"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 2) ["sci2_v1_2"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 3) ["sci2_v3_1", "sci3_v1_1", "sci3_v2_1"] CommonRegTypes VersionedDriver
+  , DriverInfo LPUART (Just 3) ["sci2_v3_1", "sci3_v1_1", "sci3_v2_1"] CommonRegTypes VersionedDriver
 
   , DriverInfo IWDG Nothing ["iwdg1_v1_1", "iwdg1_v2_0"] NoRegTypes CommonDriver
+
+  , DriverInfo EXTI (Just 1) ["*"] CommonRegTypes VersionedDriver
+  , DriverInfo EXTI (Just 2) ["exti_g0"] CommonRegTypes VersionedDriver
   ]
 
 periphDrivers p = filter (\DriverInfo{..} -> diPeriph == p) driverMapping
@@ -57,17 +61,23 @@ mcuPeriphDriver mcu periph = case periph of
   GPIO -> case mcuFamily mcu of
     F1 -> Just $ DriverInfo GPIO (Just 1) ["STM32F103x8_gpio_v1_0"] VersionedRegTypes NoDriver
     _  -> Just $ DriverInfo GPIO (Just 2) ["*"] VersionedRegTypes NoDriver
+  EXTI -> case mcuFamily mcu of
+    G0 -> Just $ DriverInfo EXTI (Just 2) ["exti_g0"] CommonRegTypes VersionedDriver
+    _  -> Just $ DriverInfo EXTI (Just 1) ["*"] CommonRegTypes VersionedDriver
   _ -> case filter (mcuCompatible mcu) (periphDrivers $ asUSART periph) of
           [x] -> Just x
-          _ -> Nothing
+          _   -> Nothing
   where asUSART UART = USART
         asUSART x = x
 
 -- error $ "Multiple or no drivers found for periph and mcu: " ++ show periph ++ ", " ++ mcuRefName mcu
 
-mcuCompatible MCU{..} DriverInfo{..} = not
-                                     $ S.null
-                                     $ S.intersection (S.fromList diCompatibleIps) (S.map ipVersion mcuIps)
+mcuCompatible MCU{..} DriverInfo{..} = case diCompatibleIps of
+  ["*"] -> True
+  _     -> not
+             $ S.null
+             $ S.intersection (S.fromList diCompatibleIps)
+                              (S.map ipVersion mcuIps)
 
 hasPeriph mcu periph =  not . S.null . S.filter (\ip -> ipName ip == show periph) $ mcuIps mcu
 

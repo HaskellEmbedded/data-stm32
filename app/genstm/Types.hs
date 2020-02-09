@@ -131,7 +131,7 @@ processedPeriph :: Periph -> MCU -> MonadGen Peripheral
 processedPeriph periph mcu = do
   dev <- svdForMCU mcu
   let mdi = mcuPeriphDriver mcu periph
-  procPeriph periph (maybe Nothing diVersion mdi) (getPeriph (show periph) dev)
+  procPeriph periph (maybe Nothing diVersion mdi) (getPeriphByGroup (show periph) dev)
     --Nothing ->  error $ "Multiple or no drivers found for periph and mcu: " ++ show periph ++ ", " ++ mcuRefName mcu
 
 svdsFamily :: Family -> MonadGen [Device]
@@ -154,7 +154,7 @@ peripheralByVersion p ver = do
     [] -> error $ "No peripheral found for IP version " ++ ver
     (x:_) -> do
       svd <- get $ mcuRefName x
-      return $ getPeriph (show p) svd
+      return $ getPeriphByGroup (show p) svd
 
 periphVersions :: Periph -> MonadGen ([String])
 periphVersions p = do

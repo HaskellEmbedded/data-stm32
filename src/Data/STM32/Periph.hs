@@ -45,6 +45,7 @@ data Periph =
   | TSC -- touchsensing controller
   | UART
   | USART
+  | LPUART
   | USB_OTG_FS
   | USB_OTG_HS
   | WWDG

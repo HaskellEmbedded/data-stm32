@@ -1,7 +1,10 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module MakePeriph where
+
+import Prelude hiding (log)
 
 import Control.Monad.Reader
 
@@ -35,16 +38,23 @@ data InstancesCtx = InstancesCtx {
   } deriving (Show, Data, Typeable)
 
 data InstanceCtx = InstanceCtx {
-    name         :: String
-  , version      :: String
-  , interrupts   :: [String]
-  , clockSource  :: String
-  , rccEnableReg :: String
-  , rccEnableBit :: String
-  , rccResetReg  :: String
-  , rccResetBit  :: String
-  , index        :: String
-  , numericIndex :: Int
+    name           :: String
+  , version        :: String
+  , interrupts     :: [String]
+  , extiInterrupts :: [EXTIInterruptCtx]
+  , clockSource    :: String
+  , rccEnableReg   :: String
+  , rccEnableBit   :: String
+  , rccResetReg    :: String
+  , rccResetBit    :: String
+  , index          :: String
+  , numericIndex   :: Int
+  } deriving (Show, Data, Typeable)
+
+data EXTIInterruptCtx = EXTIInterruptCtx {
+    rangeStart :: Int
+  , rangeEnd :: Int
+  , rangeISR :: String
   } deriving (Show, Data, Typeable)
 
 -- find enable and reset bits in RCC registers (e.g. uart{vers}{suffix} (e.g. uart1en))
@@ -129,6 +139,11 @@ periphInstancesData periph mcu = do
   -- and instances according to the RCC register
   rccis <- periphInstancesRCC periph mcu
 
+  -- IFF something fails debug with
+  --log $ show rcc
+  --log $ show is'
+  --log $ show rccis
+
   -- and instances according to the IPs
   -- unless this is GPIO we intersect with IPs as well
   ipis <- periphInstancesIP periph mcu
@@ -146,16 +161,17 @@ periphInstancesData periph mcu = do
     rccRst idStr rcc = findRCCBit periph idStr "RST" rcc
     lower = map toLower
     mkData dev rcc idChar idx = InstanceCtx {
-        name         = lower $ pName id'
-      , version      = maybe "" show $ diVersion $ fromJust $ mcuPeriphDriver mcu periph
-      , interrupts   = sharedInterrupts $ isrs' id' dev
-      , clockSource  = maybe "" id $ pclkIndex $ fst $ rccEn id' rcc
-      , rccEnableReg = lower $ fst $ rccEn id' rcc
-      , rccEnableBit = lower $ fieldName $ snd $ rccEn id' rcc
-      , rccResetReg  = lower $ fst $ rccRst id' rcc
-      , rccResetBit  = lower $ fieldName $ snd $ rccRst id' rcc
-      , index = id'
-      , numericIndex = idx
+        name           = lower $ pName id'
+      , version        = maybe "" show $ diVersion $ fromJust $ mcuPeriphDriver mcu periph
+      , interrupts     = sharedInterrupts $ isrs' id' dev
+      , extiInterrupts = extiInterruptRanges $ isrs' id' dev
+      , clockSource    = maybe "" id $ pclkIndex $ fst $ rccEn id' rcc
+      , rccEnableReg   = lower $ fst $ rccEn id' rcc
+      , rccEnableBit   = lower $ fieldName $ snd $ rccEn id' rcc
+      , rccResetReg    = lower $ fst $ rccRst id' rcc
+      , rccResetBit    = lower $ fieldName $ snd $ rccRst id' rcc
+      , index          = id'
+      , numericIndex   = idx
       }
       where id' = if idChar == '0' then "" else [idChar]
 
@@ -205,8 +221,18 @@ periphInstancesData periph mcu = do
         log True = True
         log False = trace ("Missing interrupts for " ++ (name ctx) ++ " dev " ++ (mcuRefName mcu)) False
 
+    extiInterruptRanges is =
+           map (\(s, e, i) -> EXTIInterruptCtx s e i)
+         $ L.sort
+         $ rights
+         $ map (\i -> case parseOnly extiRangeParser . B.pack $ i of
+                  Left x             -> Left x
+                  Right (start, end) -> Right (start, end, i)
+               ) is
+
 validISRCount UART = 1
 validISRCount USART = 1
+validISRCount LPUART = 1
 validISRCount SPI = 1
 validISRCount I2C = 2
 validISRCount RNG = 1
@@ -235,3 +261,15 @@ pclkIndex name | "APB1" `L.isPrefixOf` name = Just "PClk1"
 pclkIndex name | "APB2" `L.isPrefixOf` name = Just "PClk2"
 pclkIndex name | "APB3" `L.isPrefixOf` name = Just "PClk3"
 pclkIndex name | otherwise = Nothing
+
+-- EXTI0     - (0, 0)
+-- ...
+-- EXTI9_5   - (5, 9)
+-- EXTI15_10 - (10, 15)
+extiRangeParser :: Parser (Int, Int)
+extiRangeParser = do
+  string "EXTI"
+  end <- decimal
+  start <- option end $ char '_' *> decimal
+  -- correction for EXTI9_5, start is always lower
+  return (min start end, max start end)

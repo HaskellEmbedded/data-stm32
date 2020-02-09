@@ -8,6 +8,7 @@ import Turtle
 import Prelude hiding (log, FilePath)
 import Control.Monad
 import qualified Control.Foldl as Fold
+import Data.Char (toUpper)
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -105,7 +106,7 @@ stm32devs = do
     -- memMap
     let ns = "STM32" <> (T.pack name) <> ".MemoryMap"
         ctx = listCtx [ ("dev", T.pack name)
-                      , ("map" , T.pack $ ppMemMap $ getDevMemMap svd ) ]
+                      , ("map" , T.pack $ ppMemMap $ addSYSCFGAlias $ getDevMemMap svd ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
 
     -- interrupts
@@ -120,17 +121,12 @@ stm32devs = do
         ctx = listCtx [ ("isr", isr) ]
     template ctx ns "STM32DEV/Interrupt.hs"
 
-    let genPeriph p = case peripheralByGroupName svd p of
-         Nothing -> fail $ "No " ++ (show p) ++ " found"
+    let notFound p = log $ "- " ++ (show p) ++ " not found"
+        genPeriph p = case peripheralByName svd p of
+         Nothing -> notFound p
          Just svdPeriph -> genPeriphDev p svdPeriph name
 
     forM_ [ RCC, FLASH, PWR ] genPeriph
-
-    let genPeriphIfAvail p = case peripheralByName svd p of
-         Nothing -> return ()
-         Just svdPeriph -> genPeriphDev p svdPeriph name
-
-    forM_ [ SYSCFG ] genPeriphIfAvail
 
     log $ "Processing instances for " ++ name
     forM_ [ GPIO ] $ \periph -> do
@@ -140,7 +136,58 @@ stm32devs = do
       templateD ctx (target <> ".Pins")  "STM32DEV/GPIO/Pins.hs"
       templateD ctx target "STM32DEV/GPIO.hs"
 
-    forM_ (supported L.\\ [GPIO]) $ \periph -> do
+    -- for F1 we have AFIO
+    -- for G0 we have EXTICR regs in EXTI itself
+    unless (mcuFamily mcu == F1 || mcuFamily mcu == G0) $ do
+      forM_ [ EXTI ] $ \periph -> do
+        ctx <- makePeriphContext periph mcu
+        let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
+        templateD ctx target "STM32DEV/EXTI.hs"
+
+    when (mcuFamily mcu == G0) $ do
+      forM_ [ EXTI ] $ \periph -> do
+        ctx <- makePeriphContext periph mcu
+        let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
+        templateD ctx target "STM32DEV/EXTIG0.hs"
+
+    when (mcuFamily mcu == F1) $ do
+      forM_ [ EXTI ] $ \periph -> do
+        ctx <- makePeriphContext periph mcu
+        let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
+        templateD ctx target "STM32DEV/EXTIF1.hs"
+
+    -- special treatment due to G0s having SYSCFG_ITLINE in SYSCFG group
+    -- and F303 having SYSCFG_COMP_OPAMP (as groupName /o\)
+    case filter (\x -> (
+                           (periphName x /= "SYSCFG_ITLINE"
+                            && ((==show SYSCFG) . map toUpper . periphGroupName $ x))
+                        || (periphGroupName x == "SYSCFG_COMP_OPAMP"))
+                ) $ devicePeripherals svd of
+      []  -> notFound SYSCFG
+      [svdPeriph] -> do
+          let di = DriverInfo SYSCFG Nothing [] NoRegTypes NoDriver
+          genPeriphTree (T.concat ["STM32", (T.pack name)]) SYSCFG di svdPeriph
+
+          ctx <- makePeriphContext SYSCFG mcu
+          let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow SYSCFG)]
+          templateD ctx target "STM32DEV/SYSCFG.hs"
+      _   -> error "Multiple SYSCFGs"
+
+    when (mcuFamily mcu == F1) $ do
+      let p = AFIO
+      case peripheralByName svd p of
+        Nothing -> notFound p
+        Just svdPeriph -> do
+          let di = DriverInfo AFIO Nothing [] NoRegTypes NoDriver
+          genPeriphTree (T.concat ["STM32", (T.pack name)]) AFIO di svdPeriph
+
+          ctx <- makePeriphContext AFIO mcu
+          let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow AFIO)]
+          templateD ctx target "STM32DEV/AFIO.hs"
+
+    forM_ (supported L.\\ [GPIO, EXTI]) $ \periph -> do
+      unless (hasPeriph mcu periph) $ log $ "- " ++ show periph ++ " hasPeriph = False"
+      unless (hasDriver mcu periph) $ log $ "- " ++ show periph ++ " hasDriver = False"
       when (hasPeriph mcu periph && hasDriver mcu periph) $ do
         ctx <- makePeriphContext periph mcu
 
@@ -176,13 +223,13 @@ stm32periphs = do
       nVDev = get nonVersionedBase
 
   forM_ supported $ \p -> do
-    forM_ (periphDrivers p) $ \di@DriverInfo{..} -> do
+    forM_ (filter ((/=LPUART) . diPeriph) $ periphDrivers p) $ \di@DriverInfo{..} -> do
       let repre = case (diPeriph, diVersion) of
                  (GPIO, Just 2) -> head $ fx cmxs nonVersionedBase
                  _ -> someMCUWithDriver di $ cmxDevices cmxsWithSVD
       repreSVD <- get $ mcuRefName repre
       let
-          svdPeriph = getPeriph (show p) repreSVD
+          svdPeriph = getPeriphByGroup (show p) repreSVD
           pName = usart $ tshow p
           nameVersion = case diDriver of
             CommonDriver -> pName
@@ -190,52 +237,7 @@ stm32periphs = do
           usart "USART" = "UART"
           usart x = x
 
-      -- Peripheral.RegTypes
-      tPath <- getTemplatesPath
-      regTypesImports <- case diRegTypes of
-        NoRegTypes -> return []
-        CommonRegTypes -> do
-          -- this intentionally copies whole Peripheral.XYZ dir
-          -- as it might contain other files common for this periph
-          cptree (fromText $ tPath <> "/STM32/Peripheral/" <> pName)
-                 (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> pName)
-          return $ [ T.concat ["import Ivory.BSP.STM32.Peripheral.", pName, ".RegTypes"]]
-        VersionedRegTypes -> do
-          mkdir $ fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion
-          cptree (fromText $ tPath <> "/STM32/Peripheral/" <> nameVersion)
-                 (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion)
-          return $ [ T.concat [ "import Ivory.BSP.STM32.Peripheral.", nameVersion, ".RegTypes"]]
-
-      -- Peripheral.Regs
-      new <- usartToUart <$> procPeriph p diVersion svdPeriph
-      let
-          res = ppPeriphRegs new
-          ns = "STM32.Peripheral." <> nameVersion <> ".Regs"
-          ctx = RegsCtx { imports = regTypesImports
-                        , regs = T.pack res }
-
-      templateD ctx ns "STM32/Peripheral/X/Regs.hs"
-
-      -- Peripheral
-      let ns = "STM32.Peripheral." <> nameVersion <> ".Peripheral"
-          ctx = PeriphCtx {
-                  typ = T.unpack $ pName
-                  , bitDataRegs = ppBitDataRegs new
-                  , bitDataRegsMk = ppBitDataRegsMk new
-                  , pversion = maybe "" (('v':) . show) diVersion
-                  }
-      templateD ctx ns ("STM32/Peripheral/" <> nameVersion <> "/Peripheral.hs")
-
-      -- Toplevel peripheral
-      let ns = "STM32.Peripheral." <> pName
-          vers = catMaybes $ driverVersions p
-          versData = map (\(v, fst) -> VersionCtx
-                          { version = show v
-                          , prefix = if fst then " " else "|" })
-                          $ zip vers (True: [False, False ..])
-
-          ctx = VersionsCtx $ versData
-      templateD ctx ns $ "STM32/Peripheral/" <> pName <> ".hs"
+      genPeriphTree "STM32.Peripheral" p di svdPeriph
 
       -- Driver
       let
@@ -355,8 +357,15 @@ stm32families = do
 
     let ns = "STM32" <> tshow f <> ".MemoryMap"
         ctx = listCtx [ ("dev", tshow f)
-              , ("map" , T.pack $ ppMemMap $ getDevMemMap dev ) ]
+              , ("map" , T.pack $ ppMemMap $ addSYSCFGAlias $ getDevMemMap dev ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
+
+-- iff there's no syscfg memory address we
+-- try to create an alias from composed peripheral address e.g. syscfg_comp
+addSYSCFGAlias x | "SYSCFG" `elem` (map snd x) = x
+addSYSCFGAlias x | otherwise = case filter (\(adr, name) -> "SYSCFG" `L.isPrefixOf` name) x of
+  [(adr, _)] -> (adr, "SYSCFG"):x
+  _ -> x
 
 -- templating of non-versioned peripherals like RCC, PWR, FLASH
 genPeriphDev :: Periph -> Peripheral -> String -> MonadGen ()
@@ -384,6 +393,64 @@ genPeriphCommon periph svdPeripheral adjust devName = do
             , ("regs", T.concat [ T.pack $ ppPeriphRegsWithDefs new])
             ]
   template ctx ns ("STM32DEV/" <> pName <> ".hs")
+
+genPeriphTree target p di svdPeriph = do
+  let
+      pName = usart $ tshow p
+      nameVersion = case diDriver di of
+        CommonDriver -> pName
+        _            -> pName <> (maybe mempty (("v"<>) . tshow) (diVersion di))
+      usart "USART" = "UART"
+      usart x = x
+
+
+  -- Peripheral.RegTypes
+  tPath <- getTemplatesPath
+  -- XXX: fix paths for `target` here as well
+  regTypesImports <- case diRegTypes di of
+    NoRegTypes -> return []
+    CommonRegTypes -> do
+      -- this intentionally copies whole Peripheral.XYZ dir
+      -- as it might contain other files common for this periph
+      cptree (fromText $ tPath <> "/STM32/Peripheral/" <> pName)
+             (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> pName)
+      return $ [ T.concat ["import Ivory.BSP.STM32.Peripheral.", pName, ".RegTypes"]]
+    VersionedRegTypes -> do
+      mkdir $ fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion
+      cptree (fromText $ tPath <> "/STM32/Peripheral/" <> nameVersion)
+             (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion)
+      return $ [ T.concat [ "import Ivory.BSP.STM32.Peripheral.", nameVersion, ".RegTypes"]]
+
+  -- Peripheral.Regs
+  new <- usartToUart <$> procPeriph p (diVersion di) svdPeriph
+  let
+      res = ppPeriphRegs new
+      ns  = target <> "." <> nameVersion <> ".Regs"
+      ctx = RegsCtx { imports = regTypesImports
+                    , regs = T.pack res }
+
+  templateD ctx ns "STM32/Peripheral/X/Regs.hs"
+
+  -- Peripheral
+  let ns = target <> "." <> nameVersion <> ".Peripheral"
+      ctx = PeriphCtx {
+              typ = T.unpack $ pName
+              , bitDataRegs = ppBitDataRegs new
+              , bitDataRegsMk = ppBitDataRegsMk new
+              , pversion = maybe "" (('v':) . show) (diVersion di)
+              }
+  templateD ctx ns ("STM32/Peripheral/" <> nameVersion <> "/Peripheral.hs")
+
+  -- Toplevel peripheral
+  let ns = target <> "." <> pName
+      vers = catMaybes $ driverVersions p
+      versData = map (\(v, fst) -> VersionCtx
+                      { version = show v
+                      , prefix = if fst then " " else "|" })
+                      $ zip vers (True: [False, False ..])
+
+      ctx = VersionsCtx $ versData
+  templateD ctx ns $ "STM32/Peripheral/" <> pName <> ".hs"
 
 tst = do
   runGen $ do

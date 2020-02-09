@@ -100,7 +100,7 @@ extractCMXCached dbPath = do
     cachePath = "/tmp/data_stm32_cmx_cache"
 
 
-fixMCU x@MCU{..} = x { mcuIps = coerceIPVersions . filterIps $ mcuIps }
+fixMCU x@MCU{..} = x { mcuIps = addEXTI . coerceIPVersions . filterIps $ mcuIps }
   where
     coerceIPVersions = S.map (\ip -> ip { ipVersion = dropCMXSuffix $ ipVersion ip })
     dropCMXSuffix x | "_Cube" `L.isSuffixOf` x = take (length x - length ("_Cube" :: String)) x
@@ -122,6 +122,19 @@ fixMCU x@MCU{..} = x { mcuIps = coerceIPVersions . filterIps $ mcuIps }
           , "USB_DEVICE"
           , "USB_HOST"
           ])
+    addEXTI :: S.Set IP -> S.Set IP
+    addEXTI = S.insert $ extiIP $ case mcuFamily of
+      G0 -> "exti_g0"
+      _  -> "exti_common"
+
+    extiIP ver = IP {
+        ipName = "EXTI"
+      , ipVersion = ver
+      , ipConfigFile = ""
+      , ipClockEnableMode = ""
+      , ipInstanceName = ""
+      }
+
 
 -- fill in missing ram2 and ram3 sizes, compute real sram1 size
 adjustRAMs nmcu@(name, mcu) = checkRAM $ calcRam1 $ g4CcmRam $ (name, mcu {

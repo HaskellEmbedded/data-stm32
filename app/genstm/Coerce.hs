@@ -59,6 +59,8 @@ filterByPeriph UART _        x = adjustUARTRegs x
 filterByPeriph USART _       x = renameUSART $ adjustUARTRegs x
 filterByPeriph RCC  _        x = adjustRCCRegs x
 filterByPeriph SPI  _        x = adjustSPIRegs x
+filterByPeriph SYSCFG _      x = renameDualSYSCFG x
+filterByPeriph EXTI   _      x = adjustEXTI x
 filterByPeriph _    _        x = x
 
 checkPeriphRegsContinuity p new = do
@@ -199,6 +201,8 @@ adjustUARTRegs x = adjustFields fix x
     fix x | fieldName x == "TDR" = Just $ x { fieldBitWidth = 8 }
     fix x | fieldName x == "DIV_Mantissa" = Nothing  -- mantissa is dropped and div bellow covers both mantissa and fraction
     fix x | fieldName x == "DIV_Fraction" = Just $ x { fieldBitWidth = 16, fieldName = "div", fieldDescription = "divider" }
+    -- V3 UART only - normally this is 16 bits wide but LPUART uses 20
+    fix x | fieldName x == "BRR" = Just $ x { fieldBitWidth = 20, fieldName = "brr", fieldDescription = "brr divider" }
     fix x | fieldDescription x == "Word length" = Just $ x { fieldRegType = Just "UART_WordLen" }
     fix x | fieldDescription x == "STOP bits" = Just $ x { fieldRegType = Just "UART_StopBits" }
     fix x = Just x
@@ -218,7 +222,6 @@ adjustGPIOF1Regs x = adjustFields fix x
   where
     fix x | "MODE"    `L.isPrefixOf` (fieldName x) = Just $ setFieldType "GPIOF1_Mode" x
     fix x = Just x
-
 
 renameGPIO x = x { periphName = fix $ periphName x }
   where
@@ -267,6 +270,26 @@ adjustSPIRegs p = addDR16 . (adjustRegs makeDR8Bit) . adjustFields fix $ p
         dr16Reg = getDR { regName = "DR16" , regDescription = "DR register with 16 bit DR field" }
         makeDR8Bit reg | regName reg == "DR" = reg { regSize = 8 }
         makeDR8Bit reg | otherwise = reg
+
+renameDualSYSCFG x = adjustRegs fix x
+  where fix x | "SYSCFG_" `L.isPrefixOf` (regName x) = x { regName = fromJust $ L.stripPrefix "SYSCFG_" $ regName x }
+        fix x | otherwise = x
+
+
+adjustEXTI = adjustRegs make32bit
+  where
+    dataField = Field {
+                    fieldName = "data"
+                  , fieldDescription = "Data"
+                  , fieldBitOffset = 0
+                  , fieldBitWidth = 32
+                  , fieldReserved = False
+                  , fieldRegType = Nothing
+                  }
+    make32bit reg = reg { regFields = [ dataField ] }
+    --addEXTICR x@Peripheral{..} = x {
+    --  periphRegisters = periphRegisters ++ [ makeReg "EXTICR" [ ("data", 32) ] ] }
+
 
 usartToUart x | periphName x == "USART" = x { periphName = show UART }
 usartToUart x | otherwise = x
@@ -327,7 +350,7 @@ renamePLLSYS = adjustRegs renameReg . adjustFields renameFields
     renameFields x | otherwise = Just x
 
 
-fixSVDs svds = map fixIncompletes svds
+fixSVDs svds = map (fixLPUART . fixIncompletes) svds
   where
     -- incomplete interrupts maps
     -- F401, F41x, L4x5
@@ -348,3 +371,14 @@ fixSVDs svds = map fixIncompletes svds
     isrFilled = fillMissing f401 f405
     isrFilledF41X dev = fillMissing dev f413
     isrFilledL4X5 dev = fillMissing dev l462
+
+    -- G031 got name LPUART vs correct LPUART1
+    fixLPUART (name, dev) | "STM32G0" `L.isPrefixOf` deviceName dev = (name, dev { devicePeripherals = map (renameLPUART) $ devicePeripherals dev })
+      where renameLPUART p | periphName p == "LPUART" = p { periphName = "LPUART1" }
+            renameLPUART p | otherwise  = p
+    fixLPUART (name, dev) | "STM32G4" `L.isPrefixOf` deviceName dev = (name, dev { devicePeripherals = map (renameLPUARTInterrupt) $ devicePeripherals dev })
+      where renameLPUARTInterrupt p | periphName p == "LPUART1" = p { periphInterrupts = map reISR $ periphInterrupts p }
+            renameLPUARTInterrupt p | otherwise  = p
+            reISR i | interruptName i == "LPUART" = i { interruptName = "LPUART1" }
+            reISR i | otherwise = i
+    fixLPUART x | otherwise = x
