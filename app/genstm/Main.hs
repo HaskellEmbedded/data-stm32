@@ -73,6 +73,7 @@ main = do
     stm32modes
     stm32devs
     stm32families
+    readme
     (,) <$> getTemplatesPath <*> getTemplate "ivory-bsp-stm32.cabal_template"
 
   -- cabal file and support files
@@ -451,6 +452,24 @@ genPeriphTree target p di svdPeriph = do
 
       ctx = VersionsCtx $ versData
   templateD ctx ns $ "STM32/Peripheral/" <> pName <> ".hs"
+
+readme = do
+  DB{..} <- ask
+  devs <- filteredDevs
+  let header = "Device|" ++ (L.intercalate "|" $ map show $ L.sort supported)
+      row dev sup = L.intercalate "|" (dev:sup)
+      isSup mcu periph = hasPeriph mcu periph && hasDriver mcu periph
+      supStr True  = "✓"
+      supStr False = " "
+      devSup = map (\(name, mcu) -> row name (map (supStr . isSup mcu) (L.sort supported))) devs
+
+      all = unlines (header:devSup)
+
+  tmpl <- getTemplate "README.md"
+
+  r <- hastacheStr hastacheConf tmpl
+         (listCtx [("matrix", T.pack all)])
+  liftIO $ TLIO.writeFile "README.md" r
 
 tst = do
   runGen $ do
