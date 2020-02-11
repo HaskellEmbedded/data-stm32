@@ -20,6 +20,7 @@ fs = [
   , "devices.data"
   , "ivory-bsp-stm32.cabal"
   , "LICENSE"
+  , "README.md"
   ]
 
 ds = [ "src", "support" ]
