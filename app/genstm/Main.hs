@@ -457,13 +457,14 @@ readme = do
   DB{..} <- ask
   devs <- filteredDevs
   let header = "Device|" ++ (L.intercalate "|" $ map show $ L.sort supported)
+      sep = "--|" ++ (L.intercalate "|" $ map (pure "--") $ L.sort supported)
       row dev sup = L.intercalate "|" (dev:sup)
       isSup mcu periph = hasPeriph mcu periph && hasDriver mcu periph
       supStr True  = "✓"
       supStr False = " "
       devSup = map (\(name, mcu) -> row name (map (supStr . isSup mcu) (L.sort supported))) devs
 
-      all = unlines (header:devSup)
+      all = unlines (header:sep:devSup)
 
   tmpl <- getTemplate "README.md"
 
