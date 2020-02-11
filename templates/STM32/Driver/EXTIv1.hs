@@ -25,26 +25,6 @@ import qualified Ivory.BSP.ARMv7M.Instr as Instr
 extiCRFieldWidth :: Int
 extiCRFieldWidth = 4
 
-import Data.List (groupBy)
-
-import Ivory.Language
-import Ivory.Stdlib ((+=), when)
-import Ivory.Tower
-import Ivory.HW
-
-import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.Peripheral.GPIO
-import Ivory.BSP.STM32.Peripheral.EXTI.RegTypes
-import Ivory.BSP.STM32.Peripheral.EXTI.Types
-import Ivory.BSP.STM32.Peripheral.EXTIv2.Peripheral
-import Ivory.BSP.STM32.Peripheral.EXTIv2.Regs
-
-import qualified Ivory.BSP.ARMv7M.Instr as Instr
-
--- | Width of each field in extiCR${X} registers
-extiCRFieldWidth :: Int
-extiCRFieldWidth = 8
-
 isrForPin :: EXTI -> GPIOPin -> HasSTM32Interrupt
 isrForPin exti pin = case filter (\(s, e, _i) ->
      s <= pinNumber pin
