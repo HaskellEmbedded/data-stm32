@@ -187,17 +187,23 @@ getPeriphRegs :: String -> Device -> Either String [Register]
 getPeriphRegs pName dev = periphRegisters <$> getPeriphFollow pName dev
 
 -- |Get specific register of the peripheral
+-- Follows derived from.
 getPeriphReg :: String -> String -> Device -> Either String Register
 getPeriphReg pName rName dev = either Left (maybeToEither errMsg . getPeriphRegMay rName) (getPeriphFollow pName dev)
   where
     errMsg = "No register found: " ++ rName ++ " for peripheral " ++ pName
-    maybeToEither msg m = case m of
-      Just x -> Right x
-      Nothing -> Left msg
+
+maybeToEither msg m = case m of
+  Just x -> Right x
+  Nothing -> Left msg
 
 -- |Get address of the specific register of the peripheral with `pName`
 getPeriphRegAddr :: String -> String -> Device -> Either String Int
-getPeriphRegAddr pName rName dev = (\p r -> periphBaseAddress p + regAddressOffset r) <$> getPeriphFollow pName dev <*> getPeriphReg pName rName dev
+getPeriphRegAddr pName rName dev =
+  (\p r -> periphBaseAddress p + regAddressOffset r)
+  <$> (maybeToEither errMsg $ getPeriphMay pName dev) <*> getPeriphReg pName rName dev
+  where
+    errMsg = "No peripheral found " ++ pName
 
 -- |Get fields of the specific register of the peripheral with `pName`
 getPeriphRegFields :: String -> String -> Device -> Either String [Field]
