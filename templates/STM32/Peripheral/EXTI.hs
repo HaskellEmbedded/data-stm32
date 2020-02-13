@@ -7,7 +7,6 @@ module Ivory.BSP.STM32.Peripheral.EXTI
   ( mkEXTIVersion
   , EXTI(..)
   , EXTIVersion(..)
-  , cvtReg
   , module Ivory.BSP.STM32.Peripheral.EXTI.RegTypes
   , module Ivory.BSP.STM32.Peripheral.EXTI.Types
   ) where

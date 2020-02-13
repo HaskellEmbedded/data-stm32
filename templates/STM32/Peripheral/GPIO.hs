@@ -237,4 +237,4 @@ pinSetPUPD (GPIOF1 pin) v2pupd = do
 pinSetPull :: GPIOPin -> GPIOPull -> Ivory eff ()
 pinSetPull p PullUp   = pinSetPUPD  p gpio_pupd_pullup
 pinSetPull p PullDown = pinSetPUPD  p gpio_pupd_pulldown
-pinSetPull p NoPull   = return ()
+pinSetPull _p NoPull   = return ()
