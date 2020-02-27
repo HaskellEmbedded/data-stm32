@@ -159,6 +159,10 @@ pinSetMode (GPIOF1 pin) v2mode = do
 
     , v2mode ==? V2.gpio_mode_af ==> do
 
+        -- AF output config is only valid when in output mode
+        -- (doesn't matter if the pin is input pin like MISO it is still in output mode)
+        V1.pinSetMode pin V1.gpio_mode_output_50mhz
+
         --- set AF but keep pushpull/opendrain
         pp <- V1.pinIsPushPull pin
         ifte_ pp
