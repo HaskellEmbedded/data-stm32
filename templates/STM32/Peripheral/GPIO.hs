@@ -212,8 +212,8 @@ pinSetPUPD (GPIOF1 pin) v2pupd = do
        --input mode
        cond_
           [ v2pupd ==? V2.gpio_pupd_none     ==> V1.pinSetInputConfig pin V1.gpio_input_conf_float
-          , v2pupd ==? V2.gpio_pupd_pullup   ==> V1.pinSetInputConfig pin V1.gpio_input_conf_pull_updown >> V1.pinClear pin
-          , v2pupd ==? V2.gpio_pupd_pulldown ==> V1.pinSetInputConfig pin V1.gpio_input_conf_pull_updown >> V1.pinSet pin
+          , v2pupd ==? V2.gpio_pupd_pullup   ==> V1.pinSetInputConfig pin V1.gpio_input_conf_pull_updown >> V1.pinSet pin
+          , v2pupd ==? V2.gpio_pupd_pulldown ==> V1.pinSetInputConfig pin V1.gpio_input_conf_pull_updown >> V1.pinClear pin
           ]
     , true ==>
        -- output mode
