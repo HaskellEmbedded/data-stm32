@@ -193,13 +193,13 @@ pinSetOutputType (GPIOF1 pin) v2typ = do
     [ v2typ ==? V2.gpio_outputtype_opendrain ==> do
         af <- V1.pinIsAF pin
         ifte_ af
-          (V1.pinSetOutputConfig pin V1.gpio_output_conf_opendrain)
           (V1.pinSetOutputConfig pin V1.gpio_output_conf_af_opendrain)
+          (V1.pinSetOutputConfig pin V1.gpio_output_conf_opendrain)
     , v2typ ==? V2.gpio_outputtype_pushpull  ==> do
         af <- V1.pinIsAF pin
         ifte_ af
-          (V1.pinSetOutputConfig pin V1.gpio_output_conf_pushpull)
           (V1.pinSetOutputConfig pin V1.gpio_output_conf_af_pushpull)
+          (V1.pinSetOutputConfig pin V1.gpio_output_conf_pushpull)
     ]
 
 -- | Configure pull-up/down reistor or no pullup for `GPIOPin`

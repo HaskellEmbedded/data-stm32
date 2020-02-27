@@ -144,7 +144,7 @@ pinGetOutputConfig pin = do
 pinIsAF :: GPIOPin -> Ivory eff IBool
 pinIsAF pin = do
   oc <- toRep <$> pinGetOutputConfig pin
-  return (oc ==? toRep gpio_output_conf_pushpull .|| oc ==? toRep gpio_output_conf_opendrain)
+  return (oc ==? toRep gpio_output_conf_af_pushpull .|| oc ==? toRep gpio_output_conf_af_opendrain)
 
 pinIsPushPull :: GPIOPin -> Ivory eff IBool
 pinIsPushPull pin = do
