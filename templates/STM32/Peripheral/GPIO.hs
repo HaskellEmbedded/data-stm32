@@ -173,10 +173,15 @@ pinSetSpeed (GPIOF1 pin) v2speed = do
   -- only 2 and 50mhz are directly compatible
   assert (v2speed /=? V2.gpio_speed_25mhz)
   assert (v2speed /=? V2.gpio_speed_100mhz)
-  cond_
-    [ v2speed ==? V2.gpio_speed_2mhz  ==> V1.pinSetMode pin V1.gpio_mode_output_2mhz
-    , v2speed ==? V2.gpio_speed_50mhz ==> V1.pinSetMode pin V1.gpio_mode_output_50mhz
-    ]
+  v1mode <- V1.pinGetMode pin
+  -- only if we are not in input mode
+  unless (v1mode ==? V1.gpio_mode_input) $ do
+    cond_
+      [ v2speed ==? V2.gpio_speed_2mhz  ==>
+          V1.pinSetMode pin V1.gpio_mode_output_2mhz
+      , v2speed ==? V2.gpio_speed_50mhz ==>
+          V1.pinSetMode pin V1.gpio_mode_output_50mhz
+      ]
 
 
 -- | Set output type of the `GPIOPin`, either `push-pull` or `open-drain`
