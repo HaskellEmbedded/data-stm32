@@ -6,7 +6,7 @@ license:             BSD3
 author:              Richard Marko
 maintainer:          srk@48.io
 -- copyright:
--- category:
+category:            Embedded
 build-type:          Simple
 cabal-version:       >=1.8
 
