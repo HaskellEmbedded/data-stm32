@@ -14,6 +14,7 @@ data-files: support/vector_table.s.template,
             support/linker_script.lds.template,
             support/ref_to_uint32.h,
             support/ref_to_uint32.c,
+            support/instr.h,
             devices.data
 
 library
