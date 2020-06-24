@@ -100,8 +100,8 @@ clockPClkHz PClk2 = clockPClk2Hz
 
 -- HSE
 -- F4 specific
-externalXtal :: Integer -> Integer -> ClockConfig
-externalXtal xtal_mhz sysclk_mhz = ClockConfig
+externalXtalF4 :: Integer -> Integer -> ClockConfig
+externalXtalF4 xtal_mhz sysclk_mhz = ClockConfig
   { clockconfig_source = HSE (xtal_mhz * 1000 * 1000)
   , clockconfig_pll    = PLLFactorMNP
       { pll_m = xtal_mhz

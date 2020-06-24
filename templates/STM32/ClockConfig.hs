@@ -12,4 +12,4 @@ clockConfigParser :: ConfigParser ClockConfig
 clockConfigParser = do
   xtal_mhz   <- subsection "xtalMHz" integer
   sysclk_mhz <- subsection "sysclkMHz" (integer `withDefault` 168)
-  return (externalXtal xtal_mhz sysclk_mhz)
+  return (externalXtalF4 xtal_mhz sysclk_mhz)
