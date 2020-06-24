@@ -7,6 +7,7 @@ module Types where
 import Prelude hiding (log)
 import Turtle
 import Data.Char (toUpper)
+import Data.Map (Map)
 import Data.Maybe
 import Data.Either
 import Data.Ord (comparing)
@@ -31,15 +32,15 @@ import Options.Applicative
 
 
 data DB = DB {
-    cmxs :: M.Map Family [MCU]
-  , cmxsWithSVD :: M.Map Family [MCU]
-  , afs :: M.Map String AlternateFunctions
-  , noSVD :: [MCU]
-  , svds :: [(String, Device)]
-  , devNames :: [STM32DevName]
+    cmxs          :: Map Family [MCU]
+  , cmxsWithSVD   :: Map Family [MCU]
+  , afs           :: Map String AlternateFunctions
+  , noSVD         :: [MCU]
+  , svds          :: [(String, Device)]
+  , devNames      :: [STM32DevName]
   , shortDevNames :: [String]
-  , nameMapped :: M.Map STM32DevName MCU
-  , opts :: Options
+  , nameMapped    :: Map STM32DevName MCU
+  , opts          :: Options
   } deriving (Show)
 
 data Options = Options {
