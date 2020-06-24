@@ -45,3 +45,7 @@ renderDiffVal :: Show a => Diff a -> String
 renderDiffVal (Both a _a) = "   " ++ show a ++ "\n"
 renderDiffVal (First a)   = " - " ++ show a ++ "\n"
 renderDiffVal (Second a)  = " + " ++ show a ++ "\n"
+
+mapDiff f (Both x y) = (Both (f x) (f y))
+mapDiff f (First x) =  (First (f x))
+mapDiff f (Second x) = (Second (f x))

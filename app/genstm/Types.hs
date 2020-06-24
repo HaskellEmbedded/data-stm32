@@ -16,8 +16,6 @@ import qualified Data.List as L
 import qualified Data.ByteString.Char8 as B
 import Text.Pretty.Simple
 
--- functor
-import Data.Algorithm.Diff
 import Control.Monad.Reader
 
 import Data.Ivory -- .Pretty (replace)
@@ -174,13 +172,8 @@ diffPeriphs p = do
     log $ renderDiff $ dr
     lp $ diffDistance $ diffRegNames x y
     forM_ (getBoths dr) $ \rName -> do
-      log $ renderDiff $ map (fmap shortField) $ diffFields (regNameFields rName x) (regNameFields rName y)
+      log $ renderDiff $ map (mapDiff shortField) $ diffFields (regNameFields rName x) (regNameFields rName y)
       lp $ diffDistance $ diffFields (regNameFields rName x) (regNameFields rName y)
-
-instance Functor Diff where
-  fmap f (Both x y) = (Both (f x) (f y))
-  fmap f (First x) = (First (f x))
-  fmap f (Second x) = (Second (f x))
 
 parseOptions :: Parser Options
 parseOptions = Options <$>
