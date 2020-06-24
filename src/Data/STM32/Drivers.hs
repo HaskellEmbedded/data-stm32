@@ -39,6 +39,9 @@ driverMapping = [
   , DriverInfo SPI (Just 2) ["spi2s1_v2_2", "spi2s1_v2_3", "spi2s1_v2_4"] CommonRegTypes CommonDriver -- F4 and co
   , DriverInfo SPI (Just 3) ["spi2s1_v3_0", "spi2s1_v3_1", "spi2s1_v3_2", "spi2s1_v3_3", "spi2s1_v3_5"] CommonRegTypes CommonDriver -- F7 / L4
 
+  -- v1/v2 split is artificial
+  -- only because the F1 pins are setup as TX (mode output) / RX (mode input)
+  -- instead of both TX & RX in mode AF as for the rest of the devices
   , DriverInfo USART (Just 1) ["sci2_v1_1"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 2) ["sci2_v1_2"] CommonRegTypes VersionedDriver
   , DriverInfo USART (Just 3) ["sci2_v3_1", "sci3_v1_1", "sci3_v2_1"] CommonRegTypes VersionedDriver
