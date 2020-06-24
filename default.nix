@@ -1,4 +1,4 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc881" }:
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc8101" }:
 
 let
   ivory-tower-nix = nixpkgs.fetchFromGitHub {
