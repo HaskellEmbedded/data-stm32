@@ -1,7 +1,7 @@
 { pkgs ? import <nixpkgs> {} }:
 let
   dbs = import ./default.nix {};
-  data-stm32 = import ../default.nix {};
+  data-stm32 = import ../default.nix { nixpkgs = pkgs; };
 in
 pkgs.stdenv.mkDerivation {
   name = "data-stm32-environment";
