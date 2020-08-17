@@ -29,7 +29,7 @@ linker_script fname namedMcu bl_offset reset_handler =
     (not $ mcuForceSplit mcu) && (ramContinuos $ rams nmcu)
 
   sramSize nmcu@(_name, MCU{..}) =
-    if continuous nmcu then mcuRam
+    if continuous nmcu then mcuRam - maybe 0 id mcuCcmRam
                        else mcuRam1
 
   memregs nmcu@(_name, MCU{..}) = unlines $ map mkRegion
