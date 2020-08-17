@@ -19,8 +19,7 @@ The package contains
  * cd nix
  * nix-shell
  * cd ..
- * genstm
- * (OR) cabal new-repl genstm
+ * cabal repl genstm
  * :l Main
  * db <- loadDatabases
 
@@ -52,7 +51,7 @@ Then you can cd back to the repo root directory and run the actual generator
 
 ```bash
 cd ..
-cabal new-run genstm
+cabal run genstm
 ```
 
 Generated library is now available in `data` directory

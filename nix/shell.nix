@@ -8,7 +8,6 @@ pkgs.stdenv.mkDerivation {
 
   buildInputs = [
     pkgs.figlet
-    data-stm32
     data-stm32.env.nativeBuildInputs
     pkgs.haskellPackages.cabal-install
   ];
