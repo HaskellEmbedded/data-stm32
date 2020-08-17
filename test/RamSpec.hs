@@ -45,6 +45,9 @@ spec :: Spec
 spec = withCMX $ do
   itsRam1 "F103" 6
 
+  itsRam1 "F303VC" 40
+  itsCcm  "F303VC" 8
+
   itsRam1 "F334" 12
   itsCcm  "F334" 4
 
@@ -56,6 +59,11 @@ spec = withCMX $ do
   itsRam1 "L431" 32
   itsRam2 "L431" 32
   itHasNoRam3 "L431"
+
+  itsRam1 "G431" 16
+  itsRam2 "G431" 6
+  itHasNoRam3 "G431"
+  itsCcm "G431" 10
 
   itsRam1 "G474" 80
   itsRam2 "G474" 16
