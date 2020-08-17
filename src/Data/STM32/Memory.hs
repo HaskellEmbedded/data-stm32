@@ -10,6 +10,15 @@ ramOffset _  = 0x20000000
 
 -- for some we need to fill ccmSize as it's not part of svd files
 ccmSize :: NamedMCU -> Maybe Int
+ccmSize nmcu        | isFamDev F3 ["03"] nmcu =
+  case stmFlashSizeId (fst nmcu) of
+    Just '6' -> kb 4
+    Just '8' -> kb 4
+    Just 'B' -> kb 8
+    Just 'C' -> kb 8
+    Just 'D' -> kb 16
+    Just 'E' -> kb 16
+    _        -> Nothing
 ccmSize nmcu        | isFamDev G4 ["31", "41"] nmcu = kb 10
 ccmSize nmcu        | isFamDev G4 ["71"] nmcu = kb 16
 ccmSize nmcu        | isFamDev G4 ["73", "74", "83", "84"] nmcu = kb 32
