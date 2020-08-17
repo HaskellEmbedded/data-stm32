@@ -136,7 +136,7 @@ fixMCU x@MCU{..} = x { mcuIps = addEXTI . coerceIPVersions . filterIps $ mcuIps 
 
 
 -- fill in missing ram2 and ram3 sizes, compute real sram1 size
-adjustRAMs nmcu@(name, mcu) = checkRAM $ calcRam1 $ g4CcmRam $ (name, mcu {
+adjustRAMs nmcu@(name, mcu) = checkRAM $ calcRam1 $ addCcmRam $ (name, mcu {
     mcuRam2 = ram2Size nmcu
   , mcuRam3 = ram3Size nmcu
   })
@@ -151,13 +151,12 @@ calcRam1 (name, m@MCU{..}) = (name, m { mcuRam1 = ram1 })
     ram3 = maybe 0 id mcuRam3
     ccram = maybe 0 id mcuCcmRam
 
--- for G4s we don't have CCM RAM size information in svd files
--- so we add it manually
-g4CcmRam nmcu@(name, mcu) = (name, maybeSetCcm $ mcu { mcuRam = mcuRam mcu - ccm })
+-- for some MCUs we don't have CCM RAM size information in cubemx files
+-- so we add it manually based on `Data.STM32.Memory.ccmSize`
+addCcmRam nmcu@(name, mcu) = (name, maybeSetCcm mcu (ccmSize nmcu))
   where
-    ccm = maybe 0 id $ ccmSize nmcu
-    maybeSetCcm mcu | ccm /=0   = mcu { mcuCcmRam = ccmSize nmcu }
-    maybeSetCcm mcu | otherwise = mcu
+    maybeSetCcm mcu (Just _size) = mcu { mcuCcmRam = ccmSize nmcu }
+    maybeSetCcm mcu Nothing = mcu
 
 checkRAM nmcu@(name, MCU{..}) | mcuRam == mcuRam1 + (maybe 0 id mcuRam2) + (maybe 0 id mcuRam3) + (maybe 0 id mcuCcmRam) = nmcu
 checkRAM (name, _) | otherwise = error $ "ram1 + ram2 + ram3 + ccram is not equal mcuRam" ++ showName name

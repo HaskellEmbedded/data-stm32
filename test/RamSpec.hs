@@ -57,7 +57,7 @@ spec = withCMX $ do
   itsRam2 "L431" 32
   itHasNoRam3 "L431"
 
-  itsRam1 "G474" 48
+  itsRam1 "G474" 80
   itsRam2 "G474" 16
   itHasNoRam3 "G474"
   itsCcm "G474" 32
