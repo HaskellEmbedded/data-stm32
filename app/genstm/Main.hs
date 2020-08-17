@@ -228,7 +228,16 @@ stm32periphs = do
       let repre = case (diPeriph, diVersion) of
                  (GPIO, Just 2) -> head $ fx cmxs nonVersionedBase
                  _ -> someMCUWithDriver di $ cmxDevices cmxsWithSVD
+
       repreSVD <- get $ mcuRefName repre
+      log $ "Representative for "
+            ++ show p
+            ++ (maybe "" show diVersion)
+            ++ " chosen "
+            ++ mcuRefName repre
+            ++ " IP "
+            ++ getIPVersion p repre
+
       let
           svdPeriph = getPeriphByGroup (show p) repreSVD
           pName = usart $ tshow p

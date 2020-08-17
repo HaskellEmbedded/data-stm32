@@ -207,10 +207,10 @@ fx :: M.Map Family [MCU] -> String -> [MCU]
 fx db x = filter (\m -> ("STM32" ++ x) `L.isPrefixOf` (mcuRefName m)) . cmxDevices $ db
 
 getIPVersion :: Periph -> MCU -> String
-getIPVersion p m = case S.toList $ S.filter ((== show p) . ipName) $ mcuIps m of
+getIPVersion p m = case S.toList $ S.map ipVersion $ S.filter ((== show p) . ipName) $ mcuIps m of
   [] -> error $ "No IP found with name " ++ (show p)
-  [x] -> ipVersion x
-  xs -> error $ "Multiple IPs found with name " ++ (show p)
+  [x] -> x
+  xs -> error $ "Multiple IPs found with name " ++ (show p) ++ " found " ++ show xs
 
 -- STM32F091_gpio_v1_0 -> F091
 ipShortName :: Periph -> MCU -> String
