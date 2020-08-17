@@ -49,11 +49,10 @@ extractCMX dbPath = do
   xs <- forM (M.toList . M.map (concatMap subFamMCUs) $ fs) $ \(fam, devs) -> do
     ds <- forM devs $ \dev -> do
       putStrLn $ "Parsing " ++ smcuName dev
-      mcu <- parseMCU $ encodeString dbPath ++ "/db/mcu/" ++ (smcuName dev) ++ ".xml"
+      mcu <- parseMCU (encodeString dbPath ++ "/db/mcu/" ++ (smcuName dev) ++ ".xml") (smcuRefName dev)
       let m = checkMCU $ fixMCU $ mcu {
                 mcuRam = smcuRam dev
               , mcuFlash = smcuFlash dev
-              , mcuRefName = smcuRefName dev
               }
 
           name = extract $ parseName (B.pack $ mcuRefName mcu)

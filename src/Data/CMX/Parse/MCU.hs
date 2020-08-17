@@ -73,7 +73,7 @@ memory t = atTag ("memory" ++ t) >>>
     returnA -< (name, access, start, size)
 
 -- mcu/STM32F*.xml parser
-mcu = atTag "Mcu" >>>
+mcu mcuRefName = atTag "Mcu" >>>
   proc x -> do
     mcuClockTree <- att "ClockTree" -< x
     mcuDbVersion <- att "DBVersion" -< x
@@ -81,7 +81,8 @@ mcu = atTag "Mcu" >>>
     mcuIoType <- att "IOType" -< x
     mcuLine <- att "Line" -< x
     mcuPackage <- att "Package" -< x
-    mcuRefName <- att "RefName" -< x
+    -- passed from families parser as here it contains things like (B-C)
+    --mcuRefName <- att "RefName" -< x
     mcuFrequency <- withDefault (arr (Just . (*(10^6)) . read) <<< textAtTag "Frequency") Nothing -< x
     mcuDie <- textAtTag "Die" -< x
     mcuCcmRam <- withDefault (arr (Just . (*1024) . read) <<< textAtTag "CCMRam") Nothing -< x
@@ -184,13 +185,13 @@ parseCore = match . drop 4
     match "Cortex-A7"  = CortexA7
     match unknownCore = error $ "Unknow core" ++ unknownCore
 
-parseMCU f = do
-  res <- runX (readDocument [] f >>> mcu)
+parseMCU file refName = do
+  res <- runX (readDocument [] file >>> mcu refName)
   case res of
-    []  -> return $ error $ "no mcu parsed from " ++ f
+    []  -> return $ error $ "no mcu parsed from " ++ file
     [x] -> return x
     [c1, c2]   -> return c1 -- for H7 series we get two MCUs as it has two Cores (M7 & M4)
-    _   -> error $ "multiple mcus parsed from " ++ f
+    _   -> error $ "multiple mcus parsed from " ++ file
 
 value x = any (==x) $ map (++"_VALUE") clockSourceNames
 

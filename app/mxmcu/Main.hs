@@ -16,7 +16,7 @@ main = do
 parseAndShow :: [String] -> IO()
 parseAndShow [] = return ()
 parseAndShow (f:fs) = do
-  res <- parseMCU f
+  res <- parseMCU f "STM32F799C8T6"
   pPrint res
   parseAndShow fs
 
