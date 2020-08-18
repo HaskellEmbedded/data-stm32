@@ -1,4 +1,4 @@
 {
-  url = "https://www.st.com/content/ccc/resource/technical/software/sw_development_suite/group0/5f/d0/cf/79/10/fb/4e/7e/STM32CubeMX_v5-4-0/files/stm32cubemx_v5.4.0.zip/jcr:content/translations/en.stm32cubemx_v5.4.0.zip";
-  sha256 = "09v5qq6mkkjm369j5c1jk84crf0b4yri174z4n8b41qsdwpyzvgc";
+  url = "https://www.st.com/content/ccc/resource/technical/software/sw_development_suite/group0/9e/ce/6e/18/d2/ff/46/57/stm32cubemx_v6-0-1/files/stm32cubemx_v6-0-1.zip/jcr:content/translations/en.stm32cubemx_v6-0-1.zip";
+  sha256 = "1np8mqbk24jdbam4mdx0dqym4rykk93fs6blxhzipxpkf56xqzw0";
 }
