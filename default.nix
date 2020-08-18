@@ -11,7 +11,7 @@ let
   src = itn.pkgs.nix-gitignore.gitignoreSource [] ./.;
 in
 itn.pkgs.haskell.lib.overrideCabal
-  itn.ivorypkgs.data-stm32
+  (itn.ivorypkgs.callCabal2nix "data-stm32" ./. {})
   ( oldDrv: {
       doCheck = false;
       inherit src;
