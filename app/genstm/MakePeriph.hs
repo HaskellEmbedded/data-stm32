@@ -150,8 +150,14 @@ periphInstancesData periph mcu = do
   let is = if (periph == GPIO) then is'
                                else is' `L.intersect` ipis
 
-  case (is `L.intersect` rccis ) of
-    [] -> return $ [mkData dev rcc '0' 0]
+  case (is `L.intersect` rccis) of
+    [] -> if periph == UART then do
+                                 -- due to a bug in F302 / F3x8 SVD files
+                                 -- APB1ENR is missing UART4EN and UART5EN bits
+                                 log $ "Error: Empty UART instances for " ++ showName (mcuName mcu)
+                                 return []
+
+                            else return [mkData dev rcc '0' 0]
     xs -> return $
       filter (filterMissingInterrupt periph) $
       map (uncurry (mkData dev rcc)) (zip xs [0..])

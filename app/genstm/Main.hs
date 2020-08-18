@@ -166,7 +166,7 @@ stm32devs = do
                 ) $ devicePeripherals svd of
       []  -> notFound SYSCFG
       [svdPeriph] -> do
-          let di = DriverInfo SYSCFG Nothing [] NoRegTypes NoDriver
+          let di = DriverInfo SYSCFG Nothing (ByDev "") [] NoRegTypes NoDriver
           genPeriphTree (T.concat ["STM32", (T.pack name)]) SYSCFG di svdPeriph
 
           ctx <- makePeriphContext SYSCFG mcu
@@ -179,7 +179,7 @@ stm32devs = do
       case peripheralByName svd p of
         Nothing -> notFound p
         Just svdPeriph -> do
-          let di = DriverInfo AFIO Nothing [] NoRegTypes NoDriver
+          let di = DriverInfo AFIO Nothing (ByDev "F103") [] NoRegTypes NoDriver
           genPeriphTree (T.concat ["STM32", (T.pack name)]) AFIO di svdPeriph
 
           ctx <- makePeriphContext AFIO mcu
