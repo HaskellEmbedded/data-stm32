@@ -176,6 +176,17 @@ diffPeriphs p = do
       log $ renderDiff $ map (mapDiff shortField) $ diffFields (regNameFields rName x) (regNameFields rName y)
       lp $ diffDistance $ diffFields (regNameFields rName x) (regNameFields rName y)
 
+-- | Compute numeric distance of two peripherals
+-- based on number of different registers and fields.
+peripheralDistance :: Peripheral -> Peripheral -> Integer
+peripheralDistance x y =
+    let dr = diffRegNames x y
+        dist = diffDistance dr
+    in dist + (sum $ flip map (getBoths dr) $ \rName -> do
+                diffDistance $ diffFields
+                  (regNameFields rName x)
+                  (regNameFields rName y))
+
 parseOptions :: Parser Options
 parseOptions = Options <$>
     many (strOption (
