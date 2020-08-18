@@ -62,7 +62,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
       -- Spin for a little bit waiting for RCC->CR HSERDY bit to be high
       hserdy <- local (ival false)
-      arrayMap $ \(_ :: Ix 10240) -> do
+      arrayMap $ \(_ :: Ix 102400) -> do
         cr <- getReg rcc_reg_cr
         when (bitToBool (cr #. rcc_cr_hserdy)) $ do
           store hserdy true
