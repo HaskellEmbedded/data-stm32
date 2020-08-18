@@ -168,7 +168,9 @@ periphInstancesData periph mcu = do
     lower = map toLower
     mkData dev rcc idChar idx = InstanceCtx {
         name           = lower $ pName id'
-      , version        = maybe "" show $ diVersion $ fromJust $ mcuPeriphDriver mcu periph
+      , version        = maybe "" show $ diVersion $ case mcuPeriphDriver mcu periph of
+          Just x -> x
+          Nothing -> error $ "no mcu periph driver for" ++ show (mcuName mcu, periph)
       , interrupts     = sharedInterrupts $ isrs' id' dev
       , extiInterrupts = extiInterruptRanges $ isrs' id' dev
       , clockSource    = maybe "" id $ pclkIndex $ fst $ rccEn id' rcc
