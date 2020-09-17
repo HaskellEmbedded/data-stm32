@@ -63,7 +63,7 @@ iwdgTowerManual IWDG{..} t = do
 
     handler systemInit "iwdgInit" $ do
       callback $ const $ do
-        when (null rls) $ fail $ "Unable to find IWDG timings for " ++ show pms ++ "ms with LSI " ++ show clkSrc
+        when (null rls) $ error $ "Unable to find IWDG timings for " ++ show pms ++ "ms with LSI " ++ show clkSrc
         let (pscVal, rl) = minimum rls
             pscIndex = case findIndex (==pscVal) psc of
               Just idx -> idx

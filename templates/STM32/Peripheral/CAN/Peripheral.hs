@@ -205,7 +205,7 @@ canInit periph bitrate rxpin txpin clockconfig = do
 
   let pclk = clockPClk1Hz clockconfig
   let timings = legalTimings pclk bitrate
-  when (null timings) $ fail $ "no legal bxCAN bit timings for " ++ show bitrate ++ "bps with " ++ show pclk ++ "Hz APB clock"
+  when (null timings) $ error $ "no legal bxCAN bit timings for " ++ show bitrate ++ "bps with " ++ show pclk ++ "Hz APB clock"
 
   let best = minimum timings
   modifyReg (canRegBTR periph) $ do

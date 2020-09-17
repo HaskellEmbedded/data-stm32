@@ -84,7 +84,7 @@ data CANFilterBank
 canFilterInit :: CANPeriphFilters -> [CANFilterBank] -> [CANFilterBank] -> Ivory eff ()
 canFilterInit periph can1banks can2banks = do
   let banks = zip [0..] $ can1banks ++ can2banks
-  if length banks <= 28 then return () else fail "too many filter banks passed to canFilterInit"
+  if length banks <= 28 then return () else error "too many filter banks passed to canFilterInit"
 
   -- ensure the CAN master is active
   canRCCEnableF periph
