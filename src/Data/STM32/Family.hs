@@ -27,6 +27,7 @@ data Family =
   | G0
   | G4
   | WB
+  | WL
   | TS
   | MP1
   deriving (Eq, Ord, Show, Read, Generic)
