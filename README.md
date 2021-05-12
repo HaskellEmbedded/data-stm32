@@ -73,9 +73,7 @@ run `cabal` to build the generated library. This is useful for running
 # in nix-shell from previous step
 git clone https://github.com/distrap/ivory-tower-helloworld
 cd ivory-tower-helloworld
-# checkout data-stm32 branch XXX: this is only temporary
-git checkout data-stm32
-# adjust test/SimpleBlinkTest.hs
+# build
 make simpleblink-test
 # load and run
 make simpleblink-test-run
