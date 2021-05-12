@@ -1,7 +1,3 @@
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-
 module Data.STM32.Types (
     NamedMCU
   , module Data.STM32.Core
@@ -9,15 +5,6 @@ module Data.STM32.Types (
   , module Data.STM32.Name
   , module Data.STM32.Periph
   ) where
-
-import GHC.Generics (Generic)
-import Data.Serialize
-
-import Data.Attoparsec.ByteString.Char8
-import Data.Foldable
-import qualified Data.List as L
-import Control.Applicative
-import qualified Data.ByteString.Char8 as B
 
 import Data.CMX.Types (MCU)
 
