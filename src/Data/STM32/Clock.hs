@@ -6,7 +6,6 @@ module Data.STM32.Clock where
 
 import GHC.Generics (Generic)
 import Data.Serialize
-import qualified Data.List as L
 
 data ClockSource =
     HSE Integer -- High speed external
@@ -25,12 +24,13 @@ clockSourceName (MSI _) = "MSI"
 clockSourceName (LSE _) = "LSE"
 clockSourceName (LSI _) = "LSI"
 
+clockSourceNames :: [ String ]
 clockSourceNames = map clockSourceName [
-    (HSE 0)
-  , (HSI 0)
-  , (MSI 0)
-  , (LSE 0)
-  , (LSI 0)
+    HSE 0
+  , HSI 0
+  , MSI 0
+  , LSE 0
+  , LSI 0
   ]
 
 data PLLFactor =
@@ -82,15 +82,15 @@ clockSysClkHz cc = pllFactor pll source
 
 -- Hclk / AHB frequency, SysClk / hclk_divider (hpre)
 clockHClkHz :: ClockConfig -> Integer
-clockHClkHz cc = clockSysClkHz cc `div` (clockconfig_hclk_divider cc)
+clockHClkHz cc = clockSysClkHz cc `div` clockconfig_hclk_divider cc
 
 -- PClk1 / ABP1 frequency, HClk / Pclk1 (ppre1 divider)
 clockPClk1Hz :: ClockConfig -> Integer
-clockPClk1Hz cc = clockHClkHz cc `div` (clockconfig_pclk1_divider cc)
+clockPClk1Hz cc = clockHClkHz cc `div` clockconfig_pclk1_divider cc
 
 -- PClk2 / ABP2 frequency, HClk / Pclk2 (ppre2 divider)
 clockPClk2Hz :: ClockConfig -> Integer
-clockPClk2Hz cc = clockHClkHz cc `div` (clockconfig_pclk2_divider cc)
+clockPClk2Hz cc = clockHClkHz cc `div` clockconfig_pclk2_divider cc
 
 data PClk = PClk1 | PClk2
 
