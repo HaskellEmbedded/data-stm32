@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Data.STM32.Family where
 
@@ -8,7 +7,7 @@ import GHC.Generics (Generic)
 import Text.Read (readMaybe)
 import Data.Serialize
 import Data.Attoparsec.ByteString.Char8
-import Data.Maybe
+import qualified Data.Maybe
 import Data.Foldable
 
 data Family =
@@ -34,36 +33,44 @@ data Family =
 
 instance Serialize Family
 
+showFam :: Family -> String
 showFam L4Plus = "L4"
 showFam x = show x
 
 familyParser :: Parser Family
 familyParser = do
   f <- asum
-    [ pure MP1 <$> string "MP1"
-    , pure G4  <$> string "GB"
-    , (\a b -> maybe (error $ "Cannot read family out of " ++ [a, b]) id $
-               readMaybe $ [a, b]) <$> anyChar <*> anyChar
+    [ MP1 <$ string "MP1"
+    , G4  <$ string "GB"
+    , (\a b ->
+        Data.Maybe.fromMaybe
+          (error $ "Cannot read family out of " ++ [a, b])
+          $ readMaybe [a, b]) <$> anyChar <*> anyChar
     ]
 
   return f
 
+-- | List of STM32 families supported by the generator
+supportedFamilies :: [Family]
 supportedFamilies =
   [ F0
   , F1
   , F3
   , F4
   , F7
+  , G0
+  , G4
   , L4
   , L4Plus
-  , G0
-  , G4 ]
+  ]
 
--- convert STM32xyz to Family
+-- | Convert STM32xyz to just @Family@
 nameToFamily :: String -> Family
-nameToFamily n = maybe (error $ "Cannot read family: " ++ n) id $ readMaybe . fix . drop 5 $ n
+nameToFamily n =
+  Data.Maybe.fromMaybe
+    (error $ "Cannot read family: " ++ n)
+    $ readMaybe . fix . drop 5
+    $ n
   where
     fix "L4+" = "L4Plus"
     fix x     = x
-
-
