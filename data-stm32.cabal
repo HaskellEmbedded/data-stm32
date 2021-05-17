@@ -54,7 +54,8 @@ library
     , base >=4.7 && <5
     , bytestring
     , cereal
-    -- temp
+    , data-default
+    -- (not-so) temporary
     , ghcid
     , Diff
     , containers

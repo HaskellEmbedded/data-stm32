@@ -4,10 +4,9 @@ module Data.SVD.Types where
 
 import Data.Bits
 import Data.Char (toLower)
-import Data.Ord
+import Data.Default
 import Data.List
 import qualified Data.Set as Set
-import qualified Data.Map as Map
 import Safe
 
 import Control.Monad
@@ -108,7 +107,11 @@ showAccessType ReadWriteOnce  = "read-writeOnce"
 -- |Find holes in registers and create corresponding reserved fields for these
 --
 -- First finds missing missing bits and then merges them to single reserved field
-procFields Register{..} = dataIfSingleReserved $ reverse $ sortByOffset (regFields ++ missingAsReserved)
+procFields :: Register -> [Field]
+procFields Register{..} =
+    dataIfSingleReserved
+  $ reverse
+  $ sortByOffset (regFields ++ missingAsReserved)
   where
     missingAsReserved = reserved $ conts $ Set.toList missing
 
@@ -116,11 +119,11 @@ procFields Register{..} = dataIfSingleReserved $ reverse $ sortByOffset (regFiel
 
     conts x = case cont x of
       [] -> []
-      s -> [(head s, length s)] ++ conts (drop (length s) x)
+      s -> (head s, length s) : conts (drop (length s) x)
 
-    missing = all `Set.difference` existing
+    missing = allRegs `Set.difference` existing
 
-    all = Set.fromList [0..(regSize - 1)]
+    allRegs = Set.fromList [0..(regSize - 1)]
 
     existing = Set.fromList $ flip concatMap (sortByOffset regFields) $
       \Field{..} -> [fieldBitOffset .. (fieldBitOffset + fieldBitWidth - 1)]
@@ -129,27 +132,47 @@ procFields Register{..} = dataIfSingleReserved $ reverse $ sortByOffset (regFiel
 
     -- this handles a case when there are no fields and code above creates a single full-sized reserved field
     -- which we turn into non-reserved "data" field
-    dataIfSingleReserved [f] | fieldReserved f == True = [ f { fieldName = "DATA", fieldReserved = False } ]
-    dataIfSingleReserved fs  | otherwise             = fs
+    dataIfSingleReserved [f] | fieldReserved f =
+      [ f {
+            fieldName = "DATA"
+          , fieldReserved = False
+          }
+      ]
+    dataIfSingleReserved fs = fs
 
 -- find longest increasing sequence
-cont (x:y:xs) | (x + 1 == y) = [x] ++ cont (y:xs)
-cont (x:xs)  = [x]
+cont :: (Eq a, Num a) => [a] -> [a]
+cont (x:y:xs) | x + 1 == y = x : cont (y:xs)
+cont (x:_)  = [x]
 cont [] = []
 
 -- walk processed register fields top to bottom
 -- checking that the register is exactly n bits long
+continuityCheck :: Register -> Bool
 continuityCheck Register{..} = go regFields regSize
   where
   go [] 0 = True
-  go (x:xs) remainingBits | fieldBitOffset x + fieldBitWidth x == remainingBits = go xs (remainingBits - fieldBitWidth x)
-  go _ _                  | otherwise = False
+  go (x:xs) remainingBits
+    | fieldBitOffset x + fieldBitWidth x == remainingBits
+    = go xs (remainingBits - fieldBitWidth x)
+  go _ _ = False
 
+mapPeriphs :: (Peripheral -> b) -> Device -> [b]
 mapPeriphs f Device{..} = map f devicePeripherals
+
+mapRegs :: (Register -> b) -> Peripheral -> [b]
 mapRegs f Peripheral{..} = map f periphRegisters
+
+mapFields :: (Field -> b) -> Register -> [b]
 mapFields f Register{..} = map f regFields
 
-mapDevFields f d = concat $ concat $ flip mapPeriphs d $ mapRegs $ mapFields f
+mapDevFields :: (Field -> b) -> Device -> [b]
+mapDevFields f d =
+    concat
+  $ concat
+  $ flip mapPeriphs d
+  $ mapRegs
+  $ mapFields f
 
 -- |Get peripheral by groupName
 getPeriphByGroup :: String -> Device -> Peripheral
@@ -169,7 +192,7 @@ getPeriphRegMay rName = headMay . filterLowerBy rName regName . periphRegisters
 
 -- |Filter elements matching lowercased `eqTo` after applying `by`
 filterLowerBy :: String -> (a -> String) -> [a] -> [a]
-filterLowerBy eqTo by = filter $ (==(map toLower eqTo)) . map toLower . by
+filterLowerBy eqTo by = filter $ (== map toLower eqTo) . map toLower . by
 
 -- |Get peripheral by name or its parent peripheral if it's
 -- a derived peripheral (for example USART2 is typically derived from USART1)
@@ -180,7 +203,7 @@ getPeriphFollow pName dev = case getPeriphMay pName dev of
     Nothing -> Right p
     Just fromName -> case getPeriphMay fromName dev of
       Nothing -> Left $ "Parent peripheral not found: " ++ fromName ++ " for peripheral " ++ pName
-      Just parentPeriph -> Right $ parentPeriph
+      Just parentPeriph -> Right parentPeriph
 
 -- |Get registers of the peripheral
 getPeriphRegs :: String -> Device -> Either String [Register]
@@ -193,6 +216,7 @@ getPeriphReg pName rName dev = either Left (maybeToEither errMsg . getPeriphRegM
   where
     errMsg = "No register found: " ++ rName ++ " for peripheral " ++ pName
 
+maybeToEither :: a -> Maybe b -> Either a b
 maybeToEither msg m = case m of
   Just x -> Right x
   Nothing -> Left msg
@@ -201,7 +225,8 @@ maybeToEither msg m = case m of
 getPeriphRegAddr :: String -> String -> Device -> Either String Int
 getPeriphRegAddr pName rName dev =
   (\p r -> periphBaseAddress p + regAddressOffset r)
-  <$> (maybeToEither errMsg $ getPeriphMay pName dev) <*> getPeriphReg pName rName dev
+  <$> maybeToEither errMsg (getPeriphMay pName dev)
+  <*> getPeriphReg pName rName dev
   where
     errMsg = "No peripheral found " ++ pName
 
@@ -209,8 +234,10 @@ getPeriphRegAddr pName rName dev =
 getPeriphRegFields :: String -> String -> Device -> Either String [Field]
 getPeriphRegFields pName rName dev = regFields <$> getPeriphReg pName rName dev
 
--- old
+getReg :: String -> String -> Device -> Register
 getReg pName rName dev = headNote "getReg" . filter((==rName) . regName) . periphRegisters $ getPeriph pName dev
+
+getRegFields :: String -> String -> Device -> [Field]
 getRegFields pName rName dev = regFields $ getReg pName rName dev
 
 -- |Get value of specific Field according to input `x`
@@ -222,6 +249,7 @@ getFieldValues :: (Bits a, Num a) => a -> [Field] -> [(a, Field)]
 getFieldValues x fs = zip (map (getFieldVal x) fs) fs
 
 -- |Same as `getFieldValues` but with processed fields (reserved fields included)
+getProcdFieldValues :: (Bits a, Num a) => a -> Register -> [(a, Field)]
 getProcdFieldValues x fs = getFieldValues x $ procFields fs
 
 -- |Check if any reserved field has value other than 0
@@ -233,91 +261,135 @@ filterSet :: (Eq a, Num a) => [(a, Field)] -> [(a, Field)]
 filterSet = filter ((/= 0) . fst)
 
 -- |Get memory map of the device according to its perhiperal addresses
-getDevMemMap Device{..} = map (liftM2 (,) (hexFormat . periphBaseAddress) periphName) devicePeripherals
+getDevMemMap :: Device -> [(String, String)]
+getDevMemMap Device{..} =
+  map
+    (liftM2 (,) (hexFormat . periphBaseAddress) periphName)
+    devicePeripherals
 
-registerNames pName dev = map regName . periphRegisters $ getPeriph pName dev
-fieldNames rName pName dev = map fieldName $ getRegFields pName rName dev
+registerNames :: String -> Device -> [String]
+registerNames pName dev =
+  map
+    regName . periphRegisters
+    $ getPeriph pName dev
+
+fieldNames :: String -> String -> Device -> [String]
+fieldNames rName pName dev =
+  map
+    fieldName
+    $ getRegFields pName rName dev
 
 -- Diffing
 
+diffPeriphNames :: Device -> Device -> [Diff String]
 diffPeriphNames dev1 dev2 = getDiff
   (sort $ map periphName $ devicePeripherals dev1)
   (sort $ map periphName $ devicePeripherals dev2)
 
+diffRegisterNames :: String -> Device -> Device -> [Diff String]
 diffRegisterNames pName dev1 dev2 = getDiff
   (sort $ registerNames pName dev1)
   (sort $ registerNames pName dev2)
 
+regNames :: Peripheral -> [String]
 regNames = map regName . periphRegisters
-diffRegNames p1 p2 = diff regNames p1 p2
 
-regNameFields rName p = regFields . headNote "regNameFields" . filter((==rName) . regName) . periphRegisters $ p
+diffRegNames :: Peripheral -> Peripheral -> [Diff String]
+diffRegNames = diff regNames
 
+regNameFields :: String -> Peripheral -> [Field]
+regNameFields rName =
+    regFields
+  . headNote "regNameFields"
+  . filter((==rName) . regName)
+  . periphRegisters
+
+diff
+  :: Ord a
+  => (t -> [a])
+  -> t
+  -> t
+  -> [Diff a]
 diff fn x y = getDiff (sort $ fn x) (sort $ fn y)
 
+diffFieldNames
+  :: String
+  -> String
+  -> Device
+  -> Device
+  -> [Diff String]
 diffFieldNames pName regName dev1 dev2 = getDiff
   (sort $ fieldNames regName pName dev1)
   (sort $ fieldNames regName pName dev2)
 
-cmps fn a b = fn a == fn b
-
+diffFields :: [Field] -> [Field] -> [PolyDiff Field Field]
 diffFields as bs = getDiffBy (\x y ->
     cmps fieldName x y
     && cmps fieldBitWidth x y
     && cmps fieldBitOffset x y)
   (sortOn fieldBitOffset as)
   (sortOn fieldBitOffset bs)
+  where
+    -- XXX: comparing / on
+    cmps fn a b = fn a == fn b
 
+diffDistance :: [PolyDiff a b] -> Int
 diffDistance x = sum $ map go x
   where
     go (Both _ _) = 0
     go (First  _) = 1
     go (Second _) = 1
 
+isBoth :: PolyDiff a b -> Bool
 isBoth (Both _ _) = True
 isBoth _ = False
 
+getBoths :: [PolyDiff a b] -> [a]
 getBoths = map (\(Both x _) -> x) . filter isBoth
 
-defaultDevice = Device {
-    deviceName            = "defaultDev"
-  , deviceVersion         = mempty
-  , deviceDescription     = mempty
-  , deviceAddressUnitBits = 0
-  , deviceWidth           = 0
-  , deviceSize            = 0
-  , deviceResetValue      = 0
-  , deviceResetMask       = 0
-  , devicePeripherals     = []
-  }
+instance Default Device where
+  def = Device
+    { deviceName            = "defaultDev"
+    , deviceVersion         = mempty
+    , deviceDescription     = mempty
+    , deviceAddressUnitBits = 0
+    , deviceWidth           = 0
+    , deviceSize            = 0
+    , deviceResetValue      = 0
+    , deviceResetMask       = 0
+    , devicePeripherals     = []
+    }
 
-defaultPeripheral = Peripheral {
-    periphName         = "defaultPeriph"
-  , periphDescription  = mempty
-  , periphDerivedFrom  = Nothing
-  , periphGroupName    = mempty
-  , periphBaseAddress  = 0
-  , periphAddressBlock = Nothing
-  , periphInterrupts   = []
-  , periphRegisters    = []
-  }
+instance Default Peripheral where
+  def = Peripheral
+    { periphName         = "defaultPeriph"
+    , periphDescription  = mempty
+    , periphDerivedFrom  = Nothing
+    , periphGroupName    = mempty
+    , periphBaseAddress  = 0
+    , periphAddressBlock = Nothing
+    , periphInterrupts   = []
+    , periphRegisters    = []
+    }
 
-defaultRegister = Register {
-    regName          = "defaultRegister"
-  , regDisplayName   = mempty
-  , regDescription   = mempty
-  , regAddressOffset = 0
-  , regSize          = 0
-  , regAccess        = ReadOnly
-  , regResetValue    = Nothing
-  , regFields        = []
-  }
+instance Default Register where
+  def = Register
+    { regName          = "defaultRegister"
+    , regDisplayName   = mempty
+    , regDescription   = mempty
+    , regAddressOffset = 0
+    , regSize          = 0
+    , regAccess        = ReadOnly
+    , regResetValue    = Nothing
+    , regFields        = []
+    }
 
-defaultField = Field {
-    fieldName        = "defaultField"
-  , fieldDescription = mempty
-  , fieldBitOffset   = 0
-  , fieldBitWidth    = 0
-  , fieldReserved    = False
-  , fieldRegType     = Nothing
-  }
+instance Default Field where
+  def = Field
+    { fieldName        = "defaultField"
+    , fieldDescription = mempty
+    , fieldBitOffset   = 0
+    , fieldBitWidth    = 0
+    , fieldReserved    = False
+    , fieldRegType     = Nothing
+    }

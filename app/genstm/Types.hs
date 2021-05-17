@@ -158,7 +158,12 @@ peripheralByVersion p ver = do
 periphVersions :: Periph -> MonadGen ([String])
 periphVersions p = do
   db <- ask
-  return $ map snd $ filter ((==show p) . fst) $ S.toList $ uniqueIps $ cmxsWithSVD db
+  return
+    $ map snd
+    $ filter ((==show p) . fst)
+    $ S.toList
+    $ uniqueIps
+    $ cmxsWithSVD db
 
 lp x = liftIO $ pPrint $ x
 

@@ -5,28 +5,50 @@
 module Data.SVD.Parse where
 
 import Safe
-import Control.Monad
 
 import Control.Arrow.ArrowList
-import Text.XML.HXT.Core
 import qualified Data.Char as Char
+import qualified Data.Maybe
+import Data.Tree.NTree.TypeDefs
+import Text.XML.HXT.Core
 
 import Data.SVD.Types
 
 -- atTag doesn't uses deep here
+atTag :: ArrowXml cat => String -> cat (NTree XNode) XmlTree
 atTag tag = getChildren >>> hasName tag
+
+text :: ArrowXml cat => cat (NTree XNode) String
 text = getChildren >>> getText
+
+textAtTag :: ArrowXml cat => String -> cat (NTree XNode) String
 textAtTag tag = text <<< atTag tag
+
+textAtTagOrEmpty :: ArrowXml cat => String -> cat (NTree XNode) String
 textAtTagOrEmpty tag = withDefault (text <<< atTag tag) ""
+
+att :: ArrowXml cat => String -> cat XmlTree String
 att  = getAttrValue
+
 -- nonempty attr value
-attNE x = (getAttrValue x >>> isA (/= ""))
-attMaybe attname tagname = withDefault (arr Just <<< attNE attname <<< atTag tagname) Nothing
+attNE :: ArrowXml cat => String -> cat XmlTree String
+attNE x = getAttrValue x >>> isA (/= "")
 
+attMaybe :: ArrowXml cat => String -> String -> cat (NTree XNode) (Maybe String)
+attMaybe attname tagname =
+  withDefault
+    (arr Just <<< attNE attname <<< atTag tagname)
+    Nothing
 
-filterCrap = unwords . words . filter (\c -> Char.ord c < 127) . filter ( not . (flip elem ['\n', '\t', '\r']))
+filterCrap :: String -> String
+filterCrap =
+  unwords
+  . words
+  . filter (\c -> Char.ord c < 127)
+  . filter ( not . (`elem` ['\n', '\t', '\r']))
 
 -- svd parser
+svd :: ArrowXml cat => cat (NTree XNode) Device
 svd = atTag "device" >>>
   proc x -> do
     --name <- text <<< hasName "name" <<< getChildren -< x
@@ -51,11 +73,13 @@ svd = atTag "device" >>>
     returnA -< Device{..}
 
 -- loose version of svd that doesn't require device properties
+svdPeripherals :: ArrowXml cat => cat (NTree XNode) [Peripheral]
 svdPeripherals = atTag "device" >>>
   proc x -> do
     devicePeripherals <- listA peripheral <<< atTag "peripherals" -< x
     returnA -< devicePeripherals
 
+peripheral :: ArrowXml cat => cat (NTree XNode) Peripheral
 peripheral = atTag "peripheral" >>>
   proc x -> do
     periphName <- textAtTag "name" -< x
@@ -74,6 +98,9 @@ peripheral = atTag "peripheral" >>>
 
     returnA -< Peripheral{..}
 
+addressBlock
+  :: ArrowXml cat
+  => cat (NTree XNode) AddressBlock
 addressBlock = atTag "addressBlock" >>>
   proc x -> do
     offset <- textAtTag "offset" -< x
@@ -85,6 +112,9 @@ addressBlock = atTag "addressBlock" >>>
 
     returnA -< AddressBlock{..}
 
+interrupt
+  :: ArrowXml cat
+  => cat (NTree XNode) Interrupt
 interrupt = atTag "interrupt" >>>
   proc x -> do
     name <- textAtTag "name" -< x
@@ -97,6 +127,9 @@ interrupt = atTag "interrupt" >>>
 
     returnA -< Interrupt{..}
 
+register
+  :: ArrowXml cat
+  => cat (NTree XNode) Register
 register = atTag "registers" >>> atTag "register" >>>
   proc x -> do
     regName <- textAtTag "name" -< x
@@ -117,6 +150,9 @@ register = atTag "registers" >>> atTag "register" >>>
 
     returnA -< Register{..}
 
+field
+  :: ArrowXml cat
+  => cat (NTree XNode) Field
 field = atTag "field" >>>
   proc x -> do
     fieldName <- textAtTag "name" -< x
@@ -130,9 +166,10 @@ field = atTag "field" >>>
 
     -- XXX: one more possibility is lsb msb tags format, handle if needed
 
-    let err = error "Neither bitRange nor bitOffset + bitWidth defined"
+    let errmsg = error "Neither bitRange nor bitOffset + bitWidth defined"
         (fieldBitOffset, fieldBitWidth) = case bitRange of
-            Nothing -> (maybe err id bitOffsetMay, maybe err id bitWidthMay)
+            Nothing -> ( Data.Maybe.fromMaybe errmsg bitOffsetMay
+                        , Data.Maybe.fromMaybe errmsg bitWidthMay)
             Just (msb, lsb) -> (lsb, msb - lsb + 1)
 
         fieldDescription = filterCrap desc
@@ -147,16 +184,18 @@ field = atTag "field" >>>
         where
           raw = drop 1 $ init r
 
+parseSVD :: String -> IO (Either String Device)
 parseSVD f = do
   res <- runX (readDocument [] f >>> svd)
   case res of
     [] -> return $ Left "no device parsed"
     [x] -> return $ Right x
-    _ -> return $ Left $ "multiple devices parsed"
+    _ -> return $ Left "multiple devices parsed"
 
+parseSVDPeripherals :: String -> IO (Either String [Peripheral])
 parseSVDPeripherals f = do
   res <- runX (readDocument [] f >>> svdPeripherals)
   case res of
     [] -> return $ Left "no peripherals parsed"
     [x] -> return $ Right x
-    _ -> return $ Left $ "multiple devices parsed"
+    _ -> return $ Left "multiple devices parsed"
