@@ -1,15 +1,17 @@
-{ nixpkgs ? import <nixpkgs> {} }:
-let
-  izpack = nixpkgs.callPackage ./modm-devices-izpack.nix {};
-  cmxRes = nixpkgs.callPackage ./cubemx-core-resource.nix {};
-in
-  nixpkgs.runCommand "cubemx-database" {} ''
-    mkdir tmp
-    ln -s ${cmxRes}/resources .
+{ stdenv, fetchurl, unzip }:
+stdenv.mkDerivation rec {
+  name = "cubemx-database";
 
-    pushd tmp
-    ${izpack}/bin/izpack
-    popd
+  src = fetchurl (import ./cmx/cmx.nix);
 
-    mv output/db/ $out
-  ''
+  buildInputs = [ unzip ];
+
+  unpackPhase = ''
+    unzip ${src}
+  '';
+
+  installPhase = ''
+    mkdir -p $out/
+    cp -a MX/db/* $out/
+  '';
+}
