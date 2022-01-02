@@ -56,9 +56,9 @@ data ClockConfig =
   ClockConfig
     { clockconfig_source        :: ClockSource
     , clockconfig_pll           :: PLLFactor
-    , clockconfig_hclk_divider  :: Integer    -- HPRE
-    , clockconfig_pclk1_divider :: Integer    -- PPRE1
-    , clockconfig_pclk2_divider :: Integer    -- PPRE2
+    , clockconfig_hclk_divider  :: Integer    -- ^ HPRE (AHB Prescaler)
+    , clockconfig_pclk1_divider :: Integer    -- ^ PPRE1 (APB1 Prescaler)
+    , clockconfig_pclk2_divider :: Integer    -- ^ PPRE2 (APB2 Prescaler)
     } deriving (Eq, Show)
 
 pllFactor :: PLLFactor -> Integer -> Integer
