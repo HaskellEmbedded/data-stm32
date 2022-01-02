@@ -183,7 +183,7 @@ diffPeriphs p = do
 
 -- | Compute numeric distance of two peripherals
 -- based on number of different registers and fields.
-peripheralDistance :: Peripheral -> Peripheral -> Integer
+peripheralDistance :: Peripheral -> Peripheral -> Int
 peripheralDistance x y =
     let dr = diffRegNames x y
         dist = diffDistance dr
