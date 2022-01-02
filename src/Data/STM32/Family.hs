@@ -23,6 +23,7 @@ data Family =
   | L4
   | L4Plus -- L4S L4R
   | L5
+  | U5
   | G0
   | G4
   | WB
