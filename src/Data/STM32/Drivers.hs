@@ -43,7 +43,7 @@ data DriverInfo = DriverInfo {
 driverMapping :: [DriverInfo]
 driverMapping = [
     DriverInfo CAN Nothing (ByIP "bxcan1_v1_1")
-      [ByIP "bxcan1_v1_1_F7", ByIP "bxcan1_v1_1_F1"] CommonRegTypes CommonDriver
+      [ByIP "bxcan1_v1_1_F7"] CommonRegTypes CommonDriver
 
   , DriverInfo GPIO (Just 1) (ByFam F1)
       [ByIP "STM32F103x8_gpio_v1_0"] VersionedRegTypes NoDriver
