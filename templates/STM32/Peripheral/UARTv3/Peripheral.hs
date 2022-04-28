@@ -45,7 +45,7 @@ mk{{ type }} :: (STM32Interrupt i)
        -> String
        -> {{ type }}
 mk{{ type }} base rccen rccdis interrupt pclk afLookup n = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
   , uartRCCEnable  = rccen
   , uartRCCDisable = rccdis
   , uartInterrupt  = HasSTM32Interrupt interrupt

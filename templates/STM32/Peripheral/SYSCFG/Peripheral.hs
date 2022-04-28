@@ -24,7 +24,7 @@ mk{{ type }}  :: Integer
        -> (forall eff . Ivory eff ())
        -> {{ type }}
 mk{{ type }} base rccen rccdis = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
     , syscfgRCCEnable      = rccen
     , syscfgRCCDisable     = rccdis
     }

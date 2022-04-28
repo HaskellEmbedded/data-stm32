@@ -21,7 +21,7 @@ import Control.Monad.Reader
 import qualified Data.List as L
 import qualified Data.Map as M
 
-import Text.Hastache
+import Text.Mustache
 import Text.Regex.Posix
 import Text.Pretty.Simple
 
@@ -66,7 +66,7 @@ main = do
   mktree "src"
   mktree "support"
 
-  (tPath, cabalTemplate) <- runGen $ do
+  tPath <- runGen $ do
     dbStats
     stm32toplevel
     stm32periphs
@@ -74,7 +74,8 @@ main = do
     stm32devs
     stm32families
     readme
-    (,) <$> getTemplatesPath <*> getTemplate "ivory-bsp-stm32.cabal_template"
+
+    getTemplatesPath
 
   -- cabal file and support files
   cd dir
@@ -86,9 +87,11 @@ main = do
               . fpToText)
       <$> fold (find (suffix ".hs") "./src/") Fold.list
 
-  r <- hastacheStr hastacheConf cabalTemplate
-         (listCtx [("exposed", T.intercalate ",\n" mods)])
-  TLIO.writeFile "ivory-bsp-stm32.cabal" r
+  r <- runGen
+         $ templateRaw
+             (listCtx [("exposed", T.intercalate ",\n" mods)])
+             "ivory-bsp-stm32.cabal_template"
+  liftIO $ TIO.writeFile "ivory-bsp-stm32.cabal" r
 
   cptree (fromText $ tPath <> "/support/") "./support/"
 
@@ -131,31 +134,34 @@ stm32devs = do
 
     log $ "Processing instances for " ++ name
     forM_ [ GPIO ] $ \periph -> do
-      ctx <- makePeriphContext periph mcu
-      let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
-      templateD ctx (target <> ".Ports") "STM32DEV/GPIO/Ports.hs"
-      templateD ctx (target <> ".Pins")  "STM32DEV/GPIO/Pins.hs"
-      templateD ctx target "STM32DEV/GPIO.hs"
+      mCtx <- makePeriphContext periph mcu
+      case mCtx of
+        Nothing -> error "Empty periph context"
+        Just ctx -> do
+          let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
+          template ctx (target <> ".Ports") "STM32DEV/GPIO/Ports.hs"
+          template ctx (target <> ".Pins")  "STM32DEV/GPIO/Pins.hs"
+          template ctx target "STM32DEV/GPIO.hs"
 
     -- for F1 we have AFIO
     -- for G0 we have EXTICR regs in EXTI itself
     unless (mcuFamily mcu == F1 || mcuFamily mcu == G0) $ do
       forM_ [ EXTI ] $ \periph -> do
-        ctx <- makePeriphContext periph mcu
+        ctx <- maybe (error "Empty periph context") id <$> makePeriphContext periph mcu
         let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
-        templateD ctx target "STM32DEV/EXTI.hs"
+        template ctx target "STM32DEV/EXTI.hs"
 
     when (mcuFamily mcu == G0) $ do
       forM_ [ EXTI ] $ \periph -> do
-        ctx <- makePeriphContext periph mcu
+        ctx <- maybe (error "Empty periph context") id <$> makePeriphContext periph mcu
         let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
-        templateD ctx target "STM32DEV/EXTIG0.hs"
+        template ctx target "STM32DEV/EXTIG0.hs"
 
     when (mcuFamily mcu == F1) $ do
       forM_ [ EXTI ] $ \periph -> do
-        ctx <- makePeriphContext periph mcu
+        ctx <- maybe (error "Empty periph context") id <$> makePeriphContext periph mcu
         let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow periph)]
-        templateD ctx target "STM32DEV/EXTIF1.hs"
+        template ctx target "STM32DEV/EXTIF1.hs"
 
     -- special treatment due to G0s having SYSCFG_ITLINE in SYSCFG group
     -- and F303 having SYSCFG_COMP_OPAMP (as groupName /o\)
@@ -169,9 +175,9 @@ stm32devs = do
           let di = DriverInfo SYSCFG Nothing (ByDev "") [] NoRegTypes NoDriver
           genPeriphTree (T.concat ["STM32", (T.pack name)]) SYSCFG di svdPeriph
 
-          ctx <- makePeriphContext SYSCFG mcu
+          ctx <- maybe (error "Empty periph context") id <$> makePeriphContext SYSCFG mcu
           let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow SYSCFG)]
-          templateD ctx target "STM32DEV/SYSCFG.hs"
+          template ctx target "STM32DEV/SYSCFG.hs"
       _   -> error "Multiple SYSCFGs"
 
     when (mcuFamily mcu == F1) $ do
@@ -182,37 +188,51 @@ stm32devs = do
           let di = DriverInfo AFIO Nothing (ByDev "F103") [] NoRegTypes NoDriver
           genPeriphTree (T.concat ["STM32", (T.pack name)]) AFIO di svdPeriph
 
-          ctx <- makePeriphContext AFIO mcu
+          ctx <- maybe (error "Empty periph context") id <$> makePeriphContext AFIO mcu
           let target = T.concat ["STM32", (T.pack $ dev ctx), ".", (tshow AFIO)]
-          templateD ctx target "STM32DEV/AFIO.hs"
+          template ctx target "STM32DEV/AFIO.hs"
 
     forM_ (supported L.\\ [GPIO, EXTI]) $ \periph -> do
       unless (hasPeriph mcu periph) $ log $ "- " ++ show periph ++ " hasPeriph = False"
       unless (hasDriver mcu periph) $ log $ "- " ++ show periph ++ " hasDriver = False"
       when (hasPeriph mcu periph && hasDriver mcu periph) $ do
-        ctx <- makePeriphContext periph mcu
+        mCtx <- makePeriphContext periph mcu
 
-        let
-            pName = tshow periph
-            target = T.concat ["STM32", (T.pack $ dev ctx), ".", pName]
+        case mCtx of
+          Nothing -> log "Empty periph context, skipping"
+          Just ctx -> do
+            let
+              pName = tshow periph
+              target = T.concat ["STM32", (T.pack $ dev ctx), ".", pName]
 
-        templateD ctx (T.concat ["STM32", (T.pack $ dev ctx), ".", pName])
-                      (T.concat ["STM32DEV/", pName, ".hs"])
+            template ctx
+              (T.concat ["STM32", (T.pack $ dev ctx), ".", pName])
+              (T.concat ["STM32DEV/", pName, ".hs"])
 
     let ns = "STM32" <> (T.pack name) <> ".Clock"
         clks = mcuClocks mcu
         ctx = ClocksCtx (map (\csrc -> ClockCtx (clockSourceName csrc) (show $ clockSourceHz csrc)) clks)
-    templateD ctx ns "STM32DEV/Clock.hs"
+    template ctx ns "STM32DEV/Clock.hs"
 
     let ns = "STM32" <> (T.pack name) <> ".AF"
-        ctx = listCtx [ ("module", ipShortName GPIO mcu) ]
+        ctx = listCtx [ ("module", T.pack $ ipShortName GPIO mcu) ]
     template ctx ns "STM32DEV/AF.hs"
 
     -- toplevel
     let ns = "STM32" <> (T.pack name)
-        imports = map show $ filter (\periph -> hasPeriph mcu periph && hasDriver mcu periph) (supported)
+        sup = filter
+          (\periph -> hasPeriph mcu periph
+                   && hasDriver mcu periph)
+          supported
+
+    sup' <-
+      filterM
+        (\periph -> isJust <$> makePeriphContext periph mcu)
+        sup
+    let
+        imports = map show sup'
         ctx = ImportsCtx name imports
-    templateD ctx ns "STM32DEV.hs"
+    template ctx ns "STM32DEV.hs"
 
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
 -- for all supportedPeriphs
@@ -271,7 +291,7 @@ stm32periphs = do
                             $ zip vers (True: [False, False ..])
 
             ctx = VersionsCtx $ versData
-        templateD ctx ns $ "STM32/Driver/" <> pName <> ".hs"
+        template ctx ns $ "STM32/Driver/" <> pName <> ".hs"
 
   -- RCC reg types common for all devs
   template'
@@ -285,7 +305,7 @@ stm32modes = do
   forM_ (M.toList afs) $ \(name, xs) -> do
     -- alternate functions
     let ns = "STM32.AF." <> (T.pack name)
-        ctx = listCtx [ ("afs", show xs) ]
+        ctx = listCtx [ ("afs", tshow xs) ]
     template ctx ns "STM32/Modes/AF.hs"
 
 -- generate stripped down version of MCU Map
@@ -309,11 +329,11 @@ stm32toplevel = do
   -- VectorTable
   devs <- filteredShortNames
   let devctx = ShortDevicesCtx devs
-  templateD devctx "STM32.VectorTable" "STM32/VectorTable.hs"
+  template devctx "STM32.VectorTable" "STM32/VectorTable.hs"
 
   -- ClockInit
   let fctx = FamiliesCtx $ map show supportedFamilies
-  templateD fctx "STM32.ClockInit" "STM32/ClockInit.hs"
+  template fctx "STM32.ClockInit" "STM32/ClockInit.hs"
 
   -- copied verbatim
   let copies = [
@@ -426,7 +446,7 @@ genPeriphTree target p di svdPeriph = do
              (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> pName)
       return $ [ T.concat ["import Ivory.BSP.STM32.Peripheral.", pName, ".RegTypes"]]
     VersionedRegTypes -> do
-      mkdir $ fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion
+      mktree $ fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion
       cptree (fromText $ tPath <> "/STM32/Peripheral/" <> nameVersion)
              (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion)
       return $ [ T.concat [ "import Ivory.BSP.STM32.Peripheral.", nameVersion, ".RegTypes"]]
@@ -439,7 +459,7 @@ genPeriphTree target p di svdPeriph = do
       ctx = RegsCtx { imports = regTypesImports
                     , regs = T.pack res }
 
-  templateD ctx ns "STM32/Peripheral/X/Regs.hs"
+  template ctx ns "STM32/Peripheral/X/Regs.hs"
 
   -- Peripheral
   let ns = target <> "." <> nameVersion <> ".Peripheral"
@@ -449,7 +469,7 @@ genPeriphTree target p di svdPeriph = do
               , bitDataRegsMk = ppBitDataRegsMk new
               , pversion = maybe "" (('v':) . show) (diVersion di)
               }
-  templateD ctx ns ("STM32/Peripheral/" <> nameVersion <> "/Peripheral.hs")
+  template ctx ns ("STM32/Peripheral/" <> nameVersion <> "/Peripheral.hs")
 
   -- Toplevel peripheral
   let ns = target <> "." <> pName
@@ -460,7 +480,7 @@ genPeriphTree target p di svdPeriph = do
                       $ zip vers (True: [False, False ..])
 
       ctx = VersionsCtx $ versData
-  templateD ctx ns $ "STM32/Peripheral/" <> pName <> ".hs"
+  template ctx ns $ "STM32/Peripheral/" <> pName <> ".hs"
 
 readme = do
   DB{..} <- ask
@@ -475,11 +495,8 @@ readme = do
 
       all = unlines (header:sep:devSup)
 
-  tmpl <- getTemplate "README.md"
-
-  r <- hastacheStr hastacheConf tmpl
-         (listCtx [("matrix", T.pack all)])
-  liftIO $ TLIO.writeFile "README.md" r
+  r <- templateRaw (listCtx [("matrix", T.pack all)]) "README.md"
+  liftIO $ TIO.writeFile "README.md" r
 
 tst = do
   runGen $ do

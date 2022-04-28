@@ -5,6 +5,7 @@ import Data.Set (Set)
 import Data.Map (Map)
 
 import GHC.Generics
+import Data.Default.Class
 import Data.Serialize
 import Data.STM32.Family
 import Data.STM32.Core
@@ -70,6 +71,15 @@ data IP = IP {
   } deriving (Generic, Eq, Ord, Show)
 
 instance Serialize IP
+
+instance Default IP where
+  def = IP {
+        ipName = mempty
+      , ipVersion = mempty
+      , ipConfigFile = mempty
+      , ipClockEnableMode = mempty
+      , ipInstanceName = mempty
+      }
 
 data Pin = Pin {
     pinName :: String

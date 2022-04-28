@@ -101,6 +101,12 @@ driverMapping = [
       [Not (ByFam G0)] CommonRegTypes VersionedDriver
   , DriverInfo EXTI (Just 2) (ByFam G0)
       [ByIP "exti_g0"] CommonRegTypes VersionedDriver
+
+  , DriverInfo SYSCFG Nothing (ByDev "F765")
+      [ Not (ByFam F1) ] NoRegTypes NoDriver
+
+  , DriverInfo AFIO Nothing (ByFam F1)
+      [ ByFam F1 ] NoRegTypes NoDriver
   ]
 
 -- | List of drivers for specific @Periph@

@@ -1,7 +1,7 @@
 module {{ modns }} (
-{{#instances}}
-{{#prefixRest}}{{/prefixRest}}{{ name }}
-{{/instances}}
+{{#prefixedInstances}}
+  {{prefix}} {{ data.name }}
+{{/prefixedInstances}}
   , canFilters
   ) where
 
@@ -14,11 +14,11 @@ import Ivory.BSP.STM32{{ dev }}.MemoryMap
 import qualified Ivory.BSP.STM32{{ dev }}.Interrupt as {{ dev }}
 
 canFilters :: CANPeriphFilters
-canFilters = mkCANPeriphFilters {{ instances.0.name }}_periph_base
+canFilters = mkCANPeriphFilters {{ firstInstance.name }}_periph_base
                 rccenable rccdisable
   where
-  rccenable  = modifyReg rcc_reg_{{ instances.0.rccEnableReg }} $ setBit   rcc_{{ instances.0.rccEnableReg }}_{{ instances.0.rccEnableBit }}
-  rccdisable = modifyReg rcc_reg_{{ instances.0.rccEnableReg }} $ clearBit rcc_{{ instances.0.rccEnableReg }}_{{ instances.0.rccEnableBit }}
+  rccenable  = modifyReg rcc_reg_{{ firstInstance.rccEnableReg }} $ setBit   rcc_{{ firstInstance.rccEnableReg }}_{{ firstInstance.rccEnableBit }}
+  rccdisable = modifyReg rcc_reg_{{ firstInstance.rccEnableReg }} $ clearBit rcc_{{ firstInstance.rccEnableReg }}_{{ firstInstance.rccEnableBit }}
 
 {{#instances}}
 {{ name }} :: CANPeriph

@@ -39,7 +39,7 @@ mk{{ type }}Port :: Integer
            -> Int
            -> {{ type }}Port
 mk{{ type }}Port base rccen rccdis idx = {{ type }}Port
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
     , gpioPortRCCEnable      = rccen
     , gpioPortRCCDisable     = rccdis
     , gpioPortNumber         = idx

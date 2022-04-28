@@ -28,6 +28,7 @@ import qualified Data.Maybe
 import qualified Data.Ord
 import qualified Data.Set as S
 import qualified Data.ByteString.Char8 as B
+import Data.Default.Class
 import Data.Serialize
 import Data.Char (toUpper)
 
@@ -104,7 +105,7 @@ extractCMXCached dbPath = do
     cachePath = "/tmp/data_stm32_cmx_cache"
 
 
-fixMCU x@MCU{..} = x { mcuIps = addEXTI . coerceIPVersions . filterIps $ mcuIps }
+fixMCU x@MCU{..} = x { mcuIps = addSYSCFG . addAFIO . addEXTI . coerceIPVersions . filterIps $ mcuIps }
   where
     coerceIPVersions = S.map (\ip -> ip { ipVersion = dropCMXSuffix $ ipVersion ip })
     dropCMXSuffix x | "_Cube" `L.isSuffixOf` x = take (length x - length ("_Cube" :: String)) x
@@ -127,6 +128,7 @@ fixMCU x@MCU{..} = x { mcuIps = addEXTI . coerceIPVersions . filterIps $ mcuIps 
           , "USB_DEVICE"
           , "USB_HOST"
           ])
+
     addEXTI :: S.Set IP -> S.Set IP
     addEXTI = S.insert $ extiIP $ case mcuFamily of
       G0 -> "exti_g0"
@@ -140,6 +142,13 @@ fixMCU x@MCU{..} = x { mcuIps = addEXTI . coerceIPVersions . filterIps $ mcuIps 
       , ipInstanceName = ""
       }
 
+    addAFIO :: S.Set IP -> S.Set IP
+    addAFIO s = case mcuFamily of
+      F1 -> S.insert (def { ipName = "AFIO" }) s
+      _  -> s
+
+    addSYSCFG :: S.Set IP -> S.Set IP
+    addSYSCFG = S.insert (def { ipName = "SYSCFG" })
 
 -- fill in missing ram2 and ram3 sizes, compute real sram1 size
 adjustRAMs :: (STM32DevName, MCU) -> (STM32DevName, MCU)

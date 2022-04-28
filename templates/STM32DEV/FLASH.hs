@@ -9,4 +9,4 @@ import Ivory.Language
 import Ivory.HW
 import Ivory.BSP.STM32{{ dev }}.MemoryMap (flash_periph_base)
 
-{{ regs }}
+{{{ regs }}}

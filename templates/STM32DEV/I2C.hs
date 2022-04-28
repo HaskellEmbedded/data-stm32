@@ -1,7 +1,7 @@
 module {{ modns }} (
-{{#instances}}
-{{#prefixRest}}{{/prefixRest}}{{ name }}
-{{/instances}}
+{{#prefixedInstances}}
+  {{prefix}} {{ data.name }}
+{{/prefixedInstances}}
   ) where
 
 import Ivory.Language

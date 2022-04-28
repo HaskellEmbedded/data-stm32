@@ -38,7 +38,7 @@ i2cTowerFrequency :: (e -> ClockConfig)
                              , ChanOutput ('Stored ITime))
 i2cTowerFrequency tocc i2c pins freq = case i2c of
   {{#versions}}
-  (WrappedV{{ version }} x) -> V{{ version }}.i2cTower tocc x pins freq
+    (WrappedV{{ version }} x) -> V{{ version }}.i2cTower tocc x pins freq
   {{/versions}}
 
 -- 400khz I2C (for compatibility)

@@ -6,7 +6,7 @@ module MakePeriph where
 
 import Prelude hiding (log)
 
-import Control.Monad.Reader
+import Data.Default.Class
 
 import Debug.Trace
 import Data.Maybe
@@ -14,8 +14,12 @@ import Data.Either (rights)
 import Data.Ord (comparing)
 import Data.Char (toLower, toUpper, isDigit)
 import Data.Data (Data, Typeable)
+import Data.List.NonEmpty (NonEmpty)
+
 import qualified Data.List as L
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
+
 import Safe
 
 import Data.CMX
@@ -26,16 +30,28 @@ import Data.STM32.Drivers
 
 import qualified Data.ByteString.Char8 as B
 import Data.Attoparsec.ByteString.Char8
+import Text.Mustache (ToMustache(..), object, (~>))
 
 import Types
 import Utils
+import Contexts (Prefixed, buildPrefixed)
 
 data InstancesCtx = InstancesCtx {
     dev       :: String
   , fam       :: String
   , vers      :: String
-  , instances :: [InstanceCtx]
+  , instances :: NonEmpty InstanceCtx
   } deriving (Show, Data, Typeable)
+
+instance ToMustache InstancesCtx where
+  toMustache x = object
+    [ "dev" ~> dev x
+    , "fam" ~> fam x
+    , "vers" ~> vers x
+    , "instances" ~> NE.toList (instances x)
+    , "prefixedInstances" ~> buildPrefixed (NE.toList $ instances x)
+    , "firstInstance" ~> NE.head (instances x)
+    ]
 
 data InstanceCtx = InstanceCtx {
     name           :: String
@@ -51,26 +67,52 @@ data InstanceCtx = InstanceCtx {
   , numericIndex   :: Int
   } deriving (Show, Data, Typeable)
 
+instance ToMustache InstanceCtx where
+  toMustache x = object
+    [ "name" ~> name x
+    , "version" ~> version x
+    , "interrupts" ~> interrupts x
+    , "extiInterrupts" ~> buildPrefixed (extiInterrupts x)
+    , "clockSource" ~> clockSource x
+    , "rccEnableReg" ~> rccEnableReg x
+    , "rccEnableBit" ~> rccEnableBit x
+    , "rccResetReg" ~> rccResetReg x
+    , "rccResetBit" ~> rccResetBit x
+    , "index" ~> index x
+    , "numericIndex" ~> numericIndex x
+    ]
+
 data EXTIInterruptCtx = EXTIInterruptCtx {
     rangeStart :: Int
   , rangeEnd :: Int
   , rangeISR :: String
   } deriving (Show, Data, Typeable)
 
+instance ToMustache EXTIInterruptCtx where
+  toMustache x = object
+    [ "rangeStart" ~> rangeStart x
+    , "rangeEnd" ~> rangeEnd x
+    , "rangeISR" ~> rangeISR x
+    ]
+
 -- find enable and reset bits in RCC registers (e.g. uart{vers}{suffix} (e.g. uart1en))
 findRCCBit :: Periph
            -> String
            -> String
            -> Peripheral
-           -> (String, Field)
+           -> Either String (String, Field)
 findRCCBit periph vers suffix rcc = get (rccFieldName suffix) $ periphRegisters rcc
   where
     rccFieldName prefix = map toUpper $ concat [show periph, vers, prefix]
     get name regs = case filterRegFieldsByName name regs of
-         []         -> error $ "RCC field not found: " ++ name
-         [(r, [f])] -> (regName r, f)
-         [(r, _)]   -> error $ "Multiple fields found in RCC registers: " ++ name
-         _          -> error $ "Field found in multiple RCC registers: " ++ name
+         []         -> Left
+                        $ "RCC field not found: "
+                        ++ name
+                        ++ " "
+                        ++ show (periph, vers, suffix, rcc)
+         [(r, [f])] -> Right (regName r, f)
+         [(r, _)]   -> Left $ "Multiple fields found in RCC registers: " ++ name
+         _          -> Left $ "Field found in multiple RCC registers: " ++ name
 
 filterRegFields :: (Field -> Bool)
                 -> [Register]
@@ -163,8 +205,8 @@ periphInstancesData periph mcu = do
       map (uncurry (mkData dev rcc)) (zip xs [0..])
   where
     pName idStr = concat [show periph, idStr]
-    rccEn idStr rcc = findRCCBit periph idStr "EN" rcc
-    rccRst idStr rcc = findRCCBit periph idStr "RST" rcc
+    rccEn idStr rcc = either (pure ("404", def)) id $ findRCCBit periph idStr "EN" rcc
+    rccRst idStr rcc = either (pure ("404", def)) id $ findRCCBit periph idStr "RST" rcc
     lower = map toLower
     mkData dev rcc idChar idx = InstanceCtx {
         name           = lower $ pName id'
@@ -247,16 +289,17 @@ validISRCount RNG = 1
 validISRCount CAN = 4
 validISRCount _ = 0
 
-makePeriphContext :: Periph -> MCU -> MonadGen InstancesCtx
+makePeriphContext :: Periph -> MCU -> MonadGen (Maybe InstancesCtx)
 makePeriphContext periph mcu = do
   inst <- periphInstancesData periph mcu
-
-  return $ InstancesCtx {
-    dev = devName
-  , fam = show $ mcuFamily mcu
-  , vers = vers inst
-  , instances = inst
-  }
+  case inst of
+    [] -> pure Nothing
+    _  -> pure $ pure $ InstancesCtx {
+            dev = devName
+          , fam = show $ mcuFamily mcu
+          , vers = vers inst
+          , instances = NE.fromList inst
+          }
   where
     devName = L.take 4 $ L.drop 5 $ mcuRefName mcu
     vers inst = case inst of

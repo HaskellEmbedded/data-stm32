@@ -37,7 +37,7 @@ mk{{ type }}  :: (STM32Interrupt i)
        -> [(Int, Int, i)]
        -> {{ type }}
 mk{{ type }} base syscfgrccen syscfgrccdis r1 r2 r3 r4 isrs = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
     , extiInterrupts = map (\(s, e, i) -> (s, e, HasSTM32Interrupt i)) isrs
     , extiEnable = syscfgrccen
     , extiDisable = syscfgrccdis

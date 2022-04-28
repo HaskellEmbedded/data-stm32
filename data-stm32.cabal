@@ -54,7 +54,7 @@ library
     , base >=4.7 && <5
     , bytestring
     , cereal
-    , data-default
+    , data-default-class
     -- (not-so) temporary
     , ghcid
     , Diff
@@ -62,8 +62,6 @@ library
     , foldl
     , hxt
     , hxt-xpath
-    , karver
-    , hastache
     , pretty-simple
     , regex-posix
     , safe
@@ -96,12 +94,12 @@ executable genstm
     , cereal
     , containers
     , data-stm32
+    , data-default-class
     , Diff
     , foldl
     , hxt
     , hxt-xpath
-    , karver
-    , hastache
+    , mustache
     , safe
     , syb
     , mtl

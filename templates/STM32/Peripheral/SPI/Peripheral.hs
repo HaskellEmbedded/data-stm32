@@ -43,7 +43,7 @@ mk{{ type }} :: (STM32Interrupt i)
             -> String
             -> {{ type }}
 mk{{ type }} base rccen rccdis inter pclk afLookup version n = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
     , spiRCCEnable   = rccen
     , spiRCCDisable  = rccdis
     , spiInterrupt   = HasSTM32Interrupt inter

@@ -2,9 +2,9 @@
 {-# LANGUAGE RankNTypes #-}
 
 module {{ modns }} (
-{{#instances}}
-{{#prefixRest}}{{/prefixRest}}gpio{{ index }}
-{{/instances}}
+{{#prefixedInstances}}
+  {{prefix}} gpio{{ data.index }}
+{{/prefixedInstances}}
   ) where
 
 import Ivory.Language

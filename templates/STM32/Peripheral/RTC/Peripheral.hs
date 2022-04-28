@@ -30,7 +30,7 @@ mk{{ type }}  ::
        -- -> i
        -> {{ type }}
 mk{{ type }} base rccen rccdis = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
 --    , rtcInterrupt      = HasSTM32Interrupt interrupt
     , rtcRCCEnable      = rccen
     , rtcRCCDisable     = rccdis

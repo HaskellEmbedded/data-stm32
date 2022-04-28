@@ -45,7 +45,7 @@ mk{{ type }} :: (STM32Interrupt i)
             -> String -- Name
             -> {{ type }}
 mk{{ type }} base rccenable rccdisable rccreset evtint errint pclk afLookup n = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
     , i2cRCCEnable  = rccenable
     , i2cRCCDisable = rccdisable
     , i2cRCCReset   = rccreset

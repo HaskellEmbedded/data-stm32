@@ -4,7 +4,7 @@ module Data.SVD.Types where
 
 import Data.Bits
 import Data.Char (toLower)
-import Data.Default
+import Data.Default.Class
 import Data.List
 import qualified Data.Set as Set
 import Safe
