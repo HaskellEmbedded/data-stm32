@@ -70,9 +70,9 @@ loadDatabases = do
   dbPath <- case mPath of
     Nothing -> die "need DB_PATH env var"
     Just p -> return $ fromText p
+  opts <- execParser $ info (parseOptions <**> helper) (fullDesc <> progDesc "genstm")
   svds <- fmap fixSVDs $ extractSVDCached dbPath
   (cmxs, afs) <- extractCMXCached dbPath
-  opts <- execParser $ info (parseOptions <**> helper) (fullDesc <> progDesc "genstm")
   let
     supp = filterSupported cmxs
     cmxsWithSVD = filterHavingSVD (supp, svds)
