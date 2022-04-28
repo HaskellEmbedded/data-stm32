@@ -213,7 +213,7 @@ i2cPeripheralDriver tocc periph sda scl freq
               -- sadd1 is Bits 7, lowest sadd0 is ignored
               -- and read/write is set by i2c_cr2_rd_wrn
               -- (we can use readAddr or writeAddr as it doesn't matter)
-              setField i2c_cr2_sadd1 (fromRep $ (writeAddr tx_ad) `iShiftR` 1)
+              setField i2c_cr2_sadd (fromRep $ safeCast (writeAddr tx_ad))
 
             setStart periph
 

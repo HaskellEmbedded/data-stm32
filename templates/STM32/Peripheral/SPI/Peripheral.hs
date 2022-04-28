@@ -233,7 +233,7 @@ spiClearCr1 periph = modifyReg (spiRegCR1 periph) $ do
   clearBit spi_cr1_bidioe
   clearBit spi_cr1_crcen
   clearBit spi_cr1_crcnext
-  clearBit spi_cr1_dff
+  clearBit spi_cr1_crcl
   clearBit spi_cr1_rxonly
   clearBit spi_cr1_ssm
   clearBit spi_cr1_ssi
