@@ -41,6 +41,7 @@ library
       Data.STM32.Memory
       Data.STM32.Periph
       Data.STM32.Types
+      Data.STM32.Util
       Data.SVD
       Data.SVD.Extract
       Data.SVD.Parse
