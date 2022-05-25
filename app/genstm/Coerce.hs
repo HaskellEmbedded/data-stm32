@@ -73,7 +73,6 @@ procPeriph p ver x = do
   return $ new { periphName = show p }
   where
     new = adjustRegs (\r -> r { regFields = procFields r})
-        $ fixVendorBugs
         $ filterByPeriph p ver x
 
 -- Special driver/peripheral regs versioning treatment
@@ -290,28 +289,8 @@ adjustEXTI = adjustRegs make32bit
     --addEXTICR x@Peripheral{..} = x {
     --  periphRegisters = periphRegisters ++ [ makeReg "EXTICR" [ ("data", 32) ] ] }
 
-
 usartToUart x | periphName x == "USART" = x { periphName = show UART }
 usartToUart x | otherwise = x
-
-fixVendorBugs p = g4fixes $ adjustFields fix p
-  where fix x | fieldName x == "RAM_PARITY_CHECK" && fieldBitWidth x == 0 = Just $ setFieldWidth 1 x
-        -- L4x1 L4x2 svd files contain this bug where USART1EN should be USART3EN (according to datashit)
-        -- XXX: apply this only for these L4 files
-        fix x | fieldName x == "USART1EN" && fieldBitOffset x == 18 = Just $ setFieldName "USART3EN" x
-        -- same but SPI1 vs SPI2
-        fix x | fieldName x == "SPI1EN" && fieldBitOffset x == 14 = Just $ setFieldName "SPI2EN" x
-        fix x | otherwise = Just x
-
-        -- G431x has I2C3 instead of I2C3EN, description is also bogus related to opamp
-        g4fixes p = adjustFieldsByRegName "APB1ENR1" fixG4EN
-                  $ adjustFieldsByRegName "APB1RSTR1" fixG4RST p
-
-        fixG4EN x | fieldName x == "I2C3" && fieldBitOffset x == 30 = Just $ setFieldName "I2C3EN" $ setDescription "I2C3 clock enable" x
-        fixG4EN x | otherwise = Just x
-
-        fixG4RST x | fieldName x == "I2C3" && fieldBitOffset x == 30 = Just $ setFieldName "I2C3RST" $ setDescription "I2C3 clock enable" x
-        fixG4RST x | otherwise = Just x
 
 adjustPeriphFamily l4s x | l4s == L4 || l4s == L4Plus = adjustFields fix x
   where
