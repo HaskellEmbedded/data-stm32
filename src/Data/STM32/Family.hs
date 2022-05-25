@@ -24,6 +24,7 @@ data Family =
   | L4Plus -- L4S L4R
   | L5
   | U5
+  | C0
   | G0
   | G4
   | WB
