@@ -1,4 +1,4 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc8101" }:
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "default" }:
 
 let
   itnSrc = nixpkgs.fetchFromGitHub {
