@@ -306,11 +306,11 @@ makePeriphContext periph mcu = do
       (x:xs) -> version x
       [] -> ""
 
--- e.g. for G0s there's only one peripheral bus so we threat is as #1
-pclkIndex name | "APB" `L.isPrefixOf` name = Just "PClk1"
 pclkIndex name | "APB1" `L.isPrefixOf` name = Just "PClk1"
 pclkIndex name | "APB2" `L.isPrefixOf` name = Just "PClk2"
 pclkIndex name | "APB3" `L.isPrefixOf` name = Just "PClk3"
+-- e.g. for G0s there's only one peripheral bus so we threat is as #1
+pclkIndex name | "APB" `L.isPrefixOf` name = Just "PClk1"
 pclkIndex name | otherwise = Nothing
 
 -- EXTI0     - (0, 0)
