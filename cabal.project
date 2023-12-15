@@ -1,1 +1,3 @@
-packages: .
+packages:
+  ./data-stm32.cabal
+  ../data-svd/data-svd.cabal

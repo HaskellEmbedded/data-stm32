@@ -21,6 +21,7 @@ import Control.Monad.Reader
 
 import Data.Ivory -- .Pretty (replace)
 import Data.SVD hiding (svd, ppPeripheral)
+import qualified Data.SVD.Extract
 import Data.CMX
 import Data.STM32
 
@@ -71,7 +72,7 @@ loadDatabases = do
     Nothing -> die "need DB_PATH env var"
     Just p -> return $ fromText p
   opts <- execParser $ info (parseOptions <**> helper) (fullDesc <> progDesc "genstm")
-  svds <- fmap fixSVDs $ extractSVDCached dbPath
+  svds <- fmap fixSVDs $ Data.SVD.Extract.extractSVDCached dbPath
   (cmxs, afs) <- extractCMXCached dbPath
   let
     supp = filterSupported cmxs
