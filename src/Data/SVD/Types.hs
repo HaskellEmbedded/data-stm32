@@ -6,6 +6,7 @@ import Data.Bits
 import Data.Char (toLower)
 import Data.Default.Class
 import Data.List
+import qualified Data.Maybe
 import qualified Data.Set as Set
 import Safe
 
@@ -176,7 +177,16 @@ mapDevFields f d =
 
 -- |Get peripheral by groupName
 getPeriphByGroup :: String -> Device -> Peripheral
-getPeriphByGroup name dev = headNote ("getPeriphByGroup " ++ name) . filterLowerBy name periphGroupName $ devicePeripherals dev
+getPeriphByGroup name dev =
+  case filterLowerBy name periphGroupName (devicePeripherals dev) of
+    [] -> error $ "getPeriphByGroup, peripheral " ++ name ++ " not found"
+    [p] -> p
+    ps -> case filter (Data.Maybe.isNothing . periphDerivedFrom) ps of
+      [] -> error $ "getPeriphByGroup: No non-derived peripheral found for " ++ name
+      [p] -> p
+      (p:_xs) -> p
+       -- TODO: warn?
+       -- error $ "getPeriphByGroup: Multiple non-derived peripheral found for " ++ name
 
 -- |Get peripheral by name
 getPeriph :: String -> Device -> Peripheral
