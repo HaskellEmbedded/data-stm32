@@ -13,6 +13,7 @@ import Data.Either
 import Data.Ord (comparing)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.Text
 import qualified Data.List as L
 import qualified Data.ByteString.Char8 as B
 import Text.Pretty.Simple
@@ -70,7 +71,7 @@ loadDatabases = do
   mPath <- need "DB_PATH"
   dbPath <- case mPath of
     Nothing -> die "need DB_PATH env var"
-    Just p -> return $ fromText p
+    Just p -> return $ Data.Text.unpack p
   opts <- execParser $ info (parseOptions <**> helper) (fullDesc <> progDesc "genstm")
   svds <- fmap fixSVDs $ Data.SVD.Extract.extractSVDCached dbPath
   (cmxs, afs) <- extractCMXCached dbPath

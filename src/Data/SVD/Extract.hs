@@ -19,7 +19,7 @@ extractSVDCached :: FilePath -> IO [(String, Device)]
 extractSVDCached dbPath = do
   dir <- pwd
 
-  hasCache <- testfile $ decodeString cachePath
+  hasCache <- testfile cachePath
   if hasCache
     then
     (do
@@ -31,7 +31,7 @@ extractSVDCached dbPath = do
 
     else
     (do
-      putStrLn $ "Parsing SVDs from " ++ encodeString dbPath
+      putStrLn $ "Parsing SVDs from " ++ dbPath
 
       cd dbPath
       cd "svds/stm"

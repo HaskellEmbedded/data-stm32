@@ -93,7 +93,7 @@ main = do
              "ivory-bsp-stm32.cabal_template"
   liftIO $ TIO.writeFile "ivory-bsp-stm32.cabal" r
 
-  cptree (fromText $ tPath <> "/support/") "./support/"
+  cptree (T.unpack $ tPath <> "/support/") "./support/"
 
   cd here
   where
@@ -277,10 +277,10 @@ stm32periphs = do
         template' ns $ "STM32/Driver/" <> nameVersion <> ".hs"
 
         tPath <- getTemplatesPath
-        driverDir <- testdir $ fromText $ tPath <> "/STM32/Driver/" <> pName
+        driverDir <- testdir $ T.unpack $ tPath <> "/STM32/Driver/" <> pName
         when driverDir $ do
-          cptree (fromText $ tPath <> "/STM32/Driver/" <> pName)
-                 (fromText $ "./src/Ivory/BSP/STM32/Driver/" <> pName)
+          cptree (T.unpack $ tPath <> "/STM32/Driver/" <> pName)
+                 (T.unpack $ "./src/Ivory/BSP/STM32/Driver/" <> pName)
 
         -- Toplevel driver
         let ns = "STM32.Driver." <> pName
@@ -442,13 +442,13 @@ genPeriphTree target p di svdPeriph = do
     CommonRegTypes -> do
       -- this intentionally copies whole Peripheral.XYZ dir
       -- as it might contain other files common for this periph
-      cptree (fromText $ tPath <> "/STM32/Peripheral/" <> pName)
-             (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> pName)
+      cptree (T.unpack $ tPath <> "/STM32/Peripheral/" <> pName)
+             (T.unpack $ "./src/Ivory/BSP/STM32/Peripheral/" <> pName)
       return $ [ T.concat ["import Ivory.BSP.STM32.Peripheral.", pName, ".RegTypes"]]
     VersionedRegTypes -> do
-      mktree $ fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion
-      cptree (fromText $ tPath <> "/STM32/Peripheral/" <> nameVersion)
-             (fromText $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion)
+      mktree $ T.unpack $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion
+      cptree (T.unpack $ tPath <> "/STM32/Peripheral/" <> nameVersion)
+             (T.unpack $ "./src/Ivory/BSP/STM32/Peripheral/" <> nameVersion)
       return $ [ T.concat [ "import Ivory.BSP.STM32.Peripheral.", nameVersion, ".RegTypes"]]
 
   -- Peripheral.Regs

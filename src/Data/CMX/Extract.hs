@@ -49,11 +49,11 @@ filterSupported = M.filterWithKey (\k _ -> k `elem` supportedFamilies)
 
 extractCMX :: FilePath -> IO (M.Map Family [MCU], M.Map String AlternateFunctions)
 extractCMX dbPath = do
-  fs <- parseFamilies (encodeString dbPath ++ "/db/mcu/families.xml")
+  fs <- parseFamilies (dbPath ++ "/db/mcu/families.xml")
   xs <- forM (M.toList . M.map (concatMap subFamMCUs) $ fs) $ \(fam, devs) -> do
     ds <- forM devs $ \dev -> do
       putStrLn $ "Parsing " ++ smcuName dev
-      mcu <- parseMCU (encodeString dbPath ++ "/db/mcu/" ++ smcuName dev ++ ".xml") (smcuRefName dev)
+      mcu <- parseMCU (dbPath ++ "/db/mcu/" ++ smcuName dev ++ ".xml") (smcuRefName dev)
       let m = checkMCU $ fixMCU $ mcu {
                 mcuRam = smcuRam dev
               , mcuFlash = smcuFlash dev
@@ -84,7 +84,7 @@ extractAlternateFunctions dbPath mcus = do
 extractCMXCached :: FilePath -> IO (M.Map Family [MCU], M.Map String AlternateFunctions)
 
 extractCMXCached dbPath = do
-  hasCache <- testfile $ decodeString cachePath
+  hasCache <- testfile cachePath
   if hasCache
     then
     (do
@@ -96,7 +96,7 @@ extractCMXCached dbPath = do
 
     else
     (do
-      putStrLn $ "Parsing CubeMX database from " ++ encodeString dbPath
+      putStrLn $ "Parsing CubeMX database from " ++ dbPath
       x <- extractCMX dbPath
       putStrLn $ "Saving cache to " ++ cachePath
       B.writeFile cachePath (encode x)
@@ -244,7 +244,7 @@ ipShortName periph mcu = takeWhile (/='_') . drop 5 $ getIPVersion periph mcu
 -- | Get a path to peripherals IP description xml
 ipXMLPath :: FilePath -> Periph -> MCU -> String
 ipXMLPath dbPath periph mcu = concat
-  [ encodeString dbPath
+  [ dbPath
   , "/db/mcu/IP/"
   , show periph
   , "-"
