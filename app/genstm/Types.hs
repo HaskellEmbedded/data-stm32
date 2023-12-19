@@ -6,6 +6,7 @@ module Types where
 
 import Prelude hiding (log)
 import Turtle
+import Control.Monad (forM_)
 import Data.Char (toUpper)
 import Data.Map (Map)
 import Data.Maybe
