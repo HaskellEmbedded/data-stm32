@@ -30,6 +30,7 @@ library
       Data.Ivory.ISR
       Data.Ivory.MCU
       Data.Ivory.Periph
+      Data.Ivory.Reg
       Data.Ivory.Pretty
       Data.STM32
       Data.STM32.Clock
