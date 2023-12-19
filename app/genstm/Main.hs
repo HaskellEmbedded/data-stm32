@@ -93,7 +93,7 @@ main = do
              "ivory-bsp-stm32.cabal_template"
   liftIO $ TIO.writeFile "ivory-bsp-stm32.cabal" r
 
-  cptree (T.unpack $ tPath <> "/support/") "./support/"
+  cptree (T.unpack $ tPath <> "/support") "support"
 
   cd here
   where
@@ -345,7 +345,7 @@ stm32toplevel = do
 
   mapM_ (\x -> template' ("STM32." <> x) $ T.concat ["STM32/", x, ".hs"]) copies
 
-  liftIO $ cptree "../templates/ARMv7M/" "./src/Ivory/BSP/ARMv7M/"
+  liftIO $ cptree "../templates/ARMv7M" "./src/Ivory/BSP/ARMv7M"
 
 stm32families :: MonadGen ()
 stm32families = do
