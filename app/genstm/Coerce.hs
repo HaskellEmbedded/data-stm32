@@ -73,7 +73,21 @@ procPeriph p ver x = do
   return $ new { periphName = show p }
   where
     new = adjustRegs (\r -> r { regFields = procFields r})
+        $ adjustRegs adjustStm32RSRegs
         $ filterByPeriph p ver x
+
+-- | Drop %s templating of register names and descriptions used by stm32-rs
+-- since we use our own mechanism to handle arrays
+adjustStm32RSRegs :: Register -> Register
+adjustStm32RSRegs reg@Register{..} =
+  reg
+    { regName = dropPS regName
+    , regDescription = dropPS regDescription
+    }
+  where
+    dropPS ('%':'s':xs) = dropPS xs
+    dropPS (x:xs) = x : dropPS xs
+    dropPS [] = mempty
 
 -- Special driver/peripheral regs versioning treatment
 --
