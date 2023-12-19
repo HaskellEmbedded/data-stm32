@@ -1,4 +1,4 @@
-{ stdenv, fetchFromGitHub, jdk11 }:
+{ stdenv, fetchFromGitHub }:
 stdenv.mkDerivation {
   name = "svd-database";
 
