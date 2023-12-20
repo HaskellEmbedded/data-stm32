@@ -17,6 +17,7 @@ data Family =
   | F3
   | F4
   | F7
+  | H5
   | H7
   | L0
   | L1
@@ -28,6 +29,7 @@ data Family =
   | G0
   | G4
   | WB
+  | WBA
   | WL
   | TS
   | MP1
