@@ -23,7 +23,7 @@ import qualified Data.Set as S
 import Safe
 
 import Data.CMX
-import Data.SVD
+import Data.SVD.Types
 import Data.Ivory.ISR
 import Data.STM32.Types
 import Data.STM32.Drivers
