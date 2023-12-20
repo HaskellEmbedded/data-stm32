@@ -110,13 +110,13 @@ stm32devs = do
     -- memMap
     let ns = "STM32" <> (T.pack name) <> ".MemoryMap"
         ctx = listCtx [ ("dev", T.pack name)
-                      , ("map" , T.pack $ ppMemMap $ addSYSCFGAlias $ getDevMemMap svd ) ]
+                      , ("map" , T.pack $ displayMemMap $ addSYSCFGAlias $ getDevMemMap svd ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
 
     -- interrupts
     let isr = replaceOne "|" "="
             $ T.pack
-            $ ppISRs
+            $ displayISRs
             $ normalizeISRNames
             $ renameDups
             $ isrs [svd]
@@ -362,7 +362,7 @@ stm32families = do
 
     let isr = replaceOne "|" "="
             $ T.pack
-            $ ppISRs
+            $ displayISRs
             $ normalizeISRNames
             $ renameDups
             $ isrs
@@ -387,7 +387,7 @@ stm32families = do
 
     let ns = "STM32" <> tshow f <> ".MemoryMap"
         ctx = listCtx [ ("dev", tshow f)
-              , ("map" , T.pack $ ppMemMap $ addSYSCFGAlias $ getDevMemMap dev ) ]
+              , ("map" , T.pack $ displayCompactMemMap $ addSYSCFGAlias $ getDevMemMap dev ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
 
 -- iff there's no syscfg memory address we

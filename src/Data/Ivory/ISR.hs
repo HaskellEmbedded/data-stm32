@@ -19,7 +19,7 @@ import Data.Algorithm.Diff
 -- find device with most peripherals and
 -- use it as representative for this family ISR map
 --
--- use ppISRs to print these
+-- use displayISRs to print these
 isrs :: [Device] -> [Interrupt]
 isrs devs = getDevISRs
           $ head
@@ -62,7 +62,7 @@ diffISRs = getDiffBy (\a b -> interruptValue  a == interruptValue b && interrupt
 -- ^^ eats STM32F4*.svd
 genISRs fs = do
   is <- isr fs
-  putStrLn $ (ppISRs . sortBy (comparing (interruptValue)) . nubBy (\x y -> interruptValue x == interruptValue y)) is
+  putStrLn $ (displayISRs . sortBy (comparing (interruptValue)) . nubBy (\x y -> interruptValue x == interruptValue y)) is
 
 isr :: [String] -> IO ([Interrupt])
 isr [] = return []
