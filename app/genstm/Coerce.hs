@@ -4,6 +4,7 @@
 module Coerce where
 
 import Data.Char (toUpper, isDigit)
+import Data.Default.Class (def)
 import Data.Maybe
 import qualified Data.List as L
 import Text.Regex.Posix
@@ -160,26 +161,22 @@ canFilters :: String
 canFilters = "F[0-9][0-9]?R[1-2]"
 
 makeReg name fields = let
-  r = Register {
-    regName = name
-  , regDisplayName = name
-  , regDescription = ""
-  , regAddressOffset = 0
-  , regSize = 32
-  , regAccess = ReadWrite
-  , regResetValue = Just 0
-  , regFields = mkFields fields }
+  r = def
+        { regName = name
+        , regDisplayName = name
+        , regSize = 32
+        , regAccess = ReadWrite
+        , regFields = mkFields fields
+        }
   in (if continuityCheck r then r else error "Continuity check failed for mkReg")
   where
     mkFields xs = setOffsets 32 $ map mkField xs
-    mkField (name, width) = Field {
-        fieldName = name
-      , fieldDescription = ""
-      , fieldBitOffset = 0
-      , fieldBitWidth = width
-      , fieldReserved = (name == "reserved")
-      , fieldRegType = Nothing
-      }
+    mkField (name, width) = 
+      def
+        { fieldName = name
+        , fieldBitWidth = width
+        , fieldReserved = (name == "reserved")
+        }
     setOffsets offs (x:xs) = (x { fieldBitOffset = offs - fieldBitWidth x }):(setOffsets (offs - fieldBitWidth x) xs)
     setOffsets 0 [] = []
     setOffsets _ _ = error "Offsets does not compute"
@@ -291,13 +288,10 @@ renameDualSYSCFG x = adjustRegs fix x
 
 adjustEXTI = adjustRegs make32bit
   where
-    dataField = Field {
-                    fieldName = "data"
+    dataField = def
+                  { fieldName = "data"
                   , fieldDescription = "Data"
-                  , fieldBitOffset = 0
                   , fieldBitWidth = 32
-                  , fieldReserved = False
-                  , fieldRegType = Nothing
                   }
     make32bit reg = reg { regFields = [ dataField ] }
     --addEXTICR x@Peripheral{..} = x {
