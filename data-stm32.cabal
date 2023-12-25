@@ -1,20 +1,22 @@
+cabal-version:  2.2
 name:           data-stm32
 version:        0.1.0.0
 synopsis:       ARM SVD and CubeMX XML parser and pretty printer for STM32 family
 description:    ARM SVD and CubeMX XML parser and pretty printer for STM32 family
 category:       Embedded
-homepage:       https://github.com/sorki/data-stm32#readme
-bug-reports:    https://github.com/sorki/data-stm32/issues
-author:         Richard Marko
+homepage:       https://github.com/HaskellEmbedded/data-stm32#readme
+bug-reports:    https://github.com/HaskellEmbedded/data-stm32/issues
+author:         Sorki
 maintainer:     srk@48.io
-copyright:      2020 Richard Marko
-license:        BSD3
+copyright:      2020 Sorki
+license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 extra-source-files:
-    ChangeLog.md
     README.md
+
+extra-doc-files:
+    CHANGELOG.md
 
 library
   exposed-modules:
