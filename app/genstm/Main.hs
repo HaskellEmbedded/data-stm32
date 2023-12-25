@@ -387,7 +387,7 @@ stm32families = do
 
     let ns = "STM32" <> tshow f <> ".MemoryMap"
         ctx = listCtx [ ("dev", tshow f)
-              , ("map" , T.pack $ displayCompactMemMap $ addSYSCFGAlias $ getDevMemMap dev ) ]
+              , ("map" , T.pack $ displayMemMapCompact $ addSYSCFGAlias $ getDevMemMap dev ) ]
     template ctx ns "STM32DEV/MemoryMap.hs"
 
 -- iff there's no syscfg memory address we

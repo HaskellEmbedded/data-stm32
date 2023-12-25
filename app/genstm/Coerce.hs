@@ -18,6 +18,11 @@ import Data.STM32.Drivers
 
 import Utils
 
+-- toplevel kindof
+procPeriph p ver x = pure $ new { periphName = show p }
+  where
+    new = filterByPeriph p ver x
+
 -- given a composed field like pllp0 pllp1 merge this into multiple Bits or specific type set by adjust function
 -- mergeFields "PLLP" [0..1] id will drop pllp1 and grow pllp0, renaming it to "pllp"
 mergeFields prefix ids adjust x = adjustFields merger x
@@ -47,48 +52,45 @@ adjustFields fn x@Peripheral{..} = adjustRegs adj x
   where
     adj reg@Register{..} = reg { regFields = mapMaybe fn regFields }
 
+-- apply fn to peripherals registers fields passing register name
+adjustRegFields fn x@Peripheral{..} = adjustRegs adj x
+  where
+    adj reg@Register{..} = reg { regFields = mapMaybe (fn regName) regFields }
+
 -- apply fn to peripherals registers fields
 adjustFieldsByRegName targetRegName fn x@Peripheral{..} = adjustRegs adj x
   where
     adj reg@Register{..} | regName == targetRegName = reg { regFields = mapMaybe fn regFields }
     adj reg@Register{..} | otherwise = reg
 
-filterByPeriph GPIO (Just 1) x = renameGPIO $ adjustGPIOF1Regs x
-filterByPeriph GPIO (Just 2) x = renameGPIO $ adjustGPIORegs x
-filterByPeriph CAN  _        x = adjustCANRegs x
-filterByPeriph UART _        x = adjustUARTRegs x
-filterByPeriph USART _       x = renameUSART $ adjustUARTRegs x
-filterByPeriph RCC  _        x = adjustRCCRegs x
-filterByPeriph SPI  _        x = adjustSPIRegs x
-filterByPeriph SYSCFG _      x = renameDualSYSCFG x
-filterByPeriph EXTI   _      x = adjustEXTI x
-filterByPeriph _    _        x = x
+filterByPeriph GPIO (Just 1) = renameGPIO . adjustGPIOF1Regs
+filterByPeriph GPIO (Just 2) = renameGPIO . adjustGPIORegs
+filterByPeriph CAN  _        = adjustCANRegs
+filterByPeriph UART v =
+    (
+      if (v == Just 3)
+      then adjustUARTV3Regs
+      else id
+    )
+  . adjustUARTRegs
+filterByPeriph USART v =
+    renameUSART
+  . (
+      if (v == Just 3)
+      then adjustUARTV3Regs
+      else id
+    )
+  . adjustUARTRegs
+filterByPeriph RCC  _ = adjustRCCRegs
+filterByPeriph SPI  _ = adjustSPIRegs
+filterByPeriph SYSCFG _ = renameDualSYSCFG
+filterByPeriph EXTI   _ = adjustEXTI
+filterByPeriph _ _ = id
 
 checkPeriphRegsContinuity p new = do
   assert ("Register of " <> (tshow p) <> " is NOT continuous")
     $ and $ mapRegs continuityCheck new
 
--- toplevel kindof
-procPeriph p ver x = do
-  checkPeriphRegsContinuity p new
-  return $ new { periphName = show p }
-  where
-    new = adjustRegs (\r -> r { regFields = procFields r})
-        $ adjustRegs adjustStm32RSRegs
-        $ filterByPeriph p ver x
-
--- | Drop %s templating of register names and descriptions used by stm32-rs
--- since we use our own mechanism to handle arrays
-adjustStm32RSRegs :: Register -> Register
-adjustStm32RSRegs reg@Register{..} =
-  reg
-    { regName = dropPS regName
-    , regDescription = dropPS regDescription
-    }
-  where
-    dropPS ('%':'s':xs) = dropPS xs
-    dropPS (x:xs) = x : dropPS xs
-    dropPS [] = mempty
 
 -- Special driver/peripheral regs versioning treatment
 --
@@ -171,7 +173,7 @@ makeReg name fields = let
   in (if continuityCheck r then r else error "Continuity check failed for mkReg")
   where
     mkFields xs = setOffsets 32 $ map mkField xs
-    mkField (name, width) = 
+    mkField (name, width) =
       def
         { fieldName = name
         , fieldBitWidth = width
@@ -204,18 +206,46 @@ firx32 = makeReg "FiRx32" [
 
 
 -- UART
-adjustUARTRegs x = adjustFields fix x
+adjustUARTRegs x = adjustRegFields fix x
   where
-    fix x | fieldName x == "DR"  = Just $ x { fieldBitWidth = 8 } -- we fix these to 8 bits, they are defined as 9 bit iirc but that fucks with our drivers
-    fix x | fieldName x == "RDR" = Just $ x { fieldBitWidth = 8 }
-    fix x | fieldName x == "TDR" = Just $ x { fieldBitWidth = 8 }
-    fix x | fieldName x == "DIV_Mantissa" = Nothing  -- mantissa is dropped and div bellow covers both mantissa and fraction
-    fix x | fieldName x == "DIV_Fraction" = Just $ x { fieldBitWidth = 16, fieldName = "div", fieldDescription = "divider" }
+    -- we fix these to 8 bits, they are defined as 9 bit iirc but that fucks with our drivers
+    fix "DR" x | fieldName x == "DR" = Just $ x { fieldBitWidth = 8 }
+    fix "DR" x | fieldReserved x = Just $ x { fieldBitWidth = 24 }
+
+    fix "RDR" x | fieldName x == "RDR" = Just $ x { fieldBitWidth = 8 }
+    fix "RDR" x | fieldReserved x = Just $ x { fieldBitWidth = 24 }
+
+    fix "TDR" x | fieldName x == "TDR" = Just $ x { fieldBitWidth = 8 }
+    fix "TDR" x | fieldReserved x = Just $ x { fieldBitWidth = 24 }
+
+    -- mantissa is dropped and div bellow covers both mantissa and fraction
+    fix "BRR" x | fieldName x == "DIV_Mantissa" = Nothing
+    fix "BRR" x | fieldName x == "DIV_Fraction" =
+      Just
+        $ x
+            { fieldBitWidth = 16
+            , fieldName = "div"
+            , fieldDescription = "divider"
+            }
+    fix "BRR" x | fieldReserved x = Just $ x { fieldBitWidth = 16 }
+
+    -- types
+    fix "CR1" x | fieldDescription x == "Word length" = Just $ x { fieldRegType = Just "UART_WordLen" }
+    fix "CR2" x | fieldDescription x == "STOP bits" = Just $ x { fieldRegType = Just "UART_StopBits" }
+    fix _ x = Just x
+
+adjustUARTV3Regs x = adjustRegFields fix x
+  where
     -- V3 UART only - normally this is 16 bits wide but LPUART uses 20
-    fix x | fieldName x == "BRR" = Just $ x { fieldBitWidth = 20, fieldName = "brr", fieldDescription = "brr divider" }
-    fix x | fieldDescription x == "Word length" = Just $ x { fieldRegType = Just "UART_WordLen" }
-    fix x | fieldDescription x == "STOP bits" = Just $ x { fieldRegType = Just "UART_StopBits" }
-    fix x = Just x
+    fix "BRR" x | fieldName x == "BRR" =
+      Just
+        $ x
+            { fieldBitWidth = 20
+            , fieldName = "brr"
+            , fieldDescription = "brr divider"
+            }
+    fix "BRR" x | fieldReserved x = Just $ x { fieldBitWidth = 12 }
+    fix _ x = Just x
 
 adjustGPIORegs x = adjustRegs rename $ adjustFields fix x
   where
@@ -278,8 +308,15 @@ adjustSPIRegs p = addDR16 . (adjustRegs makeDR8Bit) . adjustFields fix $ p
         addDR16 x = x { periphRegisters = periphRegisters x ++ [dr16Reg] }
         getDR = headNote "adjustSPIRegs getDR" . filter ((== "DR") . regName) $ periphRegisters p
         dr16Reg = getDR { regName = "DR16" , regDescription = "DR register with 16 bit DR field" }
-        makeDR8Bit reg | regName reg == "DR" = reg { regSize = 8 }
+        makeDR8Bit reg | regName reg == "DR" =
+          reg
+            { regSize = 8
+            , regFields = dropReserved (regFields reg)
+            }
         makeDR8Bit reg | otherwise = reg
+
+        dropReserved :: [Field] -> [Field]
+        dropReserved = filter (not . fieldReserved)
 
 renameDualSYSCFG x = adjustRegs fix x
   where fix x | "SYSCFG_" `L.isPrefixOf` (regName x) = x { regName = fromJust $ L.stripPrefix "SYSCFG_" $ regName x }

@@ -11,7 +11,8 @@ import qualified Data.Text as T
 import qualified Data.ByteString.Char8 as B
 import Data.Serialize
 
-import Data.SVD.Parse
+import Data.SVD.Dim (expandDevice)
+import Data.SVD.IO (parseSVD)
 import Data.SVD.Types
 
 -- parse SVD files into ("STM32F031x", Device {..} )
@@ -52,4 +53,4 @@ svd1 f = do
     Left e -> do
       die $ T.pack ("No parse of " ++ f ++ " error was " ++ e)
     Right x -> do
-      return (drop 5 $ deviceName x, x)
+      return (drop 5 $ deviceName x, expandDevice x)
