@@ -8,12 +8,14 @@
 stdenv.mkDerivation {
   name = "stm32-rs-svd-database";
 
-  # from svd branch, generated with gensvd
+  # until
+  # https://github.com/stm32-rs/stm32-rs/pull/941
+  # https://github.com/stm32-rs/stm32-rs/pull/947
   src = fetchFromGitHub {
-    owner = "stm32-rs";
+    owner = "sorki";
     repo = "stm32-rs";
-    rev = "957a00e67fba56a71b674c143fd0dc1e007dbbba";
-    sha256 = "08cl6aqq2ql5f9kgdpzpbyilphj56l7wnjb4di3ix8w48gz8sf97";
+    rev = "dbb6084d12930ecfd4f7ff338be6200d6e355dc9";
+    sha256 = "13079g2kmb3rcmy8gf8v1sr5x20fsfqnk3dqs9v6a6xs77g8v383";
   };
 
   buildInputs = [ python3 svdtools unzip ];
