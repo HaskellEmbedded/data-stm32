@@ -217,12 +217,15 @@ devFilter _ _ = error "Cannot use both include and exclude"
 filteredDevs ::  MonadGen ([(String, MCU)])
 filteredDevs = do
   db <- ask
-  return $ filter (devFilter (opts db) . fst) $ M.toList $ M.mapKeys shortName $ nameMapped db
+  pure
+    $ filter ((\d -> not $ elem d deviceIgnoresShortNames) . fst)
+    $ filter (devFilter (opts db) . fst)
+    $ M.toList
+    $ M.mapKeys shortName
+    $ nameMapped db
 
 filteredShortNames ::  MonadGen ([String])
-filteredShortNames = do
-  db <- ask
-  return $ filter (devFilter (opts db)) $ shortDevNames db
+filteredShortNames = map fst <$> filteredDevs
 
 peripheralByGroupName :: Device -> Periph -> Maybe Peripheral
 peripheralByGroupName svd periph = peripheralBy svd periph periphGroupName

@@ -68,6 +68,14 @@ supportedFamilies =
   , L4Plus
   ]
 
+-- | Always ignore some problematic devices
+deviceIgnoresShortNames :: [String]
+deviceIgnoresShortNames = [
+    "G061"
+  , "L4Q5"
+  , "L4P5"
+  ]
+
 -- | Convert STM32xyz to just @Family@
 nameToFamily :: String -> Family
 nameToFamily n =
