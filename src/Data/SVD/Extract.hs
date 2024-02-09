@@ -12,7 +12,7 @@ import qualified Data.ByteString.Char8 as B
 import Data.Serialize
 
 import Data.SVD.Dim (expandDevice)
-import Data.SVD.IO (parseSVD)
+import qualified Data.SVD.IO
 import Data.SVD.Types
 
 -- parse SVD files into ("STM32F031x", Device {..} )
@@ -36,7 +36,7 @@ extractSVDCached dbPath = do
 
       cd dbPath
       cd "svds/stm"
-      svdxmls <- fold (onFiles (grepText (prefix "./STM32" <> suffix ".svd")) (ls ".")) Fold.list
+      svdxmls <- fold (onFiles (grepText (prefix "./stm32" <> suffix ".svd")) (ls ".")) Fold.list
       svds <- mapM (svd1 . T.unpack . format fp) svdxmls
 
       cd dir
@@ -48,9 +48,9 @@ extractSVDCached dbPath = do
 
 svd1 :: String -> IO (String, Device)
 svd1 f = do
-  res <- parseSVD f
+  res <- Data.SVD.IO.parseSVD f
   case res of
     Left e -> do
       die $ T.pack ("No parse of " ++ f ++ " error was " ++ e)
     Right x -> do
-      return (drop 5 $ deviceName x, expandDevice x)
+      return (drop 5 $ deviceName x, x)
