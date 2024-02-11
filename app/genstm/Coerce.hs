@@ -63,6 +63,7 @@ adjustFieldsByRegName targetRegName fn x@Peripheral{..} = adjustRegs adj x
     adj reg@Register{..} | regName == targetRegName = reg { regFields = mapMaybe fn regFields }
     adj reg@Register{..} | otherwise = reg
 
+filterByPeriph ADC _ = adjustADCRegs
 filterByPeriph GPIO (Just 1) = renameGPIO . adjustGPIOF1Regs
 filterByPeriph GPIO (Just 2) = renameGPIO . adjustGPIORegs
 filterByPeriph CAN  _        = adjustCANRegs
@@ -204,6 +205,12 @@ firx32 = makeReg "FiRx32" [
   , ("reserved",  1)
   ]
 
+
+-- ADC
+adjustADCRegs = adjustRegFields fix
+  where
+    fix "CR1" x | fieldName x == "RES" = Just $ x { fieldRegType = Just "ADCResolution" }
+    fix _ x = Just x
 
 -- UART
 adjustUARTRegs x = adjustRegFields fix x

@@ -252,6 +252,7 @@ periphInstancesData periph mcu = do
 
     isrsForPeriph idStr = filter (\Interrupt{..} ->
       case periph of
+        ADC -> "ADC" == interruptName
         CAN -> case mcuFamily mcu of
           F0 -> "CEC_CAN" == interruptName
           _  ->    (pName idStr) `L.isPrefixOf` interruptName
@@ -280,6 +281,7 @@ periphInstancesData periph mcu = do
                   Right (start, end) -> Right (start, end, i)
                ) is
 
+validISRCount ADC = 1
 validISRCount UART = 1
 validISRCount USART = 1
 validISRCount LPUART = 1

@@ -107,6 +107,9 @@ driverMapping = [
 
   , DriverInfo AFIO Nothing (ByFam F1)
       [ ByFam F1 ] NoRegTypes NoDriver
+
+  , DriverInfo ADC Nothing (ByIP "aditf2_v1_1")
+      [] CommonRegTypes NoDriver
   ]
 
 -- | List of drivers for specific @Periph@
