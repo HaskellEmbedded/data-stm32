@@ -1,11 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 module {{ modns }} ({{#instances}}{{ name }}{{/instances}}) where
 
-import Ivory.Language
-import Ivory.HW
-import Ivory.HW.BitData
-import Ivory.HW.Reg
-
 import Ivory.BSP.STM32{{ dev }}.MemoryMap
 import qualified Ivory.BSP.STM32{{ dev }}.Interrupt as {{ dev }}
 
