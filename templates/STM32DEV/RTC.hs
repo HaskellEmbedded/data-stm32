@@ -9,7 +9,8 @@ import Ivory.HW
 
 import Ivory.BSP.STM32{{ dev }}.RCC
 import Ivory.BSP.STM32{{ dev }}.MemoryMap
-import qualified Ivory.BSP.STM32{{ dev }}.Interrupt as {{ dev }}
+-- we don't use RTC interrupts for now
+--import qualified Ivory.BSP.STM32{{ dev }}.Interrupt as {{ dev }}
 
 import Ivory.BSP.STM32.Peripheral.RTC
 

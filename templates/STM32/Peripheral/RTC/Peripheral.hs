@@ -9,7 +9,7 @@ import Ivory.Language
 
 import Ivory.HW
 
-import Ivory.BSP.STM32.Interrupt
+--import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Peripheral.{{ type }}.Regs
 
 -- Convenience type synonyms
