@@ -110,6 +110,20 @@ driverMapping = [
 
   , DriverInfo ADC Nothing (ByIP "aditf2_v1_1")
       [] CommonRegTypes NoDriver
+
+  , DriverInfo DMA Nothing (ByDev "F765")
+      [ ByIP "STM32F401_dma_v2_0"
+      , ByIP "STM32F410_dma_v2_0"
+      , ByIP "STM32F411_dma_v2_0"
+      , ByIP "STM32F412_dma_v2_0"
+      , ByIP "STM32F413_dma_v2_0"
+      , ByIP "STM32F417_dma_v2_0"
+      , ByIP "STM32F427_dma_v2_0"
+      , ByIP "STM32F446_dma_v2_0"
+      , ByIP "STM32F469_dma_v2_0"
+      , ByIP "STM32F722_dma_v2_0"
+      , ByIP "STM32F777_dma_v2_0"
+      ] CommonRegTypes CommonDriver
   ]
 
 -- | List of drivers for specific @Periph@

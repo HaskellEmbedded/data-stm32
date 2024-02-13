@@ -459,7 +459,8 @@ genPeriphTree target p di svdPeriph = do
       ctx = RegsCtx { imports = regTypesImports
                     , regs = T.pack res }
 
-  template ctx ns "STM32/Peripheral/X/Regs.hs"
+  unless (p == DMA) $ -- skipping regs templating should be part of DriverInfo
+    template ctx ns "STM32/Peripheral/X/Regs.hs"
 
   -- Peripheral
   let ns = target <> "." <> nameVersion <> ".Peripheral"
