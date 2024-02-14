@@ -54,7 +54,7 @@ library
     , bytestring
     , cereal
     , data-default-class
-    , data-svd
+    , data-svd >= 0.1.2
     -- (not-so) temporary
     , ghcid
     , Diff
