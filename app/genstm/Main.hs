@@ -9,6 +9,7 @@ import Prelude hiding (log, FilePath)
 import Control.Monad
 import qualified Control.Foldl as Fold
 import Data.Char (toUpper)
+import qualified Data.List.NonEmpty
 import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
@@ -46,6 +47,7 @@ import Contexts
 import Extract
 import Template
 import MakePeriph
+import MakeDMAUART
 import Types
 import Utils
 
@@ -208,6 +210,22 @@ stm32devs = do
             template ctx
               (T.concat ["STM32", (T.pack $ dev ctx), ".", pName])
               (T.concat ["STM32DEV/", pName, ".hs"])
+
+    -- DMA U(S)ARTs for F4/F7s
+    when (mcuFamily mcu == F4 || mcuFamily mcu == F7) $ do
+      forM_ [ UART, USART ] $ \up -> do
+        let
+          pName = tshow up
+
+        uartsCtx <- makePeriphContext up mcu
+        case uartsCtx of
+          Nothing -> pure ()
+          Just ctx ->
+            template
+              (fromInstancesCtx pName ctx)
+              (T.concat ["STM32", (T.pack $ dev ctx), ".", pName, ".DMA"])
+              --(T.concat ["STM32DEV/", pName, ".hs"])
+              (T.concat ["STM32DEV/UART/DMA.hs"])
 
     let ns = "STM32" <> (T.pack name) <> ".Clock"
         clks = mcuClocks mcu

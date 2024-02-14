@@ -77,6 +77,7 @@ executable genstm
       Coerce
       Contexts
       Extract
+      MakeDMAUART
       MakePeriph
       Utils
       Types
