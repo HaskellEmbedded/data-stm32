@@ -15,10 +15,14 @@ import Ivory.BSP.STM32.Peripheral.ADC
 
 {{#instances}}
 {{ name }} :: ADC
-{{ name }} = mkADC {{ name }}_periph_base
-          rccenable rccdisable
-         {{#interrupts}} {{ dev }}.{{.}}{{/interrupts}}
-          "{{ name }}"
+{{ name }} =
+  mkADC
+    {{ name }}_periph_base
+    adc1_periph_base
+    rccenable
+    rccdisable
+    {{#interrupts}} {{ dev }}.{{.}}{{/interrupts}}
+    "{{ name }}"
   where
   rccenable  = modifyReg rcc_reg_{{ rccEnableReg }} $ setBit   rcc_{{ rccEnableReg }}_{{ rccEnableBit }}
   rccdisable = modifyReg rcc_reg_{{ rccEnableReg }} $ clearBit rcc_{{ rccEnableReg }}_{{ rccEnableBit }}

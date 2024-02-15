@@ -210,6 +210,10 @@ firx32 = makeReg "FiRx32" [
 adjustADCRegs = adjustRegFields fix
   where
     fix "CR1" x | fieldName x == "RES" = Just $ x { fieldRegType = Just "ADCResolution" }
+    fix "CR2" x | fieldName x `elem` [ "EXTEN", "JEXTEN" ] = Just $ x { fieldRegType = Just "ADCExtEn" }
+    fix "CR2" x | fieldName x == "EXTSEL" = Just $ x { fieldRegType = Just "ADCExtSel" }
+    fix "CR2" x | fieldName x == "JEXTSEL" = Just $ x { fieldRegType = Just "ADCJExtSel" }
+    fix "JSQR" x | fieldName x == "JL" = Just $ x { fieldRegType = Just "ADCJL" }
     fix _ x = Just x
 
 -- UART
