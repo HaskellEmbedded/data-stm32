@@ -316,6 +316,17 @@ stm32periphs = do
     "STM32.Peripheral.RCC.RegTypes"
     "STM32/Peripheral/RCC/RegTypes.hs"
 
+  -- Timers (ATIM, GTIM) common for all devs (hopefully)
+  -- no templating here
+  forM_ ["ATIM", "GTIM"] $ \tim -> do
+    tPath <- getTemplatesPath
+    cptree
+      (T.unpack $ tPath <> "/STM32/Peripheral/" <> tim)
+      (T.unpack $ "./src/Ivory/BSP/STM32/Peripheral/" <> tim)
+    template'
+      ("STM32.Peripheral." <> tim)
+      ("STM32/Peripheral/" <> tim <> ".hs")
+
 stm32modes :: MonadGen ()
 stm32modes = do
   DB{..} <- ask
