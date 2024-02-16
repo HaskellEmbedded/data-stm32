@@ -6,6 +6,7 @@ data Periph =
   | AFIO -- F1 alternate function controls / remapping, proly good idea to turn it on
   | ATIM
   | GTIM
+  | TIM
   | CAN
   | CEC
   | CRC

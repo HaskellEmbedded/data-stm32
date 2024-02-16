@@ -211,6 +211,19 @@ stm32devs = do
               (T.concat ["STM32", (T.pack $ dev ctx), ".", pName])
               (T.concat ["STM32DEV/", pName, ".hs"])
 
+    -- ATIM/GTIM
+    forM_ [ ATIM, GTIM ] $ \tim -> do
+      timInst <- timerInstancesData tim mcu
+      template
+        (TimersCtx
+          { timDev = name
+          , timInstances = timInst
+          , timInstances32Bit = filter (\TimerInstanceCtx{..} -> timIndex `elem` [2, 5]) timInst
+          }
+        )
+        (T.concat ["STM32", (T.pack name), ".", tshow tim])
+        (T.concat ["STM32DEV/", tshow tim, ".hs"])
+
     -- DMA U(S)ARTs for F4/F7s
     when (mcuFamily mcu == F4 || mcuFamily mcu == F7) $ do
       forM_ [ UART, USART ] $ \up -> do

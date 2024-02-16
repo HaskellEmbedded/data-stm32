@@ -16,6 +16,7 @@ import Data.Char (toLower, toUpper, isDigit)
 import Data.Data (Data, Typeable)
 import Data.List.NonEmpty (NonEmpty)
 
+import qualified Data.List
 import qualified Data.List as L
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
@@ -326,3 +327,122 @@ extiRangeParser = do
   start <- option end $ char '_' *> decimal
   -- correction for EXTI9_5, start is always lower
   return (min start end, max start end)
+
+-- * Timers
+
+data TimersCtx = TimersCtx {
+    timDev       :: String
+  , timInstances :: [TimerInstanceCtx]
+  , timInstances32Bit :: [TimerInstanceCtx]
+  } deriving (Show, Data, Typeable)
+
+instance ToMustache TimersCtx where
+  toMustache x = object
+    [ "dev" ~> timDev x
+    , "instances" ~> timInstances x
+    , "instances32bit" ~> timInstances32Bit x
+    ]
+
+data TimerInstanceCtx = TimerInstanceCtx {
+    timName           :: String
+  , timRccEnableReg   :: String
+  , timRccEnableBit   :: String
+  , timRccResetReg    :: String
+  , timRccResetBit    :: String
+  , timIndex          :: Int
+  } deriving (Show, Data, Typeable)
+
+instance ToMustache TimerInstanceCtx where
+  toMustache x = object
+    [ "name" ~> timName x
+    , "rccEnableReg" ~> timRccEnableReg x
+    , "rccEnableBit" ~> timRccEnableBit x
+    , "rccResetReg" ~> timRccResetReg x
+    , "rccResetBit" ~> timRccResetBit x
+    , "index" ~> timIndex x
+    ]
+
+-- Timers
+timerInstancesData
+  :: Periph
+  -> MCU
+  -> MonadGen [TimerInstanceCtx]
+timerInstancesData periph mcu = do
+  rcc <- processedPeriph RCC mcu
+  -- ATIM 1, 8, 20
+  -- GTIM all others, 2, 5 are 32-bit
+  timsRCC <- timerInstancesRCC TIM mcu
+  timsSVD <- timerInstancesSVD TIM mcu
+  let
+    -- needs to be interesected as some present
+    -- in RCC are missing in SVD (and thus memMap)
+    tims = timsRCC `Data.List.intersect` timsSVD
+    atimIndexes = [1, 8, 20]
+    groupedTims = case periph of
+      ATIM -> filter (`elem` atimIndexes) tims
+      GTIM -> filter (not . flip elem atimIndexes) tims
+  pure $ map (mkData rcc) groupedTims
+  where
+    pName idStr = concat [show periph, idStr]
+    rccEn idStr rcc = either (pure ("404", def)) id $ findRCCBit TIM idStr "EN" rcc
+    rccRst idStr rcc = either (pure ("404", def)) id $ findRCCBit TIM idStr "RST" rcc
+    lower = map toLower
+    mkData rcc timId =
+      TimerInstanceCtx
+        { timName           = lower $ pName idStr
+        , timRccEnableReg   = lower $ fst $ rccEn idStr rcc
+        , timRccEnableBit   = lower $ fieldName $ snd $ rccEn idStr rcc
+        , timRccResetReg    = lower $ fst $ rccRst idStr rcc
+        , timRccResetBit    = lower $ fieldName $ snd $ rccRst idStr rcc
+        , timIndex          = timId
+        }
+      where idStr = show timId
+
+-- | Get timer instances based on matching RCC fields
+timerInstancesRCC
+  :: Periph
+  -> MCU
+  -> MonadGen [Int]
+timerInstancesRCC periph mcu = do
+  rcc <- processedPeriph RCC mcu
+  return
+    $ Data.List.sort
+    $ map
+        (\Field{..} ->
+          readNote "timeInstancesRCC"
+          $ Data.List.takeWhile Data.Char.isDigit
+          $ fromJust
+          $ L.stripPrefix pName
+          $ fieldName
+        )
+    $ concatMap (\(r, fs) -> fs)
+    $ filterRegFields
+        (\Field{..} ->
+             pName `L.isPrefixOf` fieldName
+          && "EN" `L.isSuffixOf` fieldName
+          && (not $ "SMEN" `L.isSuffixOf` fieldName)
+          && (not $ "LPEN" `L.isSuffixOf` fieldName)
+        )
+        (periphRegisters rcc)
+  where
+    pName = show periph
+
+-- | Get timer instances according to SVD
+timerInstancesSVD
+  :: Periph
+  -> MCU
+  -> MonadGen [Int]
+timerInstancesSVD p mcu = do
+  mm <- memMap mcu
+  pure
+    $ Data.List.sort
+    $ rights
+    $ map
+       (parseOnly
+         (string (B.pack $ show p)
+         *> decimal
+         <* endOfInput
+         )
+       . B.pack
+       . snd
+       ) mm
