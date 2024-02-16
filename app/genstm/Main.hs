@@ -212,17 +212,19 @@ stm32devs = do
               (T.concat ["STM32DEV/", pName, ".hs"])
 
     -- ATIM/GTIM
-    forM_ [ ATIM, GTIM ] $ \tim -> do
+    hasTims <- forM [ ATIM, GTIM ] $ \tim -> do
       timInst <- timerInstancesData tim mcu
-      template
-        (TimersCtx
-          { timDev = name
-          , timInstances = timInst
-          , timInstances32Bit = filter (\TimerInstanceCtx{..} -> timIndex `elem` [2, 5]) timInst
-          }
-        )
-        (T.concat ["STM32", (T.pack name), ".", tshow tim])
-        (T.concat ["STM32DEV/", tshow tim, ".hs"])
+      unless (null timInst) $ do
+        template
+          (TimersCtx
+            { timDev = name
+            , timInstances = timInst
+            , timInstances32Bit = filter (\TimerInstanceCtx{..} -> timIndex `elem` [2, 5]) timInst
+            }
+          )
+          (T.concat ["STM32", (T.pack name), ".", tshow tim])
+          (T.concat ["STM32DEV/", tshow tim, ".hs"])
+      pure $ not $ null timInst
 
     -- DMA U(S)ARTs for F4/F7s
     when (mcuFamily mcu == F4 || mcuFamily mcu == F7) $ do
@@ -261,8 +263,18 @@ stm32devs = do
         (\periph -> isJust <$> makePeriphContext periph mcu)
         sup
     let
-        imports = map show sup'
-        ctx = ImportsCtx name imports
+      imports =
+        map show sup'
+        ++ (
+           if (mcuFamily mcu == F4 || mcuFamily mcu == F7)
+           then [ "UART.DMA", "USART.DMA" ]
+           else mempty
+           )
+        ++ case hasTims of
+            [True, True] -> [ "ATIM", "GTIM" ]
+            [False, True] -> pure "GTIM"
+            [True, False] -> pure "ATIM"
+      ctx = ImportsCtx name imports
     template ctx ns "STM32DEV.hs"
 
 -- generate peripheral definitions (src/Ivory/BSP/STM32/Peripheral/
