@@ -8,17 +8,13 @@ module {{ modns }}
 {{#instances32bit}}
   , tim{{ index }}_32
 {{/instances32bit}}
-  , module Ivory.BSP.STM32.Peripheral.GTIM.Regs
-  , module Ivory.BSP.STM32.Peripheral.GTIM.RegTypes
   ) where
 
-import Ivory.BSP.STM32.Peripheral.GTIM.Peripheral
-import Ivory.BSP.STM32.Peripheral.GTIM.Regs
-import Ivory.BSP.STM32.Peripheral.GTIM.RegTypes
 
 import Ivory.Language
 import Ivory.HW
 
+import Ivory.BSP.STM32.Peripheral.GTIM.Peripheral
 import Ivory.BSP.STM32{{ dev }}.RCC
 import Ivory.BSP.STM32{{ dev }}.MemoryMap
 
