@@ -367,7 +367,7 @@ bdr_reg_addr :: BitDataReg a -> Uint32
 bdr_reg_addr = fromInteger . unReg . bdr_reg
   where unReg (Reg a) = a
 
-ref_to_uint32_proc :: Def('[Ref s ('Stored Uint8)] ':-> Uint32)
+ref_to_uint32_proc :: Def('[Ref s ('Stored Uint8)] :-> Uint32)
 ref_to_uint32_proc = importProc "ref_to_uint32" dmaRefToUint32Header
 
 

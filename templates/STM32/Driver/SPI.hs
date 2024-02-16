@@ -155,7 +155,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
         ]
       interrupt_enable interrupt
 
-  let deviceBeginProc :: SPIDevice -> Def('[]':->())
+  let deviceBeginProc :: SPIDevice -> Def('[]:->())
       deviceBeginProc dev = proc ((spiDevName dev) ++ "_devicebegin") $
         body $ do
           spiBusBegin clockconfig dev

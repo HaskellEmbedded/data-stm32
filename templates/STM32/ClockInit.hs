@@ -13,7 +13,7 @@ import Data.STM32
 import qualified Ivory.BSP.STM32{{.}}.ClockInit as {{.}}
 {{/families}}
 
-init_clocks :: Family -> ClockConfig -> Def('[]':->())
+init_clocks :: Family -> ClockConfig -> Def('[]:->())
 {{#families}}
 init_clocks {{.}} = {{.}}.init_clocks
 {{/families}}

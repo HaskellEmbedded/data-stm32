@@ -34,26 +34,26 @@ instrArtifacts :: [ Located Artifact ]
 instrArtifacts = [ Incl $ artifactCabalFile P.getDataDir ("support/" ++ header) ]
 
 -- | Debug breakpoint (as used by assert)
-bkpt :: Def ('[] ':-> ())
+bkpt :: Def ('[] :-> ())
 bkpt = importProc "bkpt" header
 
 -- | Data synchronization barrier
-dsb :: Def ('[] ':-> ())
+dsb :: Def ('[] :-> ())
 dsb = importProc "dsb" header
 
 -- | Instruction synchronization barrier (pipeline flush)
-isb :: Def ('[] ':-> ())
+isb :: Def ('[] :-> ())
 isb = importProc "isb" header
 
 -- | Signal event to all cores in multiprocessor system
-sev :: Def ('[] ':-> ())
+sev :: Def ('[] :-> ())
 sev = importProc "sev" header
 
 -- | Wait for interrupt or external event
 -- signaled by another processor
-wfe :: Def ('[] ':-> ())
+wfe :: Def ('[] :-> ())
 wfe = importProc "wfe" header
 
 -- | Wait for interrupt
-wfi :: Def ('[] ':-> ())
+wfi :: Def ('[] :-> ())
 wfi = importProc "wfi" header
