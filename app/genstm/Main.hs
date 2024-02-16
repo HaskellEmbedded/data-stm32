@@ -227,20 +227,24 @@ stm32devs = do
       pure $ not $ null timInst
 
     -- DMA U(S)ARTs for F4/F7s
-    when (mcuFamily mcu == F4 || mcuFamily mcu == F7) $ do
-      forM_ [ UART, USART ] $ \up -> do
-        let
-          pName = tshow up
+    hasDmaUarts <- forM [ UART, USART ] $ \up -> do
+        case mcuFamily mcu of
+          fam | fam `elem` [F4, F7] -> do
+            let
+              pName = tshow up
 
-        uartsCtx <- makePeriphContext up mcu
-        case uartsCtx of
-          Nothing -> pure ()
-          Just ctx ->
-            template
-              (fromInstancesCtx pName ctx)
-              (T.concat ["STM32", (T.pack $ dev ctx), ".", pName, ".DMA"])
-              --(T.concat ["STM32DEV/", pName, ".hs"])
-              (T.concat ["STM32DEV/UART/DMA.hs"])
+            uartsCtx <- makePeriphContext up mcu
+            case uartsCtx of
+              Nothing -> pure False
+              Just ctx -> do
+                template
+                  (fromInstancesCtx pName ctx)
+                  (T.concat ["STM32", (T.pack $ dev ctx), ".", pName, ".DMA"])
+                  --(T.concat ["STM32DEV/", pName, ".hs"])
+                  (T.concat ["STM32DEV/UART/DMA.hs"])
+                pure True
+
+          otherwise -> pure False
 
     let ns = "STM32" <> (T.pack name) <> ".Clock"
         clks = mcuClocks mcu
@@ -265,15 +269,16 @@ stm32devs = do
     let
       imports =
         map show sup'
-        ++ (
-           if (mcuFamily mcu == F4 || mcuFamily mcu == F7)
-           then [ "UART.DMA", "USART.DMA" ]
-           else mempty
-           )
+        ++ case hasDmaUarts of
+            [True, True] -> [ "UART.DMA", "USART.DMA" ]
+            [False, True] -> pure "USART.DMA"
+            [True, False] -> pure "UART.DMA"
+            _ -> mempty
         ++ case hasTims of
             [True, True] -> [ "ATIM", "GTIM" ]
             [False, True] -> pure "GTIM"
             [True, False] -> pure "ATIM"
+            _ -> mempty
       ctx = ImportsCtx name imports
     template ctx ns "STM32DEV.hs"
 
