@@ -34,6 +34,7 @@ data ATIM = ATIM
   , atimRegCNT          :: BitDataReg ATIM_16
   , atimRegPSC          :: BitDataReg ATIM_PSC
   , atimRegARR          :: BitDataReg ATIM_16
+  , atimRegRCR          :: BitDataReg ATIM_RCR
   , atimRegCCR1         :: BitDataReg ATIM_16
   , atimRegCCR2         :: BitDataReg ATIM_16
   , atimRegCCR3         :: BitDataReg ATIM_16
@@ -65,6 +66,7 @@ mkATIM base rccen rccdis n =
     , atimRegCNT         = reg 0x24 "cnt"
     , atimRegPSC         = reg 0x28 "psc"
     , atimRegARR         = reg 0x2C "arr"
+    , atimRegRCR         = reg 0x30 "rcr"
     , atimRegCCR1        = reg 0x34 "ccr1"
     , atimRegCCR2        = reg 0x38 "ccr2"
     , atimRegCCR3        = reg 0x3C "ccr3"
