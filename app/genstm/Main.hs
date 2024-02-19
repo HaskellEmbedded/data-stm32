@@ -58,7 +58,7 @@ main = do
 
   here <- pwd
   cd "data"
-  dir <- pwd
+  dataDir <- pwd
 
   hasGarbage <- testdir "src"
   when hasGarbage $ do
@@ -68,7 +68,8 @@ main = do
   mktree "src"
   mktree "support"
 
-  tPath <- runGen $ do
+  -- generated stuff
+  runGen $ do
     dbStats
     stm32toplevel
     stm32periphs
@@ -77,11 +78,10 @@ main = do
     stm32families
     readme
 
-    getTemplatesPath
-
-  -- cabal file and support files
-  cd dir
-  mods <- prefixRest
+    -- cabal file
+    liftIO $ cd dataDir
+    mods <- liftIO
+        $ prefixRest
         . L.sort
         . map (T.replace ".hs" ""
               . T.replace "/" "."
@@ -89,13 +89,13 @@ main = do
               . fpToText)
       <$> fold (find (suffix ".hs") "./src/") Fold.list
 
-  r <- runGen
-         $ templateRaw
-             (listCtx [("exposed", T.intercalate ",\n" mods)])
-             "ivory-bsp-stm32.cabal_template"
-  liftIO $ TIO.writeFile "ivory-bsp-stm32.cabal" r
+    r <- templateRaw
+           (listCtx [("exposed", T.intercalate ",\n" mods)])
+           "ivory-bsp-stm32.cabal_template"
+    liftIO $ TIO.writeFile "ivory-bsp-stm32.cabal" r
 
-  cptree (T.unpack $ tPath <> "/support") "support"
+    tPath <- getTemplatesPath
+    liftIO $ cptree (T.unpack $ tPath <> "/support") "support"
 
   cd here
   where
