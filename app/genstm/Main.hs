@@ -241,7 +241,6 @@ stm32devs = do
                 template
                   (fromInstancesCtx pName ctx)
                   (T.concat ["STM32", (T.pack $ dev ctx), ".", pName, ".DMA"])
-                  --(T.concat ["STM32DEV/", pName, ".hs"])
                   (T.concat ["STM32DEV/UART/DMA.hs"])
                 pure True
 
