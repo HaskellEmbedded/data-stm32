@@ -58,17 +58,18 @@ data CANPeriph = CANPeriph
   , canName        :: String
   }
 
-mkCANPeriph :: (STM32Interrupt i)
-            => Integer -- Base
-            -> (forall eff . Ivory eff ()) -- RCC Enable
-            -> (forall eff . Ivory eff ()) -- RCC Disable
-            -> i -- transmit interrupt
-            -> i -- receive FIFO 0 interrupt
-            -> i -- receive FIFO 1 interrupt
-            -> i -- error/status change interrupt
-            -> (GPIOPin -> GPIO_AF) -- Alternate Function (AF) lookup
-            -> String -- Name
-            -> CANPeriph
+mkCANPeriph
+  :: (STM32Interrupt i)
+  => Integer -- Base
+  -> (forall eff . Ivory eff ()) -- RCC Enable
+  -> (forall eff . Ivory eff ()) -- RCC Disable
+  -> i -- transmit interrupt
+  -> i -- receive FIFO 0 interrupt
+  -> i -- receive FIFO 1 interrupt
+  -> i -- error/status change interrupt
+  -> (GPIOPin -> GPIO_AF) -- Alternate Function (AF) lookup
+  -> String -- Name
+  -> CANPeriph
 mkCANPeriph base rccen rccdis txint rx0int rx1int sceint afLookup n =
   CANPeriph
     { canRegMCR      = reg 0x000 "mcr"

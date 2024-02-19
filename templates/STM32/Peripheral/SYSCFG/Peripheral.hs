@@ -19,15 +19,16 @@ data {{ type }} = {{ type }}
   }
 
 -- | Create SYSCFG given the base register address.
-mk{{ type }}  :: Integer
-       -> (forall eff . Ivory eff ())
-       -> (forall eff . Ivory eff ())
-       -> {{ type }}
+mk{{ type }}
+  :: Integer
+  -> (forall eff . Ivory eff ())
+  -> (forall eff . Ivory eff ())
+  -> {{ type }}
 mk{{ type }} base rccen rccdis = {{ type }}
 {{{ bitDataRegsMk }}}
-    , syscfgRCCEnable      = rccen
-    , syscfgRCCDisable     = rccdis
-    }
+  , syscfgRCCEnable      = rccen
+  , syscfgRCCDisable     = rccdis
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) ("syscfg->" ++ name)

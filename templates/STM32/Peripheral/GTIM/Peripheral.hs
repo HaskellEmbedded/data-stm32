@@ -46,35 +46,36 @@ data GTIM a = GTIM
   }
 
 -- | Create a GPIO port given the base register address.
-mkGTIM :: (IvoryIOReg (BitDataRep a))
-       => Integer -- Base Addr
-       -> (forall eff . Ivory eff ()) -- RCC Enable
-       -> (forall eff . Ivory eff ()) -- RCC Disable
-       -> String
-       -> GTIM a
+mkGTIM
+  :: (IvoryIOReg (BitDataRep a))
+  => Integer -- Base Addr
+  -> (forall eff . Ivory eff ()) -- RCC Enable
+  -> (forall eff . Ivory eff ()) -- RCC Disable
+  -> String
+  -> GTIM a
 mkGTIM base rccen rccdis n =
   GTIM
-    { gtimRegCR1         = reg 0x00 "cr1"
-    , gtimRegCR2         = reg 0x04 "cr2"
-    , gtimRegSMCR        = reg 0x08 "smcr"
-    , gtimRegDIER        = reg 0x0C "dier"
-    , gtimRegSR          = reg 0x10 "sr"
-    , gtimRegEGR         = reg 0x14 "egr"
-    , gtimRegCCMR1_OCM   = reg 0x18 "ccmr1_ocm" -- aliased with icm
-    , gtimRegCCMR1_ICM   = reg 0x18 "ccmr1_icm"
-    , gtimRegCCMR2_OCM   = reg 0x1C "ccmr2_ocm" -- aliased with icm
-    , gtimRegCCMR2_ICM   = reg 0x1C "ccmr2_icm"
-    , gtimRegCCER        = reg 0x20 "ccer"
-    , gtimRegCNT         = reg 0x24 "cnt"
-    , gtimRegPSC         = reg 0x28 "psc"
-    , gtimRegARR         = reg 0x2C "arr"
-    , gtimRegCCR1        = reg 0x34 "ccr1"
-    , gtimRegCCR2        = reg 0x38 "ccr2"
-    , gtimRegCCR3        = reg 0x3C "ccr3"
-    , gtimRegCCR4        = reg 0x40 "ccr4"
-    , gtimRCCEnable      = rccen
-    , gtimRCCDisable     = rccdis
-    }
+  { gtimRegCR1         = reg 0x00 "cr1"
+  , gtimRegCR2         = reg 0x04 "cr2"
+  , gtimRegSMCR        = reg 0x08 "smcr"
+  , gtimRegDIER        = reg 0x0C "dier"
+  , gtimRegSR          = reg 0x10 "sr"
+  , gtimRegEGR         = reg 0x14 "egr"
+  , gtimRegCCMR1_OCM   = reg 0x18 "ccmr1_ocm" -- aliased with icm
+  , gtimRegCCMR1_ICM   = reg 0x18 "ccmr1_icm"
+  , gtimRegCCMR2_OCM   = reg 0x1C "ccmr2_ocm" -- aliased with icm
+  , gtimRegCCMR2_ICM   = reg 0x1C "ccmr2_icm"
+  , gtimRegCCER        = reg 0x20 "ccer"
+  , gtimRegCNT         = reg 0x24 "cnt"
+  , gtimRegPSC         = reg 0x28 "psc"
+  , gtimRegARR         = reg 0x2C "arr"
+  , gtimRegCCR1        = reg 0x34 "ccr1"
+  , gtimRegCCR2        = reg 0x38 "ccr2"
+  , gtimRegCCR3        = reg 0x3C "ccr3"
+  , gtimRegCCR4        = reg 0x40 "ccr4"
+  , gtimRCCEnable      = rccen
+  , gtimRCCDisable     = rccdis
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)

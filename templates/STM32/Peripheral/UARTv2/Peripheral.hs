@@ -11,9 +11,8 @@
 
 module {{ modns }} where
 
-import Ivory.Language
-
 import Ivory.HW
+import Ivory.Language
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
@@ -33,15 +32,16 @@ data {{ type }} = {{ type }}
   , uartName       :: String
   }
 
-mk{{ type }} :: (STM32Interrupt i)
-       => Integer
-       -> (forall eff . Ivory eff ())
-       -> (forall eff . Ivory eff ())
-       -> i
-       -> PClk
-       -> (GPIOPin -> GPIO_AF)
-       -> String
-       -> {{ type }}
+mk{{ type }}
+  :: (STM32Interrupt i)
+  => Integer
+  -> (forall eff . Ivory eff ())
+  -> (forall eff . Ivory eff ())
+  -> i
+  -> PClk
+  -> (GPIOPin -> GPIO_AF)
+  -> String
+  -> {{ type }}
 mk{{ type }} base rccen rccdis interrupt pclk afLookup n = {{ type }}
 {{{ bitDataRegsMk }}}
   , uartRCCEnable  = rccen

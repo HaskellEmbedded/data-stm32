@@ -26,36 +26,37 @@ data {{ type }} = {{ type }}
 
 -- | Create ADC given the base register address, global interrupt and its name
 mk{{ type }}
-       :: (STM32Interrupt i)
-       => Integer -- ^ Base
-       -> Integer -- ^ Base for common status, control, data registers
-       -> (forall eff . Ivory eff ()) -- ^ RCC Enable
-       -> (forall eff . Ivory eff ()) -- ^ RCC Disable
-       -> i -- ^ global adc interrupt. NB: shared with other adc periphs!
-       -> String -- ^ Name
-       -> {{ type }}
+  :: (STM32Interrupt i)
+  => Integer -- ^ Base
+  -> Integer -- ^ Base for common status, control, data registers
+  -> (forall eff . Ivory eff ()) -- ^ RCC Enable
+  -> (forall eff . Ivory eff ()) -- ^ RCC Disable
+  -> i -- ^ global adc interrupt. NB: shared with other adc periphs!
+  -> String -- ^ Name
+  -> {{ type }}
 mk{{ type }} base commonBase rccen rccdis int n = {{ type }}
 {{{ bitDataRegsMk }}}
-    -- common status and control registers
-    -- offset: ADC1 base address + 0x300
-    , adcRegCSR     = commonReg 0x300 "csr"
-    , adcRegCCR     = commonReg 0x304 "ccr"
-    , adcRegCDR     = commonReg 0x308 "cdr"
-    , adcRCCEnable  = rccen
-    , adcRCCDisable = rccdis
-    , adcInt        = HasSTM32Interrupt int
-    , adcName       = n
-    }
+  -- common status and control registers
+  -- offset: ADC1 base address + 0x300
+  , adcRegCSR     = commonReg 0x300 "csr"
+  , adcRegCCR     = commonReg 0x304 "ccr"
+  , adcRegCDR     = commonReg 0x308 "cdr"
+  , adcRCCEnable  = rccen
+  , adcRCCDisable = rccdis
+  , adcInt        = HasSTM32Interrupt int
+  , adcName       = n
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
   commonReg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   commonReg offs name = mkBitDataRegNamed (commonBase + offs) (n ++ "->" ++ name ++ "(common)")
 
-adcInit :: ADC
-        -> ADCResolution -- ^ how many bits of precision to use in conversion?
-        -> IBool -- ^ left-align converted bits in 16-bit data register?
-        -> Ivory eff ()
+adcInit
+  :: ADC
+  -> ADCResolution -- ^ How many bits of precision to use in conversion?
+  -> IBool -- ^ Left-align converted bits in 16-bit data register?
+  -> Ivory eff ()
 adcInit periph res align = do
   adcRCCEnable periph
   modifyReg (adcRegCR1 periph) $ do

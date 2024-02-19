@@ -294,12 +294,13 @@ showDMA dma =
     ] ++
   concatMap showDMAStreamRegs (dmaStreamRegs dma)
 
-mkDMA :: Integer
-      -> (forall eff. Ivory eff ())
-      -> (forall eff. Ivory eff ())
-      -> DMAInterrupt
-      -> String
-      -> DMA
+mkDMA
+  :: Integer
+  -> (forall eff. Ivory eff ())
+  -> (forall eff. Ivory eff ())
+  -> DMAInterrupt
+  -> String
+  -> DMA
 mkDMA base rccEn rccDis ints name = DMA
   { dmaRegLISR      = reg 0x00 "lisr"
   , dmaRegHISR      = reg 0x04 "hisr"

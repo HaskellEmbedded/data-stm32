@@ -8,9 +8,8 @@
 module {{ modns }} where
 
 import Control.Monad (when)
-import Ivory.Language
-
 import Ivory.HW
+import Ivory.Language
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
@@ -32,30 +31,30 @@ data {{ type }} = {{ type }}
   , spiName        :: String
   }
 
-mk{{ type }} :: (STM32Interrupt i)
-            => Integer
-            -> (forall eff . Ivory eff ())
-            -> (forall eff . Ivory eff ())
-            -> i
-            -> PClk
-            -> (GPIOPin -> GPIO_AF)
-            -> Int
-            -> String
-            -> {{ type }}
+mk{{ type }}
+  :: (STM32Interrupt i)
+  => Integer
+  -> (forall eff . Ivory eff ())
+  -> (forall eff . Ivory eff ())
+  -> i
+  -> PClk
+  -> (GPIOPin -> GPIO_AF)
+  -> Int
+  -> String
+  -> {{ type }}
 mk{{ type }} base rccen rccdis inter pclk afLookup version n = {{ type }}
 {{{ bitDataRegsMk }}}
-    , spiRCCEnable   = rccen
-    , spiRCCDisable  = rccdis
-    , spiInterrupt   = HasSTM32Interrupt inter
-    , spiPClk        = pclk
-    , spiAFLookup    = afLookup
-    , spiVersion     = version
-    , spiName        = n
-    }
+  , spiRCCEnable   = rccen
+  , spiRCCDisable  = rccdis
+  , spiInterrupt   = HasSTM32Interrupt inter
+  , spiPClk        = pclk
+  , spiAFLookup    = afLookup
+  , spiVersion     = version
+  , spiName        = n
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
-
 
 initInPin :: {{ type }} -> GPIOPin -> Ivory eff ()
 initInPin periph pin = do
@@ -272,4 +271,3 @@ spiSetBitOrder periph bitorder =
   modifyReg (spiRegCR1 periph) $ case bitorder of
     LSBFirst -> setBit   spi_cr1_lsbfirst
     MSBFirst -> clearBit spi_cr1_lsbfirst
-

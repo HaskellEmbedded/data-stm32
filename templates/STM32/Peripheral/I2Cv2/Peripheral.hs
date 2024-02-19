@@ -12,8 +12,8 @@ module {{ modns }} where
 
 import Control.Monad (replicateM_)
 
-import Ivory.Language
 import Ivory.HW
+import Ivory.Language
 import Ivory.Stdlib
 
 import Ivory.BSP.STM32.Interrupt
@@ -35,28 +35,29 @@ data {{ type }} = {{ type }}
   , i2cName        :: String
   }
 
-mk{{ type }} :: (STM32Interrupt i)
-            => Integer -- Base
-            -> (forall eff . Ivory eff ()) -- RCC Enable
-            -> (forall eff . Ivory eff ()) -- RCC Disable
-            -> (forall eff . Ivory eff ()) -- RCC Reset
-            -> i -- event interrupt
-            -> i -- error interrupt
-            -> PClk   -- Clock source
-            -> (GPIOPin -> GPIO_AF)
-            -> String -- Name
-            -> {{ type }}
+mk{{ type }}
+  :: (STM32Interrupt i)
+  => Integer -- Base
+  -> (forall eff . Ivory eff ()) -- RCC Enable
+  -> (forall eff . Ivory eff ()) -- RCC Disable
+  -> (forall eff . Ivory eff ()) -- RCC Reset
+  -> i -- event interrupt
+  -> i -- error interrupt
+  -> PClk   -- Clock source
+  -> (GPIOPin -> GPIO_AF)
+  -> String -- Name
+  -> {{ type }}
 mk{{ type }} base rccenable rccdisable rccreset evtint errint pclk afLookup n = {{ type }}
 {{{ bitDataRegsMk }}}
-    , i2cRCCEnable  = rccenable
-    , i2cRCCDisable = rccdisable
-    , i2cRCCReset   = rccreset
-    , i2cIntEvent   = HasSTM32Interrupt evtint
-    , i2cIntError   = HasSTM32Interrupt errint
-    , i2cPClk       = pclk
-    , i2cAFLookup   = afLookup
-    , i2cName       = n
-    }
+  , i2cRCCEnable  = rccenable
+  , i2cRCCDisable = rccdisable
+  , i2cRCCReset   = rccreset
+  , i2cIntEvent   = HasSTM32Interrupt evtint
+  , i2cIntError   = HasSTM32Interrupt errint
+  , i2cPClk       = pclk
+  , i2cAFLookup   = afLookup
+  , i2cName       = n
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
@@ -88,7 +89,6 @@ i2cInit periph sda scl clockconfig freq = do
     setField i2c_timingr_scldel (fromRep $ fromIntegral timingSCLDelay)
     setField i2c_timingr_scll   (fromRep $ fromIntegral timingSCLLow)
     setField i2c_timingr_sclh   (fromRep $ fromIntegral timingSCLHigh)
-
 
   -- enable peripheral
   modifyReg (i2cRegCR1 periph) $ setBit i2c_cr1_pe
