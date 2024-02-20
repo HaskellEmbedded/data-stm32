@@ -16,7 +16,10 @@ data Periph =
   | DCMI
   | DMA
   | DMA2D
-  | Ethernet
+  | ETHERNET_MAC
+  | ETHERNET_MMC
+  | ETHERNET_PTP
+  | ETHERNET_DMA
   | EXTI
   | FLASH
   | FPU

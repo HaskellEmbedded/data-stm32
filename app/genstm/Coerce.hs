@@ -348,6 +348,10 @@ adjustEXTI = adjustRegs make32bit
 usartToUart x | periphName x == "USART" = x { periphName = show UART }
 usartToUart x | otherwise = x
 
+shortEth x | "ETHERNET_" `L.isPrefixOf` periphName x =
+  x { periphName = "ETH" }
+shortEth x | otherwise = x
+
 adjustPeriphFamily l4s x | l4s == L4 || l4s == L4Plus = adjustFields fix x
   where
     fix x | fieldName x == "SW" || fieldName x == "SWS" = Just $ setFieldType "RCC_SYSCLK_L4" x

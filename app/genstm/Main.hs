@@ -182,6 +182,7 @@ stm32devs = do
           template ctx target "STM32DEV/SYSCFG.hs"
       _   -> error "Multiple SYSCFGs"
 
+    -- F1 AFIO
     when (mcuFamily mcu == F1) $ do
       let p = AFIO
       case peripheralByName svd p of
@@ -246,6 +247,25 @@ stm32devs = do
 
           otherwise -> pure False
 
+    -- Ethernet for F4/F7s
+    hasEthernet <-
+      if
+        ( "ETH" `S.member` S.map ipInstanceName (mcuIps mcu)
+        && mcuFamily mcu `elem` [F4, F7]
+        )
+      then do
+        template
+          (listCtx
+            -- eew
+            $ pure ("dev", T.pack $ L.take 4 $ L.drop 5 $ mcuRefName mcu)
+          )
+          (T.concat ["STM32", (T.pack name), ".ETH"])
+          (T.concat ["STM32DEV/ETH.hs"])
+
+        pure True
+      else
+        pure False
+
     let ns = "STM32" <> (T.pack name) <> ".Clock"
         clks = mcuClocks mcu
         ctx = ClocksCtx (map (\csrc -> ClockCtx (clockSourceName csrc) (show $ clockSourceHz csrc)) clks)
@@ -269,6 +289,9 @@ stm32devs = do
     let
       imports =
         map show sup'
+        ++ case hasEthernet of
+            True -> pure "ETH"
+            False -> mempty
         ++ case hasDmaUarts of
             [True, True] -> [ "UART.DMA", "USART.DMA" ]
             [False, True] -> pure "USART.DMA"
@@ -289,7 +312,6 @@ stm32periphs = do
   DB{..} <- ask
   -- base non-versioned peripherals on this devices svd
   let nonVersionedBase = "F765"
-      nVDev = get nonVersionedBase
 
   forM_ supported $ \p -> do
     forM_ (filter ((/=LPUART) . diPeriph) $ periphDrivers p) $ \di@DriverInfo{..} -> do
@@ -356,6 +378,10 @@ stm32periphs = do
     template'
       ("STM32.Peripheral." <> tim)
       ("STM32/Peripheral/" <> tim <> ".hs")
+
+  -- F4/F7 Ethernet
+  nVDev <- get nonVersionedBase
+  genEthernetPeriphTree nVDev
 
 stm32modes :: MonadGen ()
 stm32modes = do
@@ -492,7 +518,6 @@ genPeriphTree target p di svdPeriph = do
       usart "USART" = "UART"
       usart x = x
 
-
   -- Peripheral.RegTypes
   tPath <- getTemplatesPath
   -- XXX: fix paths for `target` here as well
@@ -511,7 +536,9 @@ genPeriphTree target p di svdPeriph = do
       return $ [ T.concat [ "import Ivory.BSP.STM32.Peripheral.", nameVersion, ".RegTypes"]]
 
   -- Peripheral.Regs
-  new <- usartToUart <$> procPeriph p (diVersion di) svdPeriph
+  new <-
+        usartToUart
+    <$> procPeriph p (diVersion di) svdPeriph
   let
       res = ppPeriphRegs new
       ns  = target <> "." <> nameVersion <> ".Regs"
@@ -523,8 +550,8 @@ genPeriphTree target p di svdPeriph = do
 
   -- Peripheral
   let ns = target <> "." <> nameVersion <> ".Peripheral"
-      ctx = PeriphCtx {
-              typ = T.unpack $ pName
+      ctx = PeriphCtx
+              { typ = T.unpack $ pName
               , bitDataRegs = ppBitDataRegs new
               , bitDataRegsMk = ppBitDataRegsMk new
               , pversion = maybe "" (('v':) . show) (diVersion di)
@@ -541,6 +568,85 @@ genPeriphTree target p di svdPeriph = do
 
       ctx = VersionsCtx $ versData
   template ctx ns $ "STM32/Peripheral/" <> pName <> ".hs"
+
+genEthernetPeriphTree repreSVD = do
+  -- toplevel ETH
+  tPath <- getTemplatesPath
+
+  cptree
+    (T.unpack $ tPath <> "/STM32/Peripheral/ETH")
+    (T.unpack $ "./src/Ivory/BSP/STM32/Peripheral/ETH")
+
+  template'
+    "STM32.Peripheral.ETH"
+    "STM32/Peripheral/ETH.hs"
+
+  forM_
+    [ ETHERNET_DMA
+    , ETHERNET_MAC
+    , ETHERNET_MMC
+    , ETHERNET_PTP
+    ] $ \p ->
+    do
+      case peripheralByName repreSVD p of
+        Nothing -> log $ "- " ++ (show p) ++ " not found"
+        Just svdPeriph -> do
+          genEthPeriph p svdPeriph
+
+genEthPeriph p svdPeriph = do
+  let
+      pName = eth $ tshow p
+      target = "STM32.Peripheral.ETH"
+      eth "ETHERNET_MAC" = "MAC"
+      eth "ETHERNET_MMC" = "MMC"
+      eth "ETHERNET_PTP" = "PTP"
+      eth "ETHERNET_DMA" = "DMA"
+      eth x = x
+
+  -- Peripheral.RegTypes
+  tPath <- getTemplatesPath
+  cptree (T.unpack $ tPath <> "/STM32/Peripheral/ETH/" <> pName)
+         (T.unpack $ "./src/Ivory/BSP/STM32/Peripheral/ETH/" <> pName)
+
+  -- Peripheral.Regs
+  new <-
+        shortEth
+    <$> procPeriph p Nothing svdPeriph
+  let
+    res = ppPeriphRegs new
+    ns  = target <> "." <> pName <> ".Regs"
+    ctx =
+      RegsCtx
+        { imports =
+            pure
+            $ T.concat
+                [ "import Ivory.BSP.STM32.Peripheral.ETH."
+                , pName
+                , ".RegTypes"
+                ]
+        , regs = T.pack res
+        }
+
+  template
+    ctx
+    ns
+    "STM32/Peripheral/X/Regs.hs"
+
+  -- Peripheral
+  let
+    ns = target <> "." <> pName <> ".Peripheral"
+    ctx =
+      PeriphCtx
+        { typ = T.unpack $ pName
+        , bitDataRegs = ppBitDataRegs new
+        , bitDataRegsMk = ppBitDataRegsMk new
+        , pversion = ""
+        }
+
+  template
+    ctx
+    ns
+    ("STM32/Peripheral/ETH/" <> pName <> "/Peripheral.hs")
 
 readme = do
   DB{..} <- ask
