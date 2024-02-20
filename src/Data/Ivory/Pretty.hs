@@ -6,7 +6,6 @@ import Data.List
 import Data.List.Split (splitOn)
 import Text.Printf
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
-import qualified Text.PrettyPrint.ANSI.Leijen.Internal as WL
 
 folddoc :: (Doc -> Doc -> Doc) -> [Doc] -> Doc
 folddoc _ []     = empty
@@ -41,5 +40,9 @@ displayS' SFail              = error $ "@SFail@ can not appear uncaught in a " +
 displayS' SEmpty             = id
 displayS' (SChar c x)        = showChar c . displayS' x
 displayS' (SText l s x)      = showString s . displayS' x
-displayS' (SLine i x)        = showString ('\n':WL.spaces i) . displayS' x
+displayS' (SLine i x)        = showString ('\n':spaces i) . displayS' x
+  where
+  spaces :: Int -> String
+  spaces n | n <= 0    = ""
+           | otherwise = replicate n ' '
 displayS' (SSGR _s x)         = displayS' x
