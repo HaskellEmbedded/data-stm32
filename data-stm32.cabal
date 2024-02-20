@@ -54,22 +54,15 @@ library
     , cereal
     , data-default-class
     , data-svd >= 0.1.2
-    -- (not-so) temporary
-    , ghcid
     , Diff
     , containers
     , foldl
     , hxt
-    , pretty-simple
     , prettyprinter
     , prettyprinter-ansi-terminal
-    , regex-posix
-    , safe
     , split
     , text
-    , time
     , turtle
-    , vector
   default-language: Haskell2010
 
 executable genstm
