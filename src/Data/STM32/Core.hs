@@ -43,8 +43,8 @@ core _      = CortexM3
 -- See https://github.com/FreeRTOS/FreeRTOS-Kernel/tree/main/portable/GCC
 freertosCore :: String -> Family -> String
 -- only these two match CM7/r0p1 freertos port
-freertosCore shortName _family | "F74" `L.isPrefixOf` shortName = "CM7F"
-freertosCore shortName _family | "F75" `L.isPrefixOf` shortName = "CM7F"
+freertosCore shortName _family | "F74" `L.isPrefixOf` shortName = "CM7"
+freertosCore shortName _family | "F75" `L.isPrefixOf` shortName = "CM7"
 freertosCore _shortName family = coreStr $ core family
   where
    coreStr :: Core -> String
@@ -55,7 +55,6 @@ freertosCore _shortName family = coreStr $ core family
    coreStr CortexM4F    = "CM4F"
    coreStr CortexM7F    = "CM4F"
    coreStr CortexA7     = error "freertosCore: Don't know how to handle CortexA7"
-
 
 -- -mcpu for GCC/LD
 cpu :: Core -> String
