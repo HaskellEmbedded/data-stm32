@@ -11,8 +11,8 @@ import Data.List.Split (splitOn)
 import qualified Data.Set as S
 import Data.Ord (comparing)
 import System.Exit
-import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 import Data.Algorithm.Diff
+import Prettyprinter
 
 import qualified Data.SVD.Util
 

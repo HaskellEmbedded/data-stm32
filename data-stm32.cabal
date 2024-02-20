@@ -19,6 +19,7 @@ extra-doc-files:
     CHANGELOG.md
 
 library
+  ghc-options: -Wunused-packages
   exposed-modules:
       Data.CMX
       Data.CMX.Extract
@@ -32,7 +33,6 @@ library
       Data.Ivory.ISR
       Data.Ivory.MCU
       Data.Ivory.Periph
-      Data.Ivory.Reg
       Data.Ivory.Pretty
       Data.STM32
       Data.STM32.Clock
@@ -48,7 +48,6 @@ library
   hs-source-dirs:
       src
   build-depends:
-      ansi-wl-pprint
     , attoparsec
     , base >=4.7 && <5
     , bytestring
@@ -62,6 +61,8 @@ library
     , foldl
     , hxt
     , pretty-simple
+    , prettyprinter
+    , prettyprinter-ansi-terminal
     , regex-posix
     , safe
     , split
@@ -87,8 +88,7 @@ executable genstm
       app/genstm
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ansi-wl-pprint
-    , attoparsec
+      attoparsec
     , base >=4.7 && <5
     , bytestring
     , cereal
@@ -119,8 +119,7 @@ executable gensvd
       app/gensvd
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ansi-wl-pprint
-    , attoparsec
+      attoparsec
     , base >=4.7 && <5
     , bytestring
     , containers
@@ -140,8 +139,7 @@ executable mxmcu
       app/mxmcu
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ansi-wl-pprint
-    , attoparsec
+      attoparsec
     , base >=4.7 && <5
     , bytestring
     , cereal
@@ -164,8 +162,7 @@ executable updaterepo
       app/updaterepo
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ansi-wl-pprint
-    , attoparsec
+      attoparsec
     , base >=4.7 && <5
     , bytestring
     , containers
@@ -187,7 +184,6 @@ test-suite test
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
-    , ansi-wl-pprint
     , bytestring
     , hspec
     , system-filepath

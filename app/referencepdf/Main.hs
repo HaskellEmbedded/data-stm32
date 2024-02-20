@@ -9,8 +9,6 @@ import Data.Text.IO (readFile, putStrLn)
 import Data.Time
 import Data.Word
 
-import Text.PrettyPrint.ANSI.Leijen hiding (char, string, double, (<$>))
-
 import Data.Attoparsec.Text hiding (space)
 import Data.Attoparsec.Combinator (lookAhead)
 import Control.Applicative hiding (empty)
@@ -33,7 +31,7 @@ parseMemoryMap = do
 
 pdftextParser = parseMemoryMap
 
-fp = "/home/rmarko/embedded/docs/f4reference.txt"
+fp = "f4reference.txt"
 
 main = do
   f <- readFile fp
