@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Data.STM32.Core where
 
@@ -40,11 +39,13 @@ core WB     = CortexM3
 core TS     = CortexM3
 core _      = CortexM3
 
+-- | FreeRTOS core name, prefixed with @portable/GCC/ARM_@
+-- See https://github.com/FreeRTOS/FreeRTOS-Kernel/tree/main/portable/GCC
 freertosCore :: String -> Family -> String
 -- only these two match CM7/r0p1 freertos port
-freertosCore shortName family | "F74" `L.isPrefixOf` shortName = "CM7F"
-freertosCore shortName family | "F75" `L.isPrefixOf` shortName = "CM7F"
-freertosCore shortName family | otherwise = coreStr $ core family
+freertosCore shortName _family | "F74" `L.isPrefixOf` shortName = "CM7"
+freertosCore shortName _family | "F75" `L.isPrefixOf` shortName = "CM7"
+freertosCore _shortName family = coreStr $ core family
   where
    coreStr :: Core -> String
    coreStr CortexM0     = "CM0"
@@ -53,6 +54,7 @@ freertosCore shortName family | otherwise = coreStr $ core family
    coreStr CortexM33    = "CM4F"
    coreStr CortexM4F    = "CM4F"
    coreStr CortexM7F    = "CM4F"
+   coreStr CortexA7     = error "freertosCore: Don't know how to handle CortexA7"
 
 -- -mcpu for GCC/LD
 cpu :: Core -> String
@@ -62,6 +64,7 @@ cpu CortexM3     = "cortex-m3"
 cpu CortexM33    = "cortex-m33"
 cpu CortexM4F    = "cortex-m4"
 cpu CortexM7F    = "cortex-m7"
+cpu CortexA7     = "cortex-a7"
 
 -- -mfpu for GCC
 fpu :: Core -> String

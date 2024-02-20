@@ -19,8 +19,11 @@ import Ivory.HW.BitData
 
 import Ivory.BSP.STM32.ClockConfig
 
-import Ivory.BSP.STM32.Peripheral.UART.Regs
-import Ivory.BSP.STM32.Peripheral.UART.Peripheral
+import Ivory.BSP.STM32.Peripheral.UART
+import qualified Ivory.BSP.STM32.Peripheral.UARTv2.Peripheral as V2
+import qualified Ivory.BSP.STM32.Peripheral.UARTv2.Regs as V2
+import qualified Ivory.BSP.STM32.Peripheral.UARTv3.Peripheral as V3
+import qualified Ivory.BSP.STM32.Peripheral.UARTv3.Regs as V3
 import Ivory.BSP.STM32.Peripheral.UART.DMA
 import Ivory.BSP.STM32.Peripheral.DMA
 
@@ -39,8 +42,8 @@ dmaUARTTower :: forall tx rx e
 dmaUARTTower tocc dmauart pins baud _ = do
   (tx, (buf_rx :: ChanOutput rx), mon) <- dmaUARTTower' tocc dmauart pins baud
   char_rx <- channel
-  monitor (uartName uart ++ "_dma_rx_byte_shim") $ do
-    handler buf_rx (uartName uart ++ "_buf_rx") $ do
+  monitor (named uart "_dma_rx_byte_shim") $ do
+    handler buf_rx (named uart "_buf_rx") $ do
       e <- emitter (fst char_rx) (arrayLen (somebuf ~> stringDataL))
       callback $ \buf -> do
         len <- deref (buf ~> stringLengthL)
@@ -114,7 +117,10 @@ dmaUARTHardwareMonitor tocc dmauart pins baud init_cb = do
     e <- emitter init_cb 1
     callback $ \t -> do
       dmaRCCEnable dma
-      uartInit uart pins clockConfig (fromIntegral baud) False
+      case uart of
+        WrappedV1 _ -> v1NotSupported
+        WrappedV2 x -> V2.uartInit x pins clockConfig (fromIntegral baud) False
+        WrappedV3 x -> V3.uartInit x pins clockConfig (fromIntegral baud) False
       emit e t
   where
   uart = dmaUARTPeriph    dmauart
@@ -133,8 +139,8 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
     hw_moduledef
     incl ref_to_uint32_proc
 
-  req_buf   <- state (named "req_buf")
-  tx_active <- state (named "tx_active")
+  req_buf   <- state (named uart "req_buf")
+  tx_active <- state (named uart "tx_active")
 
   handler init_chan "dmauart_tx_init" $ callback $ const $ do
     -- Enable TX interrupt:
@@ -159,7 +165,13 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
 
     -- Set peripheral address:
     setReg (dmaStreamPAR tx_regs) $
-      setField dma_sxpar_par (fromRep (bdr_reg_addr (uartRegDR uart)))
+      let
+        txRegAddr = case uart of
+          WrappedV1 _ -> v1NotSupported
+          WrappedV2 x -> bdr_reg_addr $ V2.uartRegDR x
+          WrappedV3 x -> bdr_reg_addr $ V3.uartRegTDR x
+      in
+        setField dma_sxpar_par (fromRep txRegAddr)
 
     -- Set memory address:
     buf_start_addr <- call ref_to_uint32_proc ((req_buf ~> stringDataL) ! 0)
@@ -200,21 +212,32 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
       setField dma_sxcr_teie   (fromRep 1) -- Enable transfer error interrupt
       setField dma_sxcr_dmeie  (fromRep 1) -- Enable direct mode error interrupt
     -- Enable DMA Transmit in UART:
-    modifyReg (uartRegCR3 uart) $ do
-      setField uart_cr3_dmat (fromRep 1)
+    case uart of
+      WrappedV1 _ -> v1NotSupported
+      WrappedV2 x -> do
+        modifyReg (V2.uartRegCR3 x) $ do
+          setField V2.uart_cr3_dmat (fromRep 1)
 
-    -- Clear TC in UART, per STM32 reference RM0090 section 30.3.13
-    modifyReg (uartRegSR uart) $ do
-      setField uart_sr_tc (fromRep 0)
+        -- Clear TC in UART, per STM32 reference RM0090 section 30.3.13
+        modifyReg (V2.uartRegSR x) $ do
+          setField V2.uart_sr_tc (fromRep 0)
+
+      WrappedV3 x -> do
+        modifyReg (V3.uartRegCR3 x) $ do
+          setField V3.uart_cr3_dmat (fromRep 1)
+
+        -- Clear TC in UART, per STM32 reference RM0090 section 30.3.13
+        modifyReg (V3.uartRegISR x) $ do
+          setField V3.uart_isr_tc (fromRep 0)
 
     -- Set control register:
     modifyReg (dmaStreamCR tx_regs) $ do
       setField dma_sxcr_en  (fromRep 1) -- Enable Stream
 
   -- Debugging states:
-  tx_complete     <- state (named "tx_complete")
-  tx_transfer_err <- state (named "tx_transfer_err")
-  tx_direct_err   <- state (named "tx_direct_err")
+  tx_complete     <- state (named uart "tx_complete")
+  tx_transfer_err <- state (named uart "tx_transfer_err")
+  tx_direct_err   <- state (named uart "tx_direct_err")
 
   handler (dma_stream_signal txstream) "tx_stream_interrupt" $ do
     e <- emitter resp_chan 1
@@ -251,8 +274,6 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
   where
   tx_regs  = dma_stream_regs  txstream
 
-  named n = uartName uart ++ "_dma_" ++ n
-
 
 
 dmaUARTReceiveMonitor :: forall rx e
@@ -264,16 +285,22 @@ dmaUARTReceiveMonitor :: forall rx e
                       -> ChanOutput ('Stored ITime)
                       -> Monitor e ()
 dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
-  rx0_buf <- state (named "rx0_buf")
-  rx1_buf <- state (named "rx1_buf")
-  isr_buf <- state (named "isr_buf")
+  rx0_buf <- state (named uart "rx0_buf")
+  rx1_buf <- state (named uart "rx1_buf")
+  isr_buf <- state (named uart "isr_buf")
 
   let req_items = arrayLen (rx0_buf ~> stringDataL) - 1
 
   handler init_chan "dmauart_rx_init" $ callback $ const $ do
     -- Set peripheral address:
     setReg (dmaStreamPAR rx_regs) $
-      setField dma_sxpar_par (fromRep (bdr_reg_addr (uartRegDR uart)))
+      let
+        rxRegAddr = case uart of
+          WrappedV1 _ -> v1NotSupported
+          WrappedV2 x -> bdr_reg_addr $ V2.uartRegDR x
+          WrappedV3 x -> bdr_reg_addr $ V3.uartRegRDR x
+      in
+        setField dma_sxpar_par (fromRep rxRegAddr)
 
     -- Set memory address:
     buf0_start_addr <- call ref_to_uint32_proc ((rx0_buf ~> stringDataL) ! 0)
@@ -313,8 +340,14 @@ dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
       setField dma_sxcr_teie   (fromRep 1) -- Enable transfer error interrupt
       setField dma_sxcr_dmeie  (fromRep 1) -- Enable direct mode error interrupt
     -- Enable DMA Recieve in UART:
-    modifyReg (uartRegCR3 uart) $ do
-      setField uart_cr3_dmar (fromRep 1)
+    case uart of
+      WrappedV1 _ -> v1NotSupported
+      WrappedV2 x -> do
+        modifyReg (V2.uartRegCR3 x) $ do
+          setField V2.uart_cr3_dmar (fromRep 1)
+      WrappedV3 x -> do
+        modifyReg (V3.uartRegCR3 x) $ do
+          setField V3.uart_cr3_dmar (fromRep 1)
 
     -- Set control register:
     modifyReg (dmaStreamCR rx_regs) $ do
@@ -337,9 +370,9 @@ dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
           k (constRef buf)
 
   -- Debugging states:
-  rx_complete     <- state (named "rx_complete")
-  rx_transfer_err <- state (named "rx_transfer_err")
-  rx_direct_err   <- state (named "rx_direct_err")
+  rx_complete     <- state (named uart "rx_complete")
+  rx_transfer_err <- state (named uart "rx_transfer_err")
+  rx_direct_err   <- state (named uart "rx_direct_err")
 
   handler (dma_stream_signal rxstream) "rx_stream_interrupt" $ do
     callback $ const $ do
@@ -407,15 +440,19 @@ dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
         complete_buffer (req_items - ndt) finished_buf (emit e)
 
   where
-  named n = uartName uart ++ "_dma_" ++ n
-
   rx_regs  = dma_stream_regs  rxstream
+
+named :: UART -> String -> String
+named (WrappedV1 _) _ = v1NotSupported
+named (WrappedV2 x) n = V2.uartName x ++ "_dma_" ++ n
+named (WrappedV3 x) n = V3.uartName x ++ "_dma_" ++ n
+
+v1NotSupported :: a
+v1NotSupported = error "V1 DMA UART is not supported"
 
 bdr_reg_addr :: BitDataReg a -> Uint32
 bdr_reg_addr = fromInteger . unReg . bdr_reg
   where unReg (Reg a) = a
 
-ref_to_uint32_proc :: Def('[Ref s ('Stored Uint8)] ':-> Uint32)
+ref_to_uint32_proc :: Def('[Ref s ('Stored Uint8)] :-> Uint32)
 ref_to_uint32_proc = importProc "ref_to_uint32" dmaRefToUint32Header
-
-

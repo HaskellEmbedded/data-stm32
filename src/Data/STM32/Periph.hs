@@ -6,6 +6,7 @@ data Periph =
   | AFIO -- F1 alternate function controls / remapping, proly good idea to turn it on
   | ATIM
   | GTIM
+  | TIM
   | CAN
   | CEC
   | CRC
@@ -15,7 +16,10 @@ data Periph =
   | DCMI
   | DMA
   | DMA2D
-  | Ethernet
+  | ETHERNET_MAC
+  | ETHERNET_MMC
+  | ETHERNET_PTP
+  | ETHERNET_DMA
   | EXTI
   | FLASH
   | FPU

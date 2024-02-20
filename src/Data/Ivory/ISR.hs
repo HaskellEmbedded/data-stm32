@@ -14,12 +14,13 @@ import System.Exit
 import Text.PrettyPrint.ANSI.Leijen hiding ((<$>))
 import Data.Algorithm.Diff
 
+import qualified Data.SVD.Util
 
 -- take a list of devices from one family,
 -- find device with most peripherals and
 -- use it as representative for this family ISR map
 --
--- use ppISRs to print these
+-- use displayISRs to print these
 isrs :: [Device] -> [Interrupt]
 isrs devs = getDevISRs
           $ head
@@ -52,7 +53,7 @@ fillMissing target source = target { devicePeripherals = addToFirst $ devicePeri
 getDevISRs :: Device -> [Interrupt]
 getDevISRs Device{..} =
     sortBy (comparing (interruptValue))
-  $ fillMissingInterrupts
+  $ Data.SVD.Util.fillMissingInterrupts
   $ nubBy (\x y -> interruptValue x == interruptValue y)
   $ concatMap periphInterrupts devicePeripherals
 
@@ -62,7 +63,7 @@ diffISRs = getDiffBy (\a b -> interruptValue  a == interruptValue b && interrupt
 -- ^^ eats STM32F4*.svd
 genISRs fs = do
   is <- isr fs
-  putStrLn $ (ppISRs . sortBy (comparing (interruptValue)) . nubBy (\x y -> interruptValue x == interruptValue y)) is
+  putStrLn $ (displayISRs . sortBy (comparing (interruptValue)) . nubBy (\x y -> interruptValue x == interruptValue y)) is
 
 isr :: [String] -> IO ([Interrupt])
 isr [] = return []
@@ -86,17 +87,3 @@ normalizeISRNames xs = map (\x -> x { interruptName = norm (interruptName x) }) 
 renameDups xs = reverse $ snd $ foldl f (S.empty, []) xs
   where f (seen, result) item | S.member (interruptName item) seen = f (seen, result) (item { interruptName = (interruptName item) ++ "_" })
                               | otherwise                          = (S.insert (interruptName item) seen, item:result)
-
-missingInterrupts isrs = S.toList $ S.difference
-  (S.fromList [0 .. maximum vals])
-  (S.fromList vals)
-  where
-    vals = map interruptValue isrs
-
-fillMissingInterrupts isrs = isrs ++ (map fill $ missingInterrupts isrs)
-  where
-   fill x = Interrupt {
-      interruptName = "Undefined" ++ show x
-    , interruptValue = x
-    , interruptDescription = "Undefined interrupt (padding only)"
-    }

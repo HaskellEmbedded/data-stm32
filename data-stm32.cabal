@@ -1,24 +1,25 @@
+cabal-version:  2.2
 name:           data-stm32
 version:        0.1.0.0
 synopsis:       ARM SVD and CubeMX XML parser and pretty printer for STM32 family
 description:    ARM SVD and CubeMX XML parser and pretty printer for STM32 family
 category:       Embedded
-homepage:       https://github.com/sorki/data-stm32#readme
-bug-reports:    https://github.com/sorki/data-stm32/issues
-author:         Richard Marko
+homepage:       https://github.com/HaskellEmbedded/data-stm32#readme
+bug-reports:    https://github.com/HaskellEmbedded/data-stm32/issues
+author:         Sorki
 maintainer:     srk@48.io
-copyright:      2020 Richard Marko
-license:        BSD3
+copyright:      2020 Sorki
+license:        BSD-3-Clause
 license-file:   LICENSE
 build-type:     Simple
-cabal-version:  >= 1.10
 extra-source-files:
-    ChangeLog.md
     README.md
+
+extra-doc-files:
+    CHANGELOG.md
 
 library
   exposed-modules:
-      Data.Bits.Pretty
       Data.CMX
       Data.CMX.Extract
       Data.CMX.Parse
@@ -31,6 +32,7 @@ library
       Data.Ivory.ISR
       Data.Ivory.MCU
       Data.Ivory.Periph
+      Data.Ivory.Reg
       Data.Ivory.Pretty
       Data.STM32
       Data.STM32.Clock
@@ -41,11 +43,8 @@ library
       Data.STM32.Memory
       Data.STM32.Periph
       Data.STM32.Types
-      Data.SVD
+      Data.STM32.Util
       Data.SVD.Extract
-      Data.SVD.Parse
-      Data.SVD.Pretty
-      Data.SVD.Types
   hs-source-dirs:
       src
   build-depends:
@@ -54,15 +53,14 @@ library
     , base >=4.7 && <5
     , bytestring
     , cereal
-    -- temp
+    , data-default-class
+    , data-svd >= 0.1.2
+    -- (not-so) temporary
     , ghcid
     , Diff
     , containers
     , foldl
     , hxt
-    , hxt-xpath
-    , karver
-    , hastache
     , pretty-simple
     , regex-posix
     , safe
@@ -79,6 +77,7 @@ executable genstm
       Coerce
       Contexts
       Extract
+      MakeDMAUART
       MakePeriph
       Utils
       Types
@@ -94,13 +93,12 @@ executable genstm
     , bytestring
     , cereal
     , containers
+    , data-default-class
     , data-stm32
+    , data-svd
     , Diff
     , foldl
-    , hxt
-    , hxt-xpath
-    , karver
-    , hastache
+    , mustache
     , safe
     , syb
     , mtl
@@ -127,6 +125,7 @@ executable gensvd
     , bytestring
     , containers
     , data-stm32
+    , data-svd
     , foldl
     , text
     , time
@@ -148,9 +147,8 @@ executable mxmcu
     , cereal
     , containers
     , data-stm32
+    , data-svd
     , foldl
-    , hxt
-    , hxt-xpath
     , pretty-simple
     , regex-posix
     , split

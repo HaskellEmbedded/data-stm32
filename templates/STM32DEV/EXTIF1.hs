@@ -20,7 +20,7 @@ import Ivory.BSP.STM32.Peripheral.EXTI
   (cvtReg $ afioRegEXTICR4 afio)
   [
 {{#extiInterrupts}}
-  {{#prefixRest}}{{/prefixRest}}({{ rangeStart }}, {{ rangeEnd }}, {{ dev }}.{{ rangeISR }})
+    {{ prefix }} ({{ data.rangeStart }}, {{ data.rangeEnd }}, {{ dev }}.{{ data.rangeISR }})
 {{/extiInterrupts}}
   ]
 {{/instances}}

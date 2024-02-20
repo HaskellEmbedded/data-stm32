@@ -1,7 +1,7 @@
 module {{ modns }} (
-{{#clocks}}
-{{#prefixRest}}{{/prefixRest}}clock{{ clockName }}
-{{/clocks}}
+{{#clocksPrefixed}}
+  {{prefix}} clock{{ data.clockName }}
+{{/clocksPrefixed}}
   ) where
 
 import Data.STM32.Clock

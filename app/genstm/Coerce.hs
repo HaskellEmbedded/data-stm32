@@ -4,6 +4,7 @@
 module Coerce where
 
 import Data.Char (toUpper, isDigit)
+import Data.Default.Class (def)
 import Data.Maybe
 import qualified Data.List as L
 import Text.Regex.Posix
@@ -16,6 +17,11 @@ import Data.STM32.Types
 import Data.STM32.Drivers
 
 import Utils
+
+-- toplevel kindof
+procPeriph p ver x = pure $ new { periphName = show p }
+  where
+    new = filterByPeriph p ver x
 
 -- given a composed field like pllp0 pllp1 merge this into multiple Bits or specific type set by adjust function
 -- mergeFields "PLLP" [0..1] id will drop pllp1 and grow pllp0, renaming it to "pllp"
@@ -46,35 +52,46 @@ adjustFields fn x@Peripheral{..} = adjustRegs adj x
   where
     adj reg@Register{..} = reg { regFields = mapMaybe fn regFields }
 
+-- apply fn to peripherals registers fields passing register name
+adjustRegFields fn x@Peripheral{..} = adjustRegs adj x
+  where
+    adj reg@Register{..} = reg { regFields = mapMaybe (fn regName) regFields }
+
 -- apply fn to peripherals registers fields
 adjustFieldsByRegName targetRegName fn x@Peripheral{..} = adjustRegs adj x
   where
     adj reg@Register{..} | regName == targetRegName = reg { regFields = mapMaybe fn regFields }
     adj reg@Register{..} | otherwise = reg
 
-filterByPeriph GPIO (Just 1) x = renameGPIO $ adjustGPIOF1Regs x
-filterByPeriph GPIO (Just 2) x = renameGPIO $ adjustGPIORegs x
-filterByPeriph CAN  _        x = adjustCANRegs x
-filterByPeriph UART _        x = adjustUARTRegs x
-filterByPeriph USART _       x = renameUSART $ adjustUARTRegs x
-filterByPeriph RCC  _        x = adjustRCCRegs x
-filterByPeriph SPI  _        x = adjustSPIRegs x
-filterByPeriph SYSCFG _      x = renameDualSYSCFG x
-filterByPeriph EXTI   _      x = adjustEXTI x
-filterByPeriph _    _        x = x
+filterByPeriph ADC _ = adjustADCRegs
+filterByPeriph GPIO (Just 1) = renameGPIO . adjustGPIOF1Regs
+filterByPeriph GPIO (Just 2) = renameGPIO . adjustGPIORegs
+filterByPeriph CAN  _        = adjustCANRegs
+filterByPeriph UART v =
+    (
+      if (v == Just 3)
+      then adjustUARTV3Regs
+      else id
+    )
+  . adjustUARTRegs
+filterByPeriph USART v =
+    renameUSART
+  . (
+      if (v == Just 3)
+      then adjustUARTV3Regs
+      else id
+    )
+  . adjustUARTRegs
+filterByPeriph RCC  _ = adjustRCCRegs
+filterByPeriph SPI  _ = adjustSPIRegs
+filterByPeriph SYSCFG _ = renameDualSYSCFG
+filterByPeriph EXTI   _ = adjustEXTI
+filterByPeriph _ _ = id
 
 checkPeriphRegsContinuity p new = do
   assert ("Register of " <> (tshow p) <> " is NOT continuous")
     $ and $ mapRegs continuityCheck new
 
--- toplevel kindof
-procPeriph p ver x = do
-  checkPeriphRegsContinuity p new
-  return $ new { periphName = show p }
-  where
-    new = adjustRegs (\r -> r { regFields = procFields r})
-        $ fixVendorBugs
-        $ filterByPeriph p ver x
 
 -- Special driver/peripheral regs versioning treatment
 --
@@ -147,26 +164,22 @@ canFilters :: String
 canFilters = "F[0-9][0-9]?R[1-2]"
 
 makeReg name fields = let
-  r = Register {
-    regName = name
-  , regDisplayName = name
-  , regDescription = ""
-  , regAddressOffset = 0
-  , regSize = 32
-  , regAccess = ReadWrite
-  , regResetValue = Just 0
-  , regFields = mkFields fields }
+  r = def
+        { regName = name
+        , regDisplayName = name
+        , regSize = 32
+        , regAccess = ReadWrite
+        , regFields = mkFields fields
+        }
   in (if continuityCheck r then r else error "Continuity check failed for mkReg")
   where
     mkFields xs = setOffsets 32 $ map mkField xs
-    mkField (name, width) = Field {
-        fieldName = name
-      , fieldDescription = ""
-      , fieldBitOffset = 0
-      , fieldBitWidth = width
-      , fieldReserved = (name == "reserved")
-      , fieldRegType = Nothing
-      }
+    mkField (name, width) =
+      def
+        { fieldName = name
+        , fieldBitWidth = width
+        , fieldReserved = (name == "reserved")
+        }
     setOffsets offs (x:xs) = (x { fieldBitOffset = offs - fieldBitWidth x }):(setOffsets (offs - fieldBitWidth x) xs)
     setOffsets 0 [] = []
     setOffsets _ _ = error "Offsets does not compute"
@@ -193,19 +206,57 @@ firx32 = makeReg "FiRx32" [
   ]
 
 
--- UART
-adjustUARTRegs x = adjustFields fix x
+-- ADC
+adjustADCRegs = adjustRegFields fix
   where
-    fix x | fieldName x == "DR"  = Just $ x { fieldBitWidth = 8 } -- we fix these to 8 bits, they are defined as 9 bit iirc but that fucks with our drivers
-    fix x | fieldName x == "RDR" = Just $ x { fieldBitWidth = 8 }
-    fix x | fieldName x == "TDR" = Just $ x { fieldBitWidth = 8 }
-    fix x | fieldName x == "DIV_Mantissa" = Nothing  -- mantissa is dropped and div bellow covers both mantissa and fraction
-    fix x | fieldName x == "DIV_Fraction" = Just $ x { fieldBitWidth = 16, fieldName = "div", fieldDescription = "divider" }
+    fix "CR1" x | fieldName x == "RES" = Just $ x { fieldRegType = Just "ADCResolution" }
+    fix "CR2" x | fieldName x `elem` [ "EXTEN", "JEXTEN" ] = Just $ x { fieldRegType = Just "ADCExtEn" }
+    fix "CR2" x | fieldName x == "EXTSEL" = Just $ x { fieldRegType = Just "ADCExtSel" }
+    fix "CR2" x | fieldName x == "JEXTSEL" = Just $ x { fieldRegType = Just "ADCJExtSel" }
+    fix "JSQR" x | fieldName x == "JL" = Just $ x { fieldRegType = Just "ADCJL" }
+    fix _ x = Just x
+
+-- UART
+adjustUARTRegs x = adjustRegFields fix x
+  where
+    -- we fix these to 8 bits, they are defined as 9 bit iirc but that fucks with our drivers
+    fix "DR" x | fieldName x == "DR" = Just $ x { fieldBitWidth = 8 }
+    fix "DR" x | fieldReserved x = Just $ x { fieldBitWidth = 24 }
+
+    fix "RDR" x | fieldName x == "RDR" = Just $ x { fieldBitWidth = 8 }
+    fix "RDR" x | fieldReserved x = Just $ x { fieldBitWidth = 24 }
+
+    fix "TDR" x | fieldName x == "TDR" = Just $ x { fieldBitWidth = 8 }
+    fix "TDR" x | fieldReserved x = Just $ x { fieldBitWidth = 24 }
+
+    -- mantissa is dropped and div bellow covers both mantissa and fraction
+    fix "BRR" x | fieldName x == "DIV_Mantissa" = Nothing
+    fix "BRR" x | fieldName x == "DIV_Fraction" =
+      Just
+        $ x
+            { fieldBitWidth = 16
+            , fieldName = "div"
+            , fieldDescription = "divider"
+            }
+    fix "BRR" x | fieldReserved x = Just $ x { fieldBitWidth = 16 }
+
+    -- types
+    fix "CR1" x | fieldDescription x == "Word length" = Just $ x { fieldRegType = Just "UART_WordLen" }
+    fix "CR2" x | fieldDescription x == "STOP bits" = Just $ x { fieldRegType = Just "UART_StopBits" }
+    fix _ x = Just x
+
+adjustUARTV3Regs x = adjustRegFields fix x
+  where
     -- V3 UART only - normally this is 16 bits wide but LPUART uses 20
-    fix x | fieldName x == "BRR" = Just $ x { fieldBitWidth = 20, fieldName = "brr", fieldDescription = "brr divider" }
-    fix x | fieldDescription x == "Word length" = Just $ x { fieldRegType = Just "UART_WordLen" }
-    fix x | fieldDescription x == "STOP bits" = Just $ x { fieldRegType = Just "UART_StopBits" }
-    fix x = Just x
+    fix "BRR" x | fieldName x == "BRR" =
+      Just
+        $ x
+            { fieldBitWidth = 20
+            , fieldName = "brr"
+            , fieldDescription = "brr divider"
+            }
+    fix "BRR" x | fieldReserved x = Just $ x { fieldBitWidth = 12 }
+    fix _ x = Just x
 
 adjustGPIORegs x = adjustRegs rename $ adjustFields fix x
   where
@@ -268,8 +319,15 @@ adjustSPIRegs p = addDR16 . (adjustRegs makeDR8Bit) . adjustFields fix $ p
         addDR16 x = x { periphRegisters = periphRegisters x ++ [dr16Reg] }
         getDR = headNote "adjustSPIRegs getDR" . filter ((== "DR") . regName) $ periphRegisters p
         dr16Reg = getDR { regName = "DR16" , regDescription = "DR register with 16 bit DR field" }
-        makeDR8Bit reg | regName reg == "DR" = reg { regSize = 8 }
+        makeDR8Bit reg | regName reg == "DR" =
+          reg
+            { regSize = 8
+            , regFields = dropReserved (regFields reg)
+            }
         makeDR8Bit reg | otherwise = reg
+
+        dropReserved :: [Field] -> [Field]
+        dropReserved = filter (not . fieldReserved)
 
 renameDualSYSCFG x = adjustRegs fix x
   where fix x | "SYSCFG_" `L.isPrefixOf` (regName x) = x { regName = fromJust $ L.stripPrefix "SYSCFG_" $ regName x }
@@ -278,40 +336,21 @@ renameDualSYSCFG x = adjustRegs fix x
 
 adjustEXTI = adjustRegs make32bit
   where
-    dataField = Field {
-                    fieldName = "data"
+    dataField = def
+                  { fieldName = "data"
                   , fieldDescription = "Data"
-                  , fieldBitOffset = 0
                   , fieldBitWidth = 32
-                  , fieldReserved = False
-                  , fieldRegType = Nothing
                   }
     make32bit reg = reg { regFields = [ dataField ] }
     --addEXTICR x@Peripheral{..} = x {
     --  periphRegisters = periphRegisters ++ [ makeReg "EXTICR" [ ("data", 32) ] ] }
 
-
 usartToUart x | periphName x == "USART" = x { periphName = show UART }
 usartToUart x | otherwise = x
 
-fixVendorBugs p = g4fixes $ adjustFields fix p
-  where fix x | fieldName x == "RAM_PARITY_CHECK" && fieldBitWidth x == 0 = Just $ setFieldWidth 1 x
-        -- L4x1 L4x2 svd files contain this bug where USART1EN should be USART3EN (according to datashit)
-        -- XXX: apply this only for these L4 files
-        fix x | fieldName x == "USART1EN" && fieldBitOffset x == 18 = Just $ setFieldName "USART3EN" x
-        -- same but SPI1 vs SPI2
-        fix x | fieldName x == "SPI1EN" && fieldBitOffset x == 14 = Just $ setFieldName "SPI2EN" x
-        fix x | otherwise = Just x
-
-        -- G431x has I2C3 instead of I2C3EN, description is also bogus related to opamp
-        g4fixes p = adjustFieldsByRegName "APB1ENR1" fixG4EN
-                  $ adjustFieldsByRegName "APB1RSTR1" fixG4RST p
-
-        fixG4EN x | fieldName x == "I2C3" && fieldBitOffset x == 30 = Just $ setFieldName "I2C3EN" $ setDescription "I2C3 clock enable" x
-        fixG4EN x | otherwise = Just x
-
-        fixG4RST x | fieldName x == "I2C3" && fieldBitOffset x == 30 = Just $ setFieldName "I2C3RST" $ setDescription "I2C3 clock enable" x
-        fixG4RST x | otherwise = Just x
+shortEth x | "ETHERNET_" `L.isPrefixOf` periphName x =
+  x { periphName = "ETH" }
+shortEth x | otherwise = x
 
 adjustPeriphFamily l4s x | l4s == L4 || l4s == L4Plus = adjustFields fix x
   where

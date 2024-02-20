@@ -5,9 +5,8 @@
 
 module {{ modns }} where
 
-import Ivory.Language
-
 import Ivory.HW
+import Ivory.Language
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Peripheral.{{ type }}.Regs
@@ -21,18 +20,19 @@ data {{ type }} = {{ type }}
   }
 
 -- | Create an RNG given the base register address.
-mk{{ type }}  :: (STM32Interrupt i)
-       => Integer
-       -> (forall eff . Ivory eff ())
-       -> (forall eff . Ivory eff ())
-       -> i
-       -> {{ type }}
+mk{{ type }}
+  :: (STM32Interrupt i)
+  => Integer
+  -> (forall eff . Ivory eff ())
+  -> (forall eff . Ivory eff ())
+  -> i
+  -> {{ type }}
 mk{{ type }} base rccen rccdis interrupt = {{ type }}
-{{ bitDataRegsMk }}
-    , rngInterrupt      = HasSTM32Interrupt interrupt
-    , rngRCCEnable      = rccen
-    , rngRCCDisable     = rccdis
-    }
+{{{ bitDataRegsMk }}}
+  , rngInterrupt      = HasSTM32Interrupt interrupt
+  , rngRCCEnable      = rccen
+  , rngRCCDisable     = rccdis
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) ("rng->" ++ name)

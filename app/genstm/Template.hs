@@ -1,83 +1,106 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE FlexibleContexts #-}
 
-module Template where
+module Template
+  ( getTemplate
+  , getTemplatesPath
+  , template
+  , template'
+  , templateRaw
+  , listCtx
+  ) where
 
 import Turtle
 import Prelude hiding (log)
-import Text.Hastache
-import Text.Hastache.Context
-import qualified Data.Map as M
+
+import Data.Map (Map)
+import qualified Data.Map
+import Text.Mustache
+import Text.Mustache.Types
+import qualified Data.HashMap.Strict      as HM
+
 import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import qualified Data.Text.Lazy as TL
 import qualified Data.Text.Lazy.IO as TLIO
 import Data.List (intercalate)
 import Data.List.Split (splitOn)
-import Data.Data (Data, Typeable)
-import Data.Generics.Aliases (extQ)
-import Control.Monad.State (MonadState, StateT)
-import qualified Control.Monad.State as State
 
-import Types
+import Types (MonadGen)
 
-hastacheConf   :: MonadIO m => MuConfig m
-hastacheConf = defaultConfig {
-    muEscapeFunc = emptyEscape
-  }
-
-templateRename "typ" = "type"
-templateRename "pversion" = "version"
-templateRename x = x
-
-templateD context = template (mkGenericContext' templateRename defaultExt context)
-
-template :: (Text -> StateT Bool IO (MuType (StateT Bool IO)))
-         -> Text
-         -> Text
-         -> MonadGen ()
+template
+  :: (Show a, ToMustache a)
+  => a
+  -> Text
+  -> Text
+  -> MonadGen ()
 template context namespace tmpl = do
-  t <- getTemplate tmpl
-  out <- liftIO
-      $ flip State.evalStateT True
-      $ statefull t
+  et <- compileTemplate "someName" <$> getTemplate tmpl
+  case et of
+    Left e -> error $ "Cannot compile template " ++ show e
+    Right t -> do
+      let
+          ns = "Ivory.BSP." <> namespace
 
-  liftIO $ writeHS ns $ TL.toStrict out
-  where
-    ns = "Ivory.BSP." <> namespace
+          nsInit :: Text -> Text
+          nsInit = T.intercalate "." . map T.pack . init . splitOn "." . T.unpack
 
-    statefull :: Text -> State.StateT Bool IO TL.Text
-    statefull t = hastacheStr hastacheConf t composed
+          insertContext =
+              HM.insert "modns" (String ns)
+            . HM.insert "init_modns" (String $ nsInit ns)
 
-    composed = composeCtx (globalContext ns) context
+          ctxval = toMustache context
 
+          val = case ctxval of
+            Object o -> Object $ insertContext o
+            Null -> Object $ insertContext mempty
+            x -> error $ "Absurd value when templating" ++ show x
 
-globalContext ns = composeCtx
-                     (mkStrContext $ namespaceContext ns)
-                     (mkStrContext prefixCtx)
+          errorRes = checkedSubstituteValue t val
 
-namespaceContext ns "modns" = MuVariable ns
-namespaceContext ns "init_modns" = MuVariable (nsInit ns)
-namespaceContext ns _ = MuNothing
+      case errorRes of
+        ([], res) -> liftIO $ writeHS ns res
+        (xs, _) -> error
+          $ "Substitute produced errors while rendering"
+          ++ " "
+          ++ T.unpack tmpl
+          ++ "\n"
+          ++ show xs
+          ++ "\n"
+          ++ "Input was: \n"
+          ++ show context
+          ++ "Val was: \n"
+          ++ show val
 
-prefixCtx "prefixRest" = MuLambdaM $ prefixRest . decodeStr
-prefixCtx _ = MuNothing
+template'
+  :: Text
+  -> Text
+  -> MonadGen ()
+template' = template ()
 
-prefixRest :: MonadState Bool m => String -> m String
-prefixRest a = do
-    first <- State.get
-    if first then State.put False >> return ("    " ++ a)
-             else return ("  , " ++ a)
+templateRaw
+  :: (Show a, ToMustache a)
+  => a
+  -> Text
+  -> MonadGen Text
+templateRaw context tmpl = do
+  et <- compileTemplate "someName" <$> getTemplate tmpl
+  case et of
+    Left e -> error $ "Cannot compile template " ++ show e
+    Right t -> do
+      case checkedSubstitute t context of
+        ([], res) -> pure res
+        (xs, _) -> error
+          $ "Substitute produced errors while rendering"
+          ++ " "
+          ++ T.unpack tmpl
+          ++ "\n"
+          ++ show xs
+          ++ "\n"
+          ++ "Input was: \n"
+          ++ show context
 
-nsInit :: Text -> Text
-nsInit = T.intercalate "." . map T.pack . init . splitOn "." . T.unpack
-
-template' :: T.Text
-          -> T.Text
-          -> MonadGen ()
-template' = template mempty
+listCtx :: [(Text,Text)] -> Map Text Text
+listCtx = Data.Map.fromList
 
 getTemplatesPath :: MonadGen Text
 getTemplatesPath = do
@@ -86,6 +109,8 @@ getTemplatesPath = do
     Nothing -> liftIO $ die "need TEMPLATES_PATH env var"
     Just p -> return p
 
+-- Read template from file
+getTemplate :: Text -> MonadGen Text
 getTemplate x = do
   tPath <- getTemplatesPath
   -- log $ T.unpack $ "Loading template " <> x <> " from " <> tPath
@@ -107,12 +132,3 @@ writeHS namespace content = do
     tree = fromString $ T.unpack $ T.replace "." "/" $ fst sp
     fname = fromString $ T.unpack $ T.concat [snd sp, ".hs"]
     sp = T.breakOnEnd "." namespace
-
-emptyCtx :: Monad m => MuContext m
-emptyCtx = mempty
-
-listCtx :: (Monad m, MuVar a) => [(String, a)] -> MuContext m
-listCtx l = mkStrContext $ lookup l
-  where lookup [] what = MuNothing
-        lookup ((k,v):xs) what | k == what = MuVariable v
-        lookup ((k,v):xs) what | otherwise = lookup xs what

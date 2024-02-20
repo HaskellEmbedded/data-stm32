@@ -6,6 +6,7 @@ module Types where
 
 import Prelude hiding (log)
 import Turtle
+import Control.Monad (forM_)
 import Data.Char (toUpper)
 import Data.Map (Map)
 import Data.Maybe
@@ -13,6 +14,7 @@ import Data.Either
 import Data.Ord (comparing)
 import qualified Data.Map as M
 import qualified Data.Set as S
+import qualified Data.Text
 import qualified Data.List as L
 import qualified Data.ByteString.Char8 as B
 import Text.Pretty.Simple
@@ -21,6 +23,7 @@ import Control.Monad.Reader
 
 import Data.Ivory -- .Pretty (replace)
 import Data.SVD hiding (svd, ppPeripheral)
+import qualified Data.SVD.Extract
 import Data.CMX
 import Data.STM32
 
@@ -69,10 +72,10 @@ loadDatabases = do
   mPath <- need "DB_PATH"
   dbPath <- case mPath of
     Nothing -> die "need DB_PATH env var"
-    Just p -> return $ fromText p
-  svds <- fmap fixSVDs $ extractSVDCached dbPath
-  (cmxs, afs) <- extractCMXCached dbPath
+    Just p -> return $ Data.Text.unpack p
   opts <- execParser $ info (parseOptions <**> helper) (fullDesc <> progDesc "genstm")
+  svds <- fmap fixSVDs $ Data.SVD.Extract.extractSVDCached dbPath
+  (cmxs, afs) <- extractCMXCached dbPath
   let
     supp = filterSupported cmxs
     cmxsWithSVD = filterHavingSVD (supp, svds)
@@ -158,7 +161,12 @@ peripheralByVersion p ver = do
 periphVersions :: Periph -> MonadGen ([String])
 periphVersions p = do
   db <- ask
-  return $ map snd $ filter ((==show p) . fst) $ S.toList $ uniqueIps $ cmxsWithSVD db
+  return
+    $ map snd
+    $ filter ((==show p) . fst)
+    $ S.toList
+    $ uniqueIps
+    $ cmxsWithSVD db
 
 lp x = liftIO $ pPrint $ x
 
@@ -178,7 +186,7 @@ diffPeriphs p = do
 
 -- | Compute numeric distance of two peripherals
 -- based on number of different registers and fields.
-peripheralDistance :: Peripheral -> Peripheral -> Integer
+peripheralDistance :: Peripheral -> Peripheral -> Int
 peripheralDistance x y =
     let dr = diffRegNames x y
         dist = diffDistance dr
@@ -209,12 +217,15 @@ devFilter _ _ = error "Cannot use both include and exclude"
 filteredDevs ::  MonadGen ([(String, MCU)])
 filteredDevs = do
   db <- ask
-  return $ filter (devFilter (opts db) . fst) $ M.toList $ M.mapKeys shortName $ nameMapped db
+  pure
+    $ filter ((\d -> not $ elem d deviceIgnoresShortNames) . fst)
+    $ filter (devFilter (opts db) . fst)
+    $ M.toList
+    $ M.mapKeys shortName
+    $ nameMapped db
 
 filteredShortNames ::  MonadGen ([String])
-filteredShortNames = do
-  db <- ask
-  return $ filter (devFilter (opts db)) $ shortDevNames db
+filteredShortNames = map fst <$> filteredDevs
 
 peripheralByGroupName :: Device -> Periph -> Maybe Peripheral
 peripheralByGroupName svd periph = peripheralBy svd periph periphGroupName

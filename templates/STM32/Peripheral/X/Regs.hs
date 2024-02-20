@@ -11,4 +11,4 @@ import Ivory.Language
 {{.}}
 {{/imports}}
 
-{{ regs }}
+{{{ regs }}}

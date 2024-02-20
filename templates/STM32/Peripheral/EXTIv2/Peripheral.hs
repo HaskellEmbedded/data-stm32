@@ -5,9 +5,8 @@
 
 module {{ modns }} where
 
-import Ivory.Language
-
 import Ivory.HW
+import Ivory.Language
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Peripheral.EXTI.RegTypes
@@ -35,26 +34,27 @@ fix e = e
   }
 
 -- | Create an EXTI given the base register address.
-mk{{ type }}  :: (STM32Interrupt i)
-       => Integer
-       -> (forall eff . Ivory eff ())
-       -> (forall eff . Ivory eff ())
-       -> BitDataReg (EXTI_EXTICR)
-       -> BitDataReg (EXTI_EXTICR)
-       -> BitDataReg (EXTI_EXTICR)
-       -> BitDataReg (EXTI_EXTICR)
-       -> [(Int, Int, i)]
-       -> {{ type }}
+mk{{ type }}
+  :: (STM32Interrupt i)
+  => Integer
+  -> (forall eff . Ivory eff ())
+  -> (forall eff . Ivory eff ())
+  -> BitDataReg (EXTI_EXTICR)
+  -> BitDataReg (EXTI_EXTICR)
+  -> BitDataReg (EXTI_EXTICR)
+  -> BitDataReg (EXTI_EXTICR)
+  -> [(Int, Int, i)]
+  -> {{ type }}
 mk{{ type }} base syscfgrccen syscfgrccdis r1 r2 r3 r4 isrs = fix $ {{ type }}
-{{ bitDataRegsMk }}
-    , extiInterrupts = map (\(s, e, i) -> (s, e, HasSTM32Interrupt i)) isrs
-    , extiEnable = syscfgrccen
-    , extiDisable = syscfgrccdis
-    , extiCR1 = r1
-    , extiCR2 = r2
-    , extiCR3 = r3
-    , extiCR4 = r4
-    }
+{{{ bitDataRegsMk }}}
+  , extiInterrupts = map (\(s, e, i) -> (s, e, HasSTM32Interrupt i)) isrs
+  , extiEnable = syscfgrccen
+  , extiDisable = syscfgrccdis
+  , extiCR1 = r1
+  , extiCR2 = r2
+  , extiCR3 = r3
+  , extiCR4 = r4
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) ("exti->" ++ name)

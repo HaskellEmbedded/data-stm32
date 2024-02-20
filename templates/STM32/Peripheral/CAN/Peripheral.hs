@@ -54,20 +54,23 @@ data CANPeriph = CANPeriph
   , canRCCDisable  :: forall eff . Ivory eff ()
   , canIntTX       :: HasSTM32Interrupt
   , canIntSCE      :: HasSTM32Interrupt
+  , canAFLookup    :: GPIOPin -> GPIO_AF
   , canName        :: String
   }
 
-mkCANPeriph :: (STM32Interrupt i)
-            => Integer -- Base
-            -> (forall eff . Ivory eff ()) -- RCC Enable
-            -> (forall eff . Ivory eff ()) -- RCC Disable
-            -> i -- transmit interrupt
-            -> i -- receive FIFO 0 interrupt
-            -> i -- receive FIFO 1 interrupt
-            -> i -- error/status change interrupt
-            -> String -- Name
-            -> CANPeriph
-mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n =
+mkCANPeriph
+  :: (STM32Interrupt i)
+  => Integer -- Base
+  -> (forall eff . Ivory eff ()) -- RCC Enable
+  -> (forall eff . Ivory eff ()) -- RCC Disable
+  -> i -- transmit interrupt
+  -> i -- receive FIFO 0 interrupt
+  -> i -- receive FIFO 1 interrupt
+  -> i -- error/status change interrupt
+  -> (GPIOPin -> GPIO_AF) -- Alternate Function (AF) lookup
+  -> String -- Name
+  -> CANPeriph
+mkCANPeriph base rccen rccdis txint rx0int rx1int sceint afLookup n =
   CANPeriph
     { canRegMCR      = reg 0x000 "mcr"
     , canRegMSR      = reg 0x004 "msr"
@@ -126,6 +129,7 @@ mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n =
     , canRCCDisable  = rccdis
     , canIntTX       = HasSTM32Interrupt txint
     , canIntSCE      = HasSTM32Interrupt sceint
+    , canAFLookup    = afLookup
     , canName        = n
     }
   where
@@ -193,7 +197,7 @@ canInit periph bitrate rxpin txpin clockconfig = do
     pinEnable        p
     pinSetOutputType p gpio_outputtype_pushpull
     pinSetPUPD       p gpio_pupd_none
-    pinSetAF         p gpio_af9 -- All CAN peripherals connect to af9
+    pinSetAF         p (canAFLookup periph p)
     pinSetMode       p gpio_mode_af
 
   modifyReg (canRegMCR periph) $ do

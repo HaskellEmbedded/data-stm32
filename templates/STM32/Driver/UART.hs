@@ -31,5 +31,5 @@ uartTower :: IvoryString s
                      , Monitor e ())
 uartTower tocc uart pins baud = case uart of
   {{#versions}}
-  (WrappedV{{ version }} x) -> V{{ version }}.uartTower tocc x pins baud
+    (WrappedV{{ version }} x) -> V{{ version }}.uartTower tocc x pins baud
   {{/versions}}

@@ -1,18 +1,14 @@
-{ nixpkgs ? import <nixpkgs> {}, compiler ? "ghc8101" }:
+{ nixpkgs ? import <nixpkgs> {}, compiler ? "default" }:
 
 let
   itnSrc = nixpkgs.fetchFromGitHub {
     owner = "HaskellEmbedded";
     repo = "ivory-tower-nix";
-    rev = "00e5da396361978b791057555ed992d1118765d9";
-    sha256 = "094dbs0vlaqi32x7m4qxz7xgjqi8hdhifnag9vfy9p3zwb817rh6";
+    rev = "ccc4d98569d78c331df26bf9f387a7eb52c0c068";
+    sha256 = "1s2havlknh4dpc5q45i5c1cbp8j4kk9zj23d9br2v2qwa49d536g";
   };
   itn = import itnSrc { inherit compiler nixpkgs; };
   src = itn.pkgs.nix-gitignore.gitignoreSource [] ./.;
 in
-itn.pkgs.haskell.lib.overrideCabal
-  (itn.ivorypkgs.callCabal2nix "data-stm32" ./. {})
-  ( oldDrv: {
-      doCheck = false;
-      inherit src;
-  })
+itn.pkgs.haskell.lib.dontCheck
+  (itn.ivorypkgs.callCabal2nix "data-stm32" src {})

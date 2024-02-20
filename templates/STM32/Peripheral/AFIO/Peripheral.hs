@@ -19,15 +19,16 @@ data {{ type }} = {{ type }}
   }
 
 -- | Create AFIO given the base register address.
-mk{{ type }}  :: Integer
-       -> (forall eff . Ivory eff ())
-       -> (forall eff . Ivory eff ())
-       -> {{ type }}
+mk{{ type }}
+  :: Integer
+  -> (forall eff . Ivory eff ())
+  -> (forall eff . Ivory eff ())
+  -> {{ type }}
 mk{{ type }} base rccen rccdis = {{ type }}
-{{ bitDataRegsMk }}
-    , afioRCCEnable      = rccen
-    , afioRCCDisable     = rccdis
-    }
+{{{ bitDataRegsMk }}}
+  , afioRCCEnable      = rccen
+  , afioRCCDisable     = rccdis
+  }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) ("afio->" ++ name)

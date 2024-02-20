@@ -33,17 +33,18 @@ data {{ type }} = {{ type }}
   , uartName       :: String
   }
 
-mk{{ type }} :: (STM32Interrupt i)
-       => Integer
-       -> (forall eff . Ivory eff ())
-       -> (forall eff . Ivory eff ())
-       -> i
-       -> PClk
-       -> (GPIOPin -> GPIO_AF)
-       -> String
-       -> {{ type }}
+mk{{ type }}
+  :: (STM32Interrupt i)
+  => Integer
+  -> (forall eff . Ivory eff ())
+  -> (forall eff . Ivory eff ())
+  -> i
+  -> PClk
+  -> (GPIOPin -> GPIO_AF)
+  -> String
+  -> {{ type }}
 mk{{ type }} base rccen rccdis interrupt pclk afLookup n = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
   , uartRCCEnable  = rccen
   , uartRCCDisable = rccdis
   , uartInterrupt  = HasSTM32Interrupt interrupt
@@ -54,7 +55,6 @@ mk{{ type }} base rccen rccdis interrupt pclk afLookup n = {{ type }}
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
-
 
 -- | Initialize GPIO pins for a UART.
 initPin :: {{ type }} -> GPIOPin -> Ivory eff ()

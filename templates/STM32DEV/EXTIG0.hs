@@ -1,11 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 module {{ modns }} ({{#instances}}{{ name }}{{/instances}}) where
 
-import Ivory.Language
-import Ivory.HW
-import Ivory.HW.BitData
-import Ivory.HW.Reg
-
 import Ivory.BSP.STM32{{ dev }}.MemoryMap
 import qualified Ivory.BSP.STM32{{ dev }}.Interrupt as {{ dev }}
 
@@ -24,7 +19,7 @@ import Ivory.BSP.STM32.Peripheral.EXTI
   undefined
   [
 {{#extiInterrupts}}
-  {{#prefixRest}}{{/prefixRest}}({{ rangeStart }}, {{ rangeEnd }}, {{ dev }}.{{ rangeISR }})
+    {{ prefix }} ({{ data.rangeStart }}, {{ data.rangeEnd }}, {{ dev }}.{{ data.rangeISR }})
 {{/extiInterrupts}}
   ]
 {{/instances}}

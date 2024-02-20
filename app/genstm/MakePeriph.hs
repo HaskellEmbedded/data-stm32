@@ -6,7 +6,7 @@ module MakePeriph where
 
 import Prelude hiding (log)
 
-import Control.Monad.Reader
+import Data.Default.Class
 
 import Debug.Trace
 import Data.Maybe
@@ -14,28 +14,45 @@ import Data.Either (rights)
 import Data.Ord (comparing)
 import Data.Char (toLower, toUpper, isDigit)
 import Data.Data (Data, Typeable)
+import Data.List.NonEmpty (NonEmpty)
+
+import qualified Data.List
 import qualified Data.List as L
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Set as S
+
 import Safe
 
 import Data.CMX
-import Data.SVD
+import Data.SVD.Types
 import Data.Ivory.ISR
 import Data.STM32.Types
 import Data.STM32.Drivers
 
 import qualified Data.ByteString.Char8 as B
 import Data.Attoparsec.ByteString.Char8
+import Text.Mustache (ToMustache(..), object, (~>))
 
 import Types
 import Utils
+import Contexts (Prefixed, buildPrefixed)
 
 data InstancesCtx = InstancesCtx {
     dev       :: String
   , fam       :: String
   , vers      :: String
-  , instances :: [InstanceCtx]
+  , instances :: NonEmpty InstanceCtx
   } deriving (Show, Data, Typeable)
+
+instance ToMustache InstancesCtx where
+  toMustache x = object
+    [ "dev" ~> dev x
+    , "fam" ~> fam x
+    , "vers" ~> vers x
+    , "instances" ~> NE.toList (instances x)
+    , "prefixedInstances" ~> buildPrefixed (NE.toList $ instances x)
+    , "firstInstance" ~> NE.head (instances x)
+    ]
 
 data InstanceCtx = InstanceCtx {
     name           :: String
@@ -51,26 +68,52 @@ data InstanceCtx = InstanceCtx {
   , numericIndex   :: Int
   } deriving (Show, Data, Typeable)
 
+instance ToMustache InstanceCtx where
+  toMustache x = object
+    [ "name" ~> name x
+    , "version" ~> version x
+    , "interrupts" ~> interrupts x
+    , "extiInterrupts" ~> buildPrefixed (extiInterrupts x)
+    , "clockSource" ~> clockSource x
+    , "rccEnableReg" ~> rccEnableReg x
+    , "rccEnableBit" ~> rccEnableBit x
+    , "rccResetReg" ~> rccResetReg x
+    , "rccResetBit" ~> rccResetBit x
+    , "index" ~> index x
+    , "numericIndex" ~> numericIndex x
+    ]
+
 data EXTIInterruptCtx = EXTIInterruptCtx {
     rangeStart :: Int
   , rangeEnd :: Int
   , rangeISR :: String
   } deriving (Show, Data, Typeable)
 
+instance ToMustache EXTIInterruptCtx where
+  toMustache x = object
+    [ "rangeStart" ~> rangeStart x
+    , "rangeEnd" ~> rangeEnd x
+    , "rangeISR" ~> rangeISR x
+    ]
+
 -- find enable and reset bits in RCC registers (e.g. uart{vers}{suffix} (e.g. uart1en))
 findRCCBit :: Periph
            -> String
            -> String
            -> Peripheral
-           -> (String, Field)
+           -> Either String (String, Field)
 findRCCBit periph vers suffix rcc = get (rccFieldName suffix) $ periphRegisters rcc
   where
     rccFieldName prefix = map toUpper $ concat [show periph, vers, prefix]
     get name regs = case filterRegFieldsByName name regs of
-         []         -> error $ "RCC field not found: " ++ name
-         [(r, [f])] -> (regName r, f)
-         [(r, _)]   -> error $ "Multiple fields found in RCC registers: " ++ name
-         _          -> error $ "Field found in multiple RCC registers: " ++ name
+         []         -> Left
+                        $ "RCC field not found: "
+                        ++ name
+                        ++ " "
+                        ++ show (periph, vers, suffix, rcc)
+         [(r, [f])] -> Right (regName r, f)
+         [(r, _)]   -> Left $ "Multiple fields found in RCC registers: " ++ name
+         _          -> Left $ "Field found in multiple RCC registers: " ++ name
 
 filterRegFields :: (Field -> Bool)
                 -> [Register]
@@ -163,8 +206,8 @@ periphInstancesData periph mcu = do
       map (uncurry (mkData dev rcc)) (zip xs [0..])
   where
     pName idStr = concat [show periph, idStr]
-    rccEn idStr rcc = findRCCBit periph idStr "EN" rcc
-    rccRst idStr rcc = findRCCBit periph idStr "RST" rcc
+    rccEn idStr rcc = either (pure ("404", def)) id $ findRCCBit periph idStr "EN" rcc
+    rccRst idStr rcc = either (pure ("404", def)) id $ findRCCBit periph idStr "RST" rcc
     lower = map toLower
     mkData dev rcc idChar idx = InstanceCtx {
         name           = lower $ pName id'
@@ -210,6 +253,7 @@ periphInstancesData periph mcu = do
 
     isrsForPeriph idStr = filter (\Interrupt{..} ->
       case periph of
+        ADC -> "ADC" == interruptName
         CAN -> case mcuFamily mcu of
           F0 -> "CEC_CAN" == interruptName
           _  ->    (pName idStr) `L.isPrefixOf` interruptName
@@ -238,6 +282,7 @@ periphInstancesData periph mcu = do
                   Right (start, end) -> Right (start, end, i)
                ) is
 
+validISRCount ADC = 1
 validISRCount UART = 1
 validISRCount USART = 1
 validISRCount LPUART = 1
@@ -247,27 +292,28 @@ validISRCount RNG = 1
 validISRCount CAN = 4
 validISRCount _ = 0
 
-makePeriphContext :: Periph -> MCU -> MonadGen InstancesCtx
+makePeriphContext :: Periph -> MCU -> MonadGen (Maybe InstancesCtx)
 makePeriphContext periph mcu = do
   inst <- periphInstancesData periph mcu
-
-  return $ InstancesCtx {
-    dev = devName
-  , fam = show $ mcuFamily mcu
-  , vers = vers inst
-  , instances = inst
-  }
+  case inst of
+    [] -> pure Nothing
+    _  -> pure $ pure $ InstancesCtx {
+            dev = devName
+          , fam = show $ mcuFamily mcu
+          , vers = vers inst
+          , instances = NE.fromList inst
+          }
   where
     devName = L.take 4 $ L.drop 5 $ mcuRefName mcu
     vers inst = case inst of
       (x:xs) -> version x
       [] -> ""
 
--- e.g. for G0s there's only one peripheral bus so we threat is as #1
-pclkIndex name | "APB" `L.isPrefixOf` name = Just "PClk1"
 pclkIndex name | "APB1" `L.isPrefixOf` name = Just "PClk1"
 pclkIndex name | "APB2" `L.isPrefixOf` name = Just "PClk2"
 pclkIndex name | "APB3" `L.isPrefixOf` name = Just "PClk3"
+-- e.g. for G0s there's only one peripheral bus so we threat is as #1
+pclkIndex name | "APB" `L.isPrefixOf` name = Just "PClk1"
 pclkIndex name | otherwise = Nothing
 
 -- EXTI0     - (0, 0)
@@ -281,3 +327,122 @@ extiRangeParser = do
   start <- option end $ char '_' *> decimal
   -- correction for EXTI9_5, start is always lower
   return (min start end, max start end)
+
+-- * Timers
+
+data TimersCtx = TimersCtx {
+    timDev       :: String
+  , timInstances :: [TimerInstanceCtx]
+  , timInstances32Bit :: [TimerInstanceCtx]
+  } deriving (Show, Data, Typeable)
+
+instance ToMustache TimersCtx where
+  toMustache x = object
+    [ "dev" ~> timDev x
+    , "instances" ~> timInstances x
+    , "instances32bit" ~> timInstances32Bit x
+    ]
+
+data TimerInstanceCtx = TimerInstanceCtx {
+    timName           :: String
+  , timRccEnableReg   :: String
+  , timRccEnableBit   :: String
+  , timRccResetReg    :: String
+  , timRccResetBit    :: String
+  , timIndex          :: Int
+  } deriving (Show, Data, Typeable)
+
+instance ToMustache TimerInstanceCtx where
+  toMustache x = object
+    [ "name" ~> timName x
+    , "rccEnableReg" ~> timRccEnableReg x
+    , "rccEnableBit" ~> timRccEnableBit x
+    , "rccResetReg" ~> timRccResetReg x
+    , "rccResetBit" ~> timRccResetBit x
+    , "index" ~> timIndex x
+    ]
+
+-- Timers
+timerInstancesData
+  :: Periph
+  -> MCU
+  -> MonadGen [TimerInstanceCtx]
+timerInstancesData periph mcu = do
+  rcc <- processedPeriph RCC mcu
+  -- ATIM 1, 8, 20
+  -- GTIM all others, 2, 5 are 32-bit
+  timsRCC <- timerInstancesRCC TIM mcu
+  timsSVD <- timerInstancesSVD TIM mcu
+  let
+    -- needs to be interesected as some present
+    -- in RCC are missing in SVD (and thus memMap)
+    tims = timsRCC `Data.List.intersect` timsSVD
+    atimIndexes = [1, 8, 20]
+    groupedTims = case periph of
+      ATIM -> filter (`elem` atimIndexes) tims
+      GTIM -> filter (not . flip elem atimIndexes) tims
+  pure $ map (mkData rcc) groupedTims
+  where
+    pName idStr = concat [show periph, idStr]
+    rccEn idStr rcc = either (pure ("404", def)) id $ findRCCBit TIM idStr "EN" rcc
+    rccRst idStr rcc = either (pure ("404", def)) id $ findRCCBit TIM idStr "RST" rcc
+    lower = map toLower
+    mkData rcc timId =
+      TimerInstanceCtx
+        { timName           = lower $ pName idStr
+        , timRccEnableReg   = lower $ fst $ rccEn idStr rcc
+        , timRccEnableBit   = lower $ fieldName $ snd $ rccEn idStr rcc
+        , timRccResetReg    = lower $ fst $ rccRst idStr rcc
+        , timRccResetBit    = lower $ fieldName $ snd $ rccRst idStr rcc
+        , timIndex          = timId
+        }
+      where idStr = show timId
+
+-- | Get timer instances based on matching RCC fields
+timerInstancesRCC
+  :: Periph
+  -> MCU
+  -> MonadGen [Int]
+timerInstancesRCC periph mcu = do
+  rcc <- processedPeriph RCC mcu
+  return
+    $ Data.List.sort
+    $ map
+        (\Field{..} ->
+          readNote "timeInstancesRCC"
+          $ Data.List.takeWhile Data.Char.isDigit
+          $ fromJust
+          $ L.stripPrefix pName
+          $ fieldName
+        )
+    $ concatMap (\(r, fs) -> fs)
+    $ filterRegFields
+        (\Field{..} ->
+             pName `L.isPrefixOf` fieldName
+          && "EN" `L.isSuffixOf` fieldName
+          && (not $ "SMEN" `L.isSuffixOf` fieldName)
+          && (not $ "LPEN" `L.isSuffixOf` fieldName)
+        )
+        (periphRegisters rcc)
+  where
+    pName = show periph
+
+-- | Get timer instances according to SVD
+timerInstancesSVD
+  :: Periph
+  -> MCU
+  -> MonadGen [Int]
+timerInstancesSVD p mcu = do
+  mm <- memMap mcu
+  pure
+    $ Data.List.sort
+    $ rights
+    $ map
+       (parseOnly
+         (string (B.pack $ show p)
+         *> decimal
+         <* endOfInput
+         )
+       . B.pack
+       . snd
+       ) mm

@@ -21,7 +21,7 @@ data {{ type }} = {{ type }}
 -- | Create an IWDG given the base register address.
 mk{{ type }}  :: Integer -> ClockSource -> {{ type }}
 mk{{ type }} base clk = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
   , iwdgClock = clk
   }
   where

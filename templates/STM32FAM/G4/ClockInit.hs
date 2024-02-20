@@ -17,7 +17,7 @@ import Ivory.BSP.STM32{{ fam }}.FLASH
 import Ivory.BSP.STM32{{ fam }}.PWR
 import Ivory.BSP.STM32{{ fam }}.RCC
 
-init_clocks :: ClockConfig -> Def('[]':->())
+init_clocks :: ClockConfig -> Def('[]:->())
 init_clocks clockconfig = proc "init_clocks" $ body $ do
   comment ("platformClockConfig: " ++ (show cc)      ++ "\n" ++
            "sysclk: "  ++ (show (clockSysClkHz cc))  ++ "\n" ++
@@ -37,7 +37,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
   -- Reset HSEOn, CSSOn, PLLOn bits
   modifyReg rcc_reg_cr $ do
     clearBit rcc_cr_hseon
-    clearBit rcc_cr_hsecsson
+    clearBit rcc_cr_csson
     clearBit rcc_cr_pllon
 
   -- Reset HSEBYP bit

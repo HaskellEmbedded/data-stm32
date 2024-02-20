@@ -20,7 +20,7 @@ data {{ type }} = {{ type }}
 
 mk{{ type }} :: Integer -> {{ type }}
 mk{{ type }} base  = {{ type }}
-{{ bitDataRegsMk }}
+{{{ bitDataRegsMk }}}
   }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
