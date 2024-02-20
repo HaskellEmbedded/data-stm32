@@ -100,27 +100,5 @@ Then we match each device with its SVD file according to its name.
 
 ### Updating SVD files
 
-Executable `app/gensvds` is a simple SVD downloader / unpacker. To obtain
-recent SVD files from vendor run
-
-```bash
-cabal new-run gensvds
-```
-
-To update the `svds` branch
-
-```bash
-mv svds new_svds
-git checkout svds
-mv new_svds/stm/*.svd svds/stm/
-git diff
-git commit ...
-git push ...
-git show # note the new revision
-```
-
-Don't forget to update `nix/svd-database.nix`, to obtain `sha256` hash use
-
-```bash
-nix-prefetch-git https://github.com/HaskellEmbedded/data-stm32 <NEW_REVISION_HASH>
-```
+We now use SVD files from https://github.com/stm32-rs/stm32-rs/
+pinned in [nix/stm32-rs-svds.nix](./nix/stm32-rs-svds.nix)
