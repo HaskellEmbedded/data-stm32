@@ -51,14 +51,20 @@ instance ToMustache InstancesCtx where
     , "vers" ~> vers x
     , "instances" ~> NE.toList (instances x)
     , "prefixedInstances" ~> buildPrefixed (NE.toList $ instances x)
-    , "firstInstance" ~> NE.head (instances x)
+    , "canFilterInstances" ~> makeCANFilters (NE.toList $ instances x)
     ]
+    where
+      -- can1 and can2 have shared filters - canFilters
+      -- if there's can3, we also add can3Filters
+      -- on some devs, there's only can for can1
+      makeCANFilters = filter (\InstanceCtx{..} -> name `elem` ["can", "can1", "can3"])
 
 data InstanceCtx = InstanceCtx {
     name           :: String
   , version        :: String
   , interrupts     :: [String]
   , extiInterrupts :: [EXTIInterruptCtx]
+  , canFiltersName :: String
   , clockSource    :: String
   , rccEnableReg   :: String
   , rccEnableBit   :: String
@@ -74,6 +80,7 @@ instance ToMustache InstanceCtx where
     , "version" ~> version x
     , "interrupts" ~> interrupts x
     , "extiInterrupts" ~> buildPrefixed (extiInterrupts x)
+    , "canFiltersName" ~> canFiltersName x
     , "clockSource" ~> clockSource x
     , "rccEnableReg" ~> rccEnableReg x
     , "rccEnableBit" ~> rccEnableBit x
@@ -216,6 +223,9 @@ periphInstancesData periph mcu = do
           Nothing -> error $ "no mcu periph driver for" ++ show (mcuName mcu, periph)
       , interrupts     = sharedInterrupts $ isrs' id' dev
       , extiInterrupts = extiInterruptRanges $ isrs' id' dev
+      , canFiltersName = case lower $ pName id' of
+          "can3" -> "can3Filters"
+          _      -> "canFilters" -- can1 and 2 always have shared filters
       , clockSource    = maybe "" id $ pclkIndex $ fst $ rccEn id' rcc
       , rccEnableReg   = lower $ fst $ rccEn id' rcc
       , rccEnableBit   = lower $ fieldName $ snd $ rccEn id' rcc
