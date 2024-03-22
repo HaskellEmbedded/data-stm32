@@ -50,6 +50,7 @@ import Ivory.BSP.STM32.Peripheral.ADC.RegTypes
   , _               :: Bits 4
   , adc_ccr_adcpre  :: ADCPrescaler
   , adc_ccr_dma     :: ADCDMA
+  , adc_ccr_dds     :: Bit
   , _               :: Bit
   , adc_ccr_delay   :: Bits 4
   , _               :: Bits 3
