@@ -1,4 +1,4 @@
-{ pkgs ? import <nixpkgs> {} }:
+{ pkgs ? (import ./itn.nix {}).pkgs, ... }:
 let
   cmxDb = pkgs.callPackage ./cubemx-database.nix {};
   svdDb = pkgs.callPackage ./stm32-rs-svds.nix {};
