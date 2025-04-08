@@ -13,8 +13,6 @@ import Prettyprinter.Render.Terminal (AnsiStyle, Color(..), color)
 import Data.Ivory.Pretty
 import qualified Data.Bits.Pretty
 
-ppList pp x = vcat (map pp x) <> line
-
 ppPeriphRegs res = displayIvoryCompact (ppPeriphRegs' res False)
 ppPeriphRegsWithDefs res = displayIvoryCompact (ppPeriphRegs' res True)
 
@@ -22,12 +20,11 @@ ppBitDataRegs res = displayIvoryCompact (ppBitDataRegs' res)
 ppBitDataRegsMk res = displayIvoryCompact (ppBitDataRegsMk' res)
 
 ppPeriphRegs' periph@Peripheral{..} withDefs =
-       comment (pretty periphName <+> pretty periphDescription)
-  <>   hardline
-  <>   comment ("Base address:" <+> pretty (Data.Bits.Pretty.formatHex periphBaseAddress))
-  <>   ppList (\reg -> ppIvoryReg periph reg withDefs) periphRegisters
-  <> softline
-  <> maybe mempty (\x -> pretty ("Derived from" :: String) <+> pretty x) periphDerivedFrom
+     comment (pretty periphName <+> pretty periphDescription)
+  <> hardline
+  <> comment ("Base address:" <+> pretty (Data.Bits.Pretty.formatHex periphBaseAddress))
+  <> vsep (map (\reg -> ppIvoryReg periph reg withDefs) periphRegisters)
+  <> maybe mempty (\x -> softline <> pretty ("Derived from" :: String) <+> pretty x) periphDerivedFrom
 
 ppIvoryReg Peripheral{..} r@Register{..} withDefs =
       hardline
@@ -41,7 +38,7 @@ ppIvoryReg Peripheral{..} r@Register{..} withDefs =
   <>  (annotate (color Blue) $ pretty lowcaseRegName)
   <>  line
   <>  vsep
-   [ indent 2 ( encloseStack "{" "}" "," (ppField maxFieldLength <$> prefixed))
+   [ indent 2 ( encloseStack "{" "}" "," (ppField maxFieldNameLength maxTypeNameLength <$> prefixed))
    , (annotate (color Red) "|]")
    ]
   <>  if withDefs then line <> defs else mempty
@@ -52,7 +49,13 @@ ppIvoryReg Peripheral{..} r@Register{..} withDefs =
       prefixRegField prefix f = f
       upcaseRegName = toUpper <$> mconcat [periphName, "_", regName]
       lowcaseRegName = toLower <$> upcaseRegName
-      maxFieldLength = maximum . map (length . fieldName) $ prefixed
+      maxFieldNameLength = maximum . map (length . fieldName) $ prefixed
+      maxTypeNameLength = maximum . map ((maybe maxBitsLength length) . fieldRegType) $ prefixed
+        where
+          maxBitsLength =  maximum . map (length . renderWidth . fieldBitWidth) $ prefixed
+          renderWidth 1 = "Bit"
+          renderWidth x = "Bits " ++ show x
+
       defs = defName
            <> " :: BitDataReg "
            <> pretty (toUpper <$> mconcat [periphName, "_", regName])
@@ -89,17 +92,11 @@ ppBitDataRegsMk' Peripheral{..} = indent 2 $ encloseSep "{" "" "," $
     regOrPort _ = "Reg"
     maxRegLength = maximum . ((length (periphName ++ "RCCDisable")):) . map ((+3) . (+length periphName). length . regName) $ periphRegisters
 
-ppField maxLen f@Field{..} =
-  (annotate (color Green) $ pretty $ rpad maxLen (toLower <$> fieldName))
-  <>  fixPadding fieldReserved
-  <>  "::"
-  <+> (maybe (ppWidthPad 7 fieldBitWidth) pretty fieldRegType)
-  <+> (annotate (color Cyan) (pretty $ " -- " ++ fieldDescription))
-  where fixPadding True = mempty
-        fixPadding False  = "  "
-
-ppWidth 1 = "Bit"
-ppWidth x = "Bits" <+> pretty x
+ppField maxNameLen maxTypeLen f@Field{..} =
+  (annotate (color Green) $ pretty $ rpad maxNameLen (toLower <$> fieldName))
+  <+> "::"
+  <+> (maybe (ppWidthPad maxTypeLen fieldBitWidth) (pretty . rpad maxTypeLen) fieldRegType)
+  <+> (annotate (color Cyan) (pretty $ "-- " ++ fieldDescription))
 
 ppWidthPad m 1 = pretty $ rpad m "Bit"
 ppWidthPad m x = pretty $ rpad m $ "Bits " ++ show x
