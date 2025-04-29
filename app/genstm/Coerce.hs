@@ -86,6 +86,8 @@ filterByPeriph RCC  _ = adjustRCCRegs
 filterByPeriph SPI  _ = adjustSPIRegs
 filterByPeriph SYSCFG _ = renameDualSYSCFG
 filterByPeriph EXTI   _ = adjustEXTI
+filterByPeriph ETHERNET_MAC   _ = adjustETH_MAC
+filterByPeriph ETHERNET_DMA   _ = adjustETH_DMA
 filterByPeriph _ _ = id
 
 checkPeriphRegsContinuity p new = do
@@ -351,6 +353,20 @@ usartToUart x | otherwise = x
 shortEth x | "ETHERNET_" `L.isPrefixOf` periphName x =
   x { periphName = "ETH" }
 shortEth x | otherwise = x
+
+adjustETH_MAC = adjustRegFields fix
+  where
+    fix "MACCR" x | fieldName x == "IFG" = Just $ x { fieldRegType = Just "InterframeGap" }
+    fix "MACCR" x | fieldName x == "BL" = Just $ x { fieldRegType = Just "BackoffLimit" }
+    fix "MACMIIAR" x | fieldName x == "CR" = Just $ x { fieldRegType = Just "ClockRange" }
+    fix _ x = Just x
+
+adjustETH_DMA = adjustRegFields fix
+  where
+    fix "DMABMR" x | fieldName x == "PM" = Just $ x { fieldRegType = Just "RxTxRatio" }
+    fix "DMASR" x | fieldName x == "TPS" = Just $ x { fieldRegType = Just "TransmitProcessState" }
+    fix "DMASR" x | fieldName x == "RPS" = Just $ x { fieldRegType = Just "ReceiveProcessState" }
+    fix _ x = Just x
 
 adjustPeriphFamily l4s x | l4s == L4 || l4s == L4Plus = adjustFields fix x
   where
