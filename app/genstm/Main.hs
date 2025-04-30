@@ -369,8 +369,8 @@ stm32periphs = do
 
   -- Timers (ATIM, GTIM) common for all devs (hopefully)
   -- no templating here
+  tPath <- getTemplatesPath
   forM_ ["ATIM", "GTIM"] $ \tim -> do
-    tPath <- getTemplatesPath
     cptree
       (T.unpack $ tPath <> "/STM32/Peripheral/" <> tim)
       (T.unpack $ "./src/Ivory/BSP/STM32/Peripheral/" <> tim)
@@ -381,6 +381,12 @@ stm32periphs = do
   -- F4/F7 Ethernet
   nVDev <- get nonVersionedBase
   genEthernetPeriphTree nVDev
+  template'
+    ("STM32.Driver.ETH")
+    ("STM32/Driver/ETH.hs")
+  cptree
+    (T.unpack $ tPath <> "/STM32/Driver/ETH")
+    (T.unpack $ "./src/Ivory/BSP/STM32/Driver/ETH")
 
 stm32modes :: MonadGen ()
 stm32modes = do
