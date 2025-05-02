@@ -7,7 +7,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Ivory.BSP.STM32.Driver.ETH (ethTower, ethTowerDeps) where
+module Ivory.BSP.STM32.Driver.ETH
+  ( ethTower
+  , module Ivory.BSP.STM32.Driver.ETH.FrameBuffer
+  , module Ivory.BSP.STM32.Driver.ETH.RxPacket
+  ) where
 
 import Control.Monad (forM_)
 
@@ -32,22 +36,20 @@ import Ivory.BSP.STM32.Peripheral.ETH.MMC.Regs
 import Ivory.BSP.STM32.Driver.ETH.FrameBuffer
 import Ivory.BSP.STM32.Driver.ETH.MIIMTypes
 import Ivory.BSP.STM32.Driver.ETH.PhyState
+import Ivory.BSP.STM32.Driver.ETH.RxPacket
 
 -- | Ethernet peripheral driver
 -- Tested on STM32F7 with LAN8742A (standard f7 nucleo board)
 ethTower
-  :: forall e frameBuffer
-   . (IvoryString frameBuffer)
-  => (e -> ClockConfig)
+  :: (e -> ClockConfig)
   -> ETHConfig
-  -> Proxy frameBuffer
   -> Tower
        e
        ( ChanOutput ('Stored IBool)
-       , BackpressureTransmit frameBuffer ('Stored IBool)
-       , ChanOutput frameBuffer
+       , BackpressureTransmit FrameBuffer ('Stored IBool)
+       , ChanOutput (Struct "rx_packet")
        )
-ethTower tocc ETHConfig{..} _frameBuffer = do
+ethTower tocc ETHConfig{..} = do
   let
     ETH{..} = ethConfigPeriph
     ETHPins{..} = ethConfigPins
@@ -55,6 +57,7 @@ ethTower tocc ETHConfig{..} _frameBuffer = do
     named = ("eth"++)
 
   mapM_ towerArtifact dmaArtifacts
+  ethTowerDeps
 
   clockConfig <- fmap tocc getEnv
 
@@ -95,15 +98,18 @@ ethTower tocc ETHConfig{..} _frameBuffer = do
       <- state (named "Rdes1")
 
     -- Data buffers -> up to MTU -> up to 2^13 (8192)
-    (tframe0 :: Ref 'Global frameBuffer)
+    (tframe0 :: Ref 'Global FrameBuffer)
       <- state (named "Tframe0")
-    (tframe1 :: Ref 'Global frameBuffer)
+    (tframe1 :: Ref 'Global FrameBuffer)
       <- state (named "Tframe1")
 
-    (rframe0 :: Ref 'Global frameBuffer)
+    (rframe0 :: Ref 'Global FrameBuffer)
       <- state (named "Rframe0")
-    (rframe1 :: Ref 'Global frameBuffer)
+    (rframe1 :: Ref 'Global FrameBuffer)
       <- state (named "Rframe1")
+
+    (rxPacket :: Ref Global (Struct "rx_packet"))
+      <- state (named "RxPacket")
 
     monitorModuleDef $ do
       hw_moduledef
@@ -475,28 +481,59 @@ ethTower tocc ETHConfig{..} _frameBuffer = do
           rframe <- assign $ fstDesc ? (rframe0, rframe1)
 
           rd0 <- fromRep <$> deref (rdes ! 0)
+          rd4 <- fromRep <$> deref (rdes ! 4)
 
-          cond_
-            [ bitToBool (rd0 #. eth_rdes0_es)
-                ==> rxErrors += 1
-            , bitToBool (rd0 #. eth_rdes0_fs)
-              .&& iNot (bitToBool (rd0 #. eth_rdes0_ls))
-                -- Fragmented frame which we don't support
-                ==> rxFragmented += 1
-            , true ==> do
-                -- Set frame length (including padding)
-                store
-                  (rframe ~> stringLengthL)
-                  $ safeCast $ toRep (rd0 #. eth_rdes0_fl)
+          store (rxPacket ~> rx_packet_error) false
+          store (rxPacket ~> rx_packet_fragmented) false
+          store (rxPacket ~> rx_packet_overflow) false
+          store (rxPacket ~> rx_packet_crc_error) false
+          store (rxPacket ~> rx_packet_receive_error) false
+          store (rxPacket ~> rx_packet_ip_error) false
 
-                store
-                  (rdes ! 0)
-                  $ withBits 0
-                  $ do
-                      setField eth_rdes0_own owned_by_dma
+          when
+            (bitToBool (rd0 #. eth_rdes0_es))
+            $ do
+                rxErrors += 1
+                store (rxPacket ~> rx_packet_error) true
 
-                emit rxDoneE (constRef rframe)
-            ]
+          when
+            (bitToBool (rd0 #. eth_rdes0_oe))
+            $ store (rxPacket ~> rx_packet_overflow) true
+
+          when
+            (bitToBool (rd0 #. eth_rdes0_ce))
+            $ store (rxPacket ~> rx_packet_crc_error) true
+
+          when
+            (bitToBool (rd0 #. eth_rdes0_re))
+            $ store (rxPacket ~> rx_packet_receive_error) true
+
+          when
+            (    (bitToBool (rd4 #. eth_rdes4_iphe)) -- IP Header error
+             .|| (bitToBool (rd4 #. eth_rdes4_ippe)) -- IP Payload error
+            )
+            $ store (rxPacket ~> rx_packet_ip_error) true
+
+          when
+            ((bitToBool (rd0 #. eth_rdes0_fs))
+              .&& iNot (bitToBool (rd0 #. eth_rdes0_ls)))
+            $ do
+                rxFragmented += 1
+                store (rxPacket ~> rx_packet_fragmented) true
+
+          -- Set frame length (including padding)
+          store
+            (rframe ~> stringLengthL)
+            $ safeCast $ toRep (rd0 #. eth_rdes0_fl)
+
+          store
+            (rdes ! 0)
+            $ withBits 0
+            $ do
+                setField eth_rdes0_own owned_by_dma
+
+          refCopy (rxPacket ~> rx_packet_buffer) rframe
+          emit rxDoneE (constRef rxPacket)
 
         interrupt_enable (ethInterrupt ethMAC)
 
@@ -505,6 +542,16 @@ ethTower tocc ETHConfig{..} _frameBuffer = do
     , BackpressureTransmit (fst txReq) (snd txDone)
     , snd rxDone
     )
+  where
+    ethTypes :: Module
+    ethTypes = package "ethTypes" $ do
+      defStringType (Proxy :: Proxy FrameBuffer)
+      defStruct (Proxy :: Proxy "rx_packet")
+
+    ethTowerDeps :: Tower e ()
+    ethTowerDeps = do
+      towerDepends ethTypes
+      towerModule ethTypes
 
 -- | Init ETH MAC peripheral
 macInit
@@ -741,12 +788,3 @@ refU8_to_uint32_proc = importProc "ref_to_uint32" dmaRefToUint32Header
 
 refU32_to_uint32_proc :: Def('[Ref s ('Stored Uint32)] :-> Uint32)
 refU32_to_uint32_proc = importProc "ref_to_uint32" dmaRefToUint32Header
-
-ethTypes :: Module
-ethTypes = package "ethTypes" $ do
-  defStringType (Proxy :: Proxy FrameBuffer)
-
-ethTowerDeps :: Tower e ()
-ethTowerDeps = do
-  towerDepends ethTypes
-  towerModule ethTypes

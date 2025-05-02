@@ -12,5 +12,6 @@ import Ivory.Language
 
 [ivory|
   -- Has to be aligned to 4 bytes
-  string struct FrameBuffer 1500
+  -- 1522 comes from datasheet (1518 maximum legal length + 4 VLAN tag)
+  string struct FrameBuffer 1522
 |]

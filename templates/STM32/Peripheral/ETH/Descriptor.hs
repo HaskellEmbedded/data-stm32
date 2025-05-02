@@ -105,15 +105,15 @@ import Ivory.BSP.STM32.Peripheral.ETH.Descriptor.Types
   --   to the second buffer of the descriptor or next descriptor
   -- RDES4: Extended status
   bitdata ETH_RDES4 :: Bits 32 = eth_rdes4
-    { _                :: Bits 18 -- (Reserved)
-    , eth_rdes4_pv     :: Bit      -- PTP version
-    , eth_rdes4_pft    :: Bit        -- PTP frame type
-    , eth_rdes4_pmt    :: Bits 4     -- PTP message type
-    , eth_rdes4_ipv6pr :: Bit        -- IPv6 packet received
-    , eth_rdes4_ipv4pr :: Bit        -- IPv4 packet received
-    , eth_rdes4_ipcb   :: Bit        -- IP checksum bypassed
-    , eth_rdes4_ippe   :: Bit        -- IP payload error
-    , eth_rdes4_iphe   :: Bit        -- IP header error
+    { _                :: Bits 18        -- (Reserved)
+    , eth_rdes4_pv     :: Bit            -- PTP version
+    , eth_rdes4_pft    :: Bit            -- PTP frame type
+    , eth_rdes4_pmt    :: Bits 4         -- PTP message type
+    , eth_rdes4_ipv6pr :: Bit            -- IPv6 packet received
+    , eth_rdes4_ipv4pr :: Bit            -- IPv4 packet received
+    , eth_rdes4_ipcb   :: Bit            -- IP checksum bypassed
+    , eth_rdes4_ippe   :: Bit            -- IP payload error
+    , eth_rdes4_iphe   :: Bit            -- IP header error
     , eth_rdes4_ippt   :: IPPayloadType  -- IP payload type if checksum offload is enabled
     }
   -- RDES5: (Reserved)
