@@ -659,8 +659,6 @@ dmaInit ETHDMA{..} = do
     setBit eth_dmaomr_tsf
     -- Forward error frames
     setBit eth_dmaomr_fef
-    -- Operate on second frame
-    setBit eth_dmaomr_osf
 
   -- Bus mode register
   modifyReg ethRegDMABMR $ do
