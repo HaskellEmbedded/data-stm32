@@ -298,7 +298,7 @@ ethTower tocc ETHConfig{..} = do
                   phy_register_bcr
                   $ withBits 0 $ setBit phy_bcr_reset
                 store phyState phyResetReq
-            , pstate ==? phyReset ==> do
+            , pstate ==? phyReset .|| pstate ==? phyResetClearedReq ==> do
                 phyReadReq phy_register_bcr
                 store phyState phyResetClearedReq
             , pstate ==? phyResetCleared ==> do
