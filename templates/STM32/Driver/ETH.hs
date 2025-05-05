@@ -8,7 +8,8 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Ivory.BSP.STM32.Driver.ETH
-  ( ethTower
+  ( ethModule
+  , ethTower
   , module Ivory.BSP.STM32.Driver.ETH.FrameBuffer
   , module Ivory.BSP.STM32.Driver.ETH.RxPacket
   ) where
@@ -543,15 +544,15 @@ ethTower tocc ETHConfig{..} = do
     , snd rxDone
     )
   where
-    ethTypes :: Module
-    ethTypes = package "ethTypes" $ do
-      defStringType (Proxy :: Proxy FrameBuffer)
-      defStruct (Proxy :: Proxy "rx_packet")
-
     ethTowerDeps :: Tower e ()
     ethTowerDeps = do
-      towerDepends ethTypes
-      towerModule ethTypes
+      towerDepends ethModule
+      towerModule ethModule
+
+ethModule :: Module
+ethModule = package "ethTypes" $ do
+  defStringType (Proxy :: Proxy FrameBuffer)
+  defStruct (Proxy :: Proxy "rx_packet")
 
 -- | Init ETH MAC peripheral
 macInit
