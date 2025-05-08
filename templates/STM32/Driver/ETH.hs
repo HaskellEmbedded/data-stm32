@@ -10,11 +10,13 @@
 module Ivory.BSP.STM32.Driver.ETH
   ( ethModule
   , ethTower
+  , ethTower'
   , module Ivory.BSP.STM32.Driver.ETH.FrameBuffer
   , module Ivory.BSP.STM32.Driver.ETH.RxPacket
   ) where
 
 import Control.Monad (forM_)
+import GHC.TypeLits
 
 import Ivory.HW
 import Ivory.Language
@@ -50,7 +52,28 @@ ethTower
        , BackpressureTransmit FrameBuffer ('Stored IBool)
        , ChanOutput (Struct "rx_packet")
        )
-ethTower tocc ETHConfig{..} = do
+ethTower = ethTower'
+  (Proxy @4) -- rx
+  (Proxy @2) -- tx
+
+-- | Variant of @ethTower@ that allows setting custom
+-- size of rx and tx descriptor/buffer counts
+ethTower'
+  :: forall e rxDescCount txDescCount
+   . ( KnownNat rxDescCount
+     , KnownNat txDescCount
+     )
+  => Proxy rxDescCount
+  -> Proxy txDescCount
+  -> (e -> ClockConfig)
+  -> ETHConfig
+  -> Tower
+       e
+       ( ChanOutput ('Stored IBool)
+       , BackpressureTransmit FrameBuffer ('Stored IBool)
+       , ChanOutput (Struct "rx_packet")
+       )
+ethTower' rxDescCount _txDescCount tocc ETHConfig{..} = do
   let
     ETH{..} = ethConfigPeriph
     ETHPins{..} = ethConfigPins
@@ -82,32 +105,25 @@ ethTower tocc ETHConfig{..} = do
     periphInitDone <- state (named "PeriphInitDone")
     phyInitDone <- state (named "PhyInitDone")
 
-    isFirstTDes <- stateInit (named "IsFirstTDes") (ival true)
-
     -- Transmit descriptors
-    (tdes0 :: Ref 'Global ('Array 8 ('Stored Uint32)))
-      <- state (named "Tdes0")
-    (tdes1 :: Ref 'Global ('Array 8 ('Stored Uint32)))
-      <- state (named "Tdes1")
-
-    isFirstRDes <- stateInit (named "IsFirstRDes") (ival true)
+    (tDescs :: Ref Global (Array txDescCount (Array 8 (Stored Uint32))))
+      <- state (named "tDescs")
+    -- and their data buffers (size up to MTU -> up to 2^13 (8192))
+    (tFrames :: Ref Global (Array txDescCount FrameBuffer))
+      <- state (named "tFrames")
+    -- index of currently used descriptor/buffer
+    (tDesIx :: Ref Global (Stored (Ix txDescCount)))
+      <- state (named "tDesIx")
 
     -- Receive descriptors
-    (rdes0 :: Ref 'Global ('Array 8 ('Stored Uint32)))
-      <- state (named "Rdes0")
-    (rdes1 :: Ref 'Global ('Array 8 ('Stored Uint32)))
-      <- state (named "Rdes1")
-
-    -- Data buffers -> up to MTU -> up to 2^13 (8192)
-    (tframe0 :: Ref 'Global FrameBuffer)
-      <- state (named "Tframe0")
-    (tframe1 :: Ref 'Global FrameBuffer)
-      <- state (named "Tframe1")
-
-    (rframe0 :: Ref 'Global FrameBuffer)
-      <- state (named "Rframe0")
-    (rframe1 :: Ref 'Global FrameBuffer)
-      <- state (named "Rframe1")
+    (rDescs :: Ref Global (Array rxDescCount (Array 8 (Stored Uint32))))
+      <- state (named "rDescs")
+    -- and their data buffers (size up to MTU -> up to 2^13 (8192))
+    (rFrames :: Ref Global (Array rxDescCount FrameBuffer))
+      <- state (named "rFrames")
+    -- index of currently used descriptor/buffer
+    (rDesIx :: Ref Global (Stored (Ix rxDescCount)))
+      <- state (named "rDesIx")
 
     (rxPacket :: Ref Global (Struct "rx_packet"))
       <- state (named "RxPacket")
@@ -154,74 +170,51 @@ ethTower tocc ETHConfig{..} = do
           ethMMC
 
         -- Rx descriptors
-        -- 1st
-        store
-          (rdes0 ! 0)
-          $ withBits 0
-          $ do
-              setField eth_rdes0_own owned_by_dma
+        arrayMap $ \ix -> do
+          store
+            (rDescs ! ix ! 0)
+            $ withBits 0
+            $ do
+                setField eth_rdes0_own owned_by_dma
 
-        store
-          (rdes0 ! 1)
-          $ withBits 0
-          $ do
-              setBit eth_rdes1_rch -- Second address chained
-              setField eth_rdes1_rbs1 -- Receive buffer 1 size
-                (fromRep $ arrayLen (rframe0 ~> stringDataL))
+          store
+            (rDescs ! ix ! 1)
+            $ withBits 0
+            $ do
+                setBit eth_rdes1_rch -- Second address chained
+                setField eth_rdes1_rbs1 -- Receive buffer 1 size
+                  (fromRep $ arrayLen (rFrames ! ix ~> stringDataL))
+                setField eth_rdes1_rer -- Receive end of ring
+                  (boolToBit $ fromIntegral (ixSize ix) - 1 ==? ix)
 
-        rFrame0Addr <-
-          call
-            refU8_to_uint32_proc
-            (rframe0 ~> stringDataL ! 0)
+          rFrameAddr <-
+            call
+              refU8_to_uint32_proc
+              (rFrames ! ix ~> stringDataL ! 0)
 
-        store
-          (rdes0 ! 2)
-          rFrame0Addr
+          store
+            (rDescs ! ix ! 2)
+            rFrameAddr
 
-        -- 2nd
-        store
-          (rdes1 ! 0)
-          $ withBits 0
-          $ do
-              setField eth_rdes0_own owned_by_dma
+          -- chain rdes ix -> rdes (ix + 1)
+          nextRdesAddr <-
+            call
+              refU32_to_uint32_proc
+              (rDescs ! (ix + 1) ! 0)
 
-        store
-          (rdes1 ! 1)
-          $ withBits 0
-          $ do
-              setBit eth_rdes1_rer -- Receive end of ring
-              setBit eth_rdes1_rch -- Second address chained
-              setField eth_rdes1_rbs1 -- Receive buffer 1 size
-                (fromRep $ arrayLen (rframe1 ~> stringDataL))
-
-        rFrame1Addr <-
-          call
-            refU8_to_uint32_proc
-            (rframe1 ~> stringDataL ! 0)
-
-        store
-          (rdes1 ! 2)
-          rFrame1Addr
-
-        -- chain rdes0 -> rdes1
-        nextRdesAddr <-
-          call
-            refU32_to_uint32_proc
-            (rdes1 ! 0)
-
-        store
-          (rdes0 ! 3)
-          nextRdesAddr
+          store
+            (rDescs ! ix ! 3)
+            nextRdesAddr
 
         call_ Ivory.BSP.ARMv7M.Instr.dsb
 
-        -- ring
+        -- Ring start address
         r_list_start_addr <-
           call
             refU32_to_uint32_proc
-            (rdes0 ! 0)
+            (rDescs ! 0 ! 0)
 
-        -- Set list start address
+        -- Set rx ring start address
         modifyReg (ethRegDMARDLAR ethDMA)
           $ setField eth_dmardlar_srl
           $ fromRep r_list_start_addr
@@ -230,23 +223,26 @@ ethTower tocc ETHConfig{..} = do
         modifyReg (ethRegDMAOMR ethDMA)
           $ setBit eth_dmaomr_sr
 
-        nextTdesAddr <-
-          call
-            refU32_to_uint32_proc
-            (tdes1 ! 0)
+        -- Tx descriptors
+        arrayMap $ \ix -> do
+          -- chain tdes ix -> tdes (ix + 1)
+          nextTdesAddr <-
+            call
+              refU32_to_uint32_proc
+              (tDescs ! (ix + 1) ! 0)
 
-        store
-          (tdes0 ! 3)
-          nextTdesAddr
+          store
+            (tDescs ! ix ! 3)
+            nextTdesAddr
+
+        call_ Ivory.BSP.ARMv7M.Instr.dsb
 
         list_start_addr <-
           call
             refU32_to_uint32_proc
-            (tdes0 ! 0)
+            (tDescs ! 0 ! 0)
 
-        call_ Ivory.BSP.ARMv7M.Instr.dsb
-
-        -- Set list start address
+        -- Set tx ring start address
         modifyReg (ethRegDMATDLAR ethDMA)
           $ setField eth_dmatdlar_stl
           $ fromRep list_start_addr
@@ -254,7 +250,6 @@ ethTower tocc ETHConfig{..} = do
         -- Start transmission
         modifyReg (ethRegDMAOMR ethDMA)
           $ setBit eth_dmaomr_st
-
 
         interrupt_enable (ethInterrupt ethMAC)
 
@@ -405,11 +400,11 @@ ethTower tocc ETHConfig{..} = do
 
     handler (snd txReq) (named "TxReq") $ do
       callback $ \txBuf -> do
-        fstDesc <- deref isFirstTDes
-        store isFirstTDes (iNot fstDesc)
+        current <- deref tDesIx
+        tDesIx += 1
 
-        tdes <- assign $ fstDesc ? (tdes0, tdes1)
-        tframe <- assign $ fstDesc ? (tframe0, tframe1)
+        tdes <- assign $ tDescs ! current
+        tframe <- assign $ tFrames ! current
         refCopy tframe txBuf
 
         store
@@ -422,7 +417,8 @@ ethTower tocc ETHConfig{..} = do
               setBit eth_tdes0_ls -- Last segment
               setField eth_tdes0_cic cic_all
               setBit eth_tdes0_tch -- Transmit chained
-              setField eth_tdes0_ter (boolToBit (iNot fstDesc))
+              setField eth_tdes0_ter -- Transmit end of ring
+                (boolToBit (fromIntegral (ixSize current) - 1 ==? current))
 
         frameLen <-
           ((bitCast :: Uint32 -> Uint16) . signCast)
@@ -456,7 +452,7 @@ ethTower tocc ETHConfig{..} = do
 
     handler ethIrq (named "IsrHandler") $ do
       txDoneE <- emitter (fst txDone) 1
-      rxDoneE <- emitter (fst rxDone) 1
+      rxDoneE <- emitter (fst rxDone) (natVal rxDescCount)
       callback $ const $ do
         sr <- getReg $ (ethRegDMASR ethDMA)
         when (bitToBool (sr #. eth_dmasr_ts)) $ do
@@ -475,66 +471,73 @@ ethTower tocc ETHConfig{..} = do
             -- Clear receive status
             setBit eth_dmasr_rs
 
-          fstDesc <- deref isFirstRDes
-          store isFirstRDes (iNot fstDesc)
+          -- We could have multiple descriptors ready
+          forever $ do
+            current <- deref rDesIx
+            rdes <- assign (rDescs ! current)
+            rframe <- assign (rFrames ! current)
 
-          rdes <- assign $ fstDesc ? (rdes0, rdes1)
-          rframe <- assign $ fstDesc ? (rframe0, rframe1)
+            rd0 <- fromRep <$> deref (rdes ! 0)
 
-          rd0 <- fromRep <$> deref (rdes ! 0)
-          rd4 <- fromRep <$> deref (rdes ! 4)
+            unless
+              ((rd0 #. eth_rdes0_own) ==? owned_by_cpu)
+              breakOut
 
-          store (rxPacket ~> rx_packet_error) false
-          store (rxPacket ~> rx_packet_fragmented) false
-          store (rxPacket ~> rx_packet_overflow) false
-          store (rxPacket ~> rx_packet_crc_error) false
-          store (rxPacket ~> rx_packet_receive_error) false
-          store (rxPacket ~> rx_packet_ip_error) false
+            rDesIx += 1
 
-          when
-            (bitToBool (rd0 #. eth_rdes0_es))
-            $ do
-                rxErrors += 1
-                store (rxPacket ~> rx_packet_error) true
+            rd4 <- fromRep <$> deref (rdes ! 4)
 
-          when
-            (bitToBool (rd0 #. eth_rdes0_oe))
-            $ store (rxPacket ~> rx_packet_overflow) true
+            store (rxPacket ~> rx_packet_error) false
+            store (rxPacket ~> rx_packet_fragmented) false
+            store (rxPacket ~> rx_packet_overflow) false
+            store (rxPacket ~> rx_packet_crc_error) false
+            store (rxPacket ~> rx_packet_receive_error) false
+            store (rxPacket ~> rx_packet_ip_error) false
 
-          when
-            (bitToBool (rd0 #. eth_rdes0_ce))
-            $ store (rxPacket ~> rx_packet_crc_error) true
+            when
+              (bitToBool (rd0 #. eth_rdes0_es))
+              $ do
+                  rxErrors += 1
+                  store (rxPacket ~> rx_packet_error) true
 
-          when
-            (bitToBool (rd0 #. eth_rdes0_re))
-            $ store (rxPacket ~> rx_packet_receive_error) true
+            when
+              (bitToBool (rd0 #. eth_rdes0_oe))
+              $ store (rxPacket ~> rx_packet_overflow) true
 
-          when
-            (    (bitToBool (rd4 #. eth_rdes4_iphe)) -- IP Header error
-             .|| (bitToBool (rd4 #. eth_rdes4_ippe)) -- IP Payload error
-            )
-            $ store (rxPacket ~> rx_packet_ip_error) true
+            when
+              (bitToBool (rd0 #. eth_rdes0_ce))
+              $ store (rxPacket ~> rx_packet_crc_error) true
 
-          when
-            ((bitToBool (rd0 #. eth_rdes0_fs))
-              .&& iNot (bitToBool (rd0 #. eth_rdes0_ls)))
-            $ do
-                rxFragmented += 1
-                store (rxPacket ~> rx_packet_fragmented) true
+            when
+              (bitToBool (rd0 #. eth_rdes0_re))
+              $ store (rxPacket ~> rx_packet_receive_error) true
 
-          -- Set frame length (including padding)
-          store
-            (rframe ~> stringLengthL)
-            $ safeCast $ toRep (rd0 #. eth_rdes0_fl)
+            when
+              (    (bitToBool (rd4 #. eth_rdes4_iphe)) -- IP Header error
+               .|| (bitToBool (rd4 #. eth_rdes4_ippe)) -- IP Payload error
+              )
+              $ store (rxPacket ~> rx_packet_ip_error) true
 
-          store
-            (rdes ! 0)
-            $ withBits 0
-            $ do
-                setField eth_rdes0_own owned_by_dma
+            when
+              ((bitToBool (rd0 #. eth_rdes0_fs))
+                .&& iNot (bitToBool (rd0 #. eth_rdes0_ls)))
+              $ do
+                  rxFragmented += 1
+                  store (rxPacket ~> rx_packet_fragmented) true
 
-          refCopy (rxPacket ~> rx_packet_buffer) rframe
-          emit rxDoneE (constRef rxPacket)
+            -- Set frame length (including padding)
+            store
+              (rframe ~> stringLengthL)
+              $ safeCast $ toRep (rd0 #. eth_rdes0_fl)
+
+            store
+              (rdes ! 0)
+              $ withBits 0
+              $ do
+                  setField eth_rdes0_own owned_by_dma
+
+            refCopy (rxPacket ~> rx_packet_buffer) rframe
+            emit rxDoneE (constRef rxPacket)
 
         interrupt_enable (ethInterrupt ethMAC)
 
