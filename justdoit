@@ -1,0 +1,5 @@
+cabal run genstm  -- \
+  -e G061 \
+  -e L4Q5 \
+  -e L4P5 \
+  2>&1 | tee log && cabal run updaterepo
