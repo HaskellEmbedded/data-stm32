@@ -62,7 +62,6 @@ spiTower tocc devices pins = do
   eqname a b = spiName a == spiName b
   err m = error ("spiTower cannot be created " ++ m)
 
-
 spiPeripheralDriver :: forall e
                      . (e -> ClockConfig)
                     -> SPI
@@ -107,10 +106,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
           store done true
           store shutdown false
 
-
-
   handler irq "irq" $ do
-
     callback $ \_ -> do
       tx_pos <- deref reqbufferpos
       tx_sz  <- deref (reqbuffer ~> tx_len)
@@ -134,7 +130,6 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
               modifyReg (spiRegCR2 periph)
                 (setBit spi_cr2_txeie >> clearBit spi_cr2_rxneie)
 
-
         , bitToBool (sr #. spi_sr_txe) ==> do
             when (tx_pos <? tx_sz) $ do
               w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
@@ -150,8 +145,6 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
               comment "shut down the device once the bus isn't busy"
               modifyReg (spiRegCR2 periph) (clearBit spi_cr2_txeie)
               store shutdown true
-
-
         ]
       interrupt_enable interrupt
 
