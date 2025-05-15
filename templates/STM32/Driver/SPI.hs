@@ -93,6 +93,8 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
   resbuffer    <- state "resbuffer"
   resbufferpos <- state "resbufferpos"
 
+  overruns     <- stateInit "overruns" (ival (0 :: Uint32))
+
   handler watchdog_per "spi_shutdown_watchdog" $ do
     e <- emitter res_in 1
     callback $ \_ -> do
@@ -178,7 +180,11 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
         modifyReg (spiRegCR2 periph) (setBit spi_cr2_txeie)
 
       unless ready $ do
-        return () -- XXX how do we want to handle this error?
+        -- This means that the request/response protocol is not followed
+        -- correctly and a transaction is still pending when new one arrives.
+        -- We could assert here, but instead we just increment overruns
+        -- variable that can be checked via gdb
+        overruns += 1
 
   where
   interrupt = spiInterrupt periph
