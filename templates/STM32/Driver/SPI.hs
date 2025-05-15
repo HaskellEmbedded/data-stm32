@@ -76,9 +76,9 @@ spiPeripheralDriver :: forall e
 spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdog_per = do
   clockconfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
-  done <- state "done"
-  shutdown <- stateInit "shutdown" (ival false)
-  handler systemInit "initialize_hardware" $ do
+  done <- state (named "done")
+  shutdown <- stateInit (named "shutdown") (ival false)
+  handler systemInit (named "initialize_hardware") $ do
     send_ready <- emitter ready_in 1
     callback $ \ now -> do
       spiInit        periph pins
@@ -87,15 +87,15 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
       emit send_ready now
       interrupt_enable interrupt
 
-  reqbuffer    <- state "reqbuffer"
-  reqbufferpos <- state "reqbufferpos"
+  reqbuffer    <- state (named "reqbuffer")
+  reqbufferpos <- state (named "reqbufferpos")
 
-  resbuffer    <- state "resbuffer"
-  resbufferpos <- state "resbufferpos"
+  resbuffer    <- state (named "resbuffer")
+  resbufferpos <- state (named "resbufferpos")
 
-  overruns     <- stateInit "overruns" (ival (0 :: Uint32))
+  overruns     <- stateInit (named "overruns") (ival (0 :: Uint32))
 
-  handler watchdog_per "spi_shutdown_watchdog" $ do
+  handler watchdog_per (named "shutdown_watchdog") $ do
     e <- emitter res_in 1
     callback $ \_ -> do
       do_shutdown <- deref shutdown
@@ -108,7 +108,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
           store done true
           store shutdown false
 
-  handler irq "irq" $ do
+  handler irq (named "irq") $ do
     callback $ \_ -> do
       tx_pos <- deref reqbufferpos
       tx_sz  <- deref (reqbuffer ~> tx_len)
@@ -159,7 +159,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
   monitorModuleDef $ do
     mapM_ (incl . deviceBeginProc) devices
 
-  handler req_out  "request" $ do
+  handler req_out (named "request") $ do
     callback $ \req -> do
       ready <- deref done
       when ready $ do
@@ -187,6 +187,8 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdo
         overruns += 1
 
   where
+  named nm = spiName periph ++ "_" ++ nm
+
   interrupt = spiInterrupt periph
 
   chooseDevice :: (SPIDevice -> Ivory eff ())
