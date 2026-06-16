@@ -8,9 +8,9 @@ pkgs.stdenv.mkDerivation {
 
   buildInputs = [
     pkgs.figlet
-    data-stm32.env.nativeBuildInputs
     pkgs.haskellPackages.cabal-install
-  ];
+  ]
+  ++ data-stm32.env.nativeBuildInputs;
 
   shellHook = ''
     figlet "YOLO"
