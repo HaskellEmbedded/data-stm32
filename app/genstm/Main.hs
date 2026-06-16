@@ -391,8 +391,17 @@ stm32periphs = do
 stm32modes :: MonadGen ()
 stm32modes = do
   DB{..} <- ask
+  let
+    supportedAfs =
+      M.filterWithKey
+        (\name _v ->
+            any
+              (\f -> show f `L.isPrefixOf` name)
+              supportedFamilies
+        )
+      afs
 
-  forM_ (M.toList afs) $ \(name, xs) -> do
+  forM_ (M.toList $ supportedAfs) $ \(name, xs) -> do
     -- alternate functions
     let ns = "STM32.AF." <> (T.pack name)
         ctx = listCtx [ ("afs", tshow xs) ]
