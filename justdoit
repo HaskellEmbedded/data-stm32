@@ -1,3 +1,5 @@
+set -o pipefail
+
 cabal run genstm  -- \
   -e G061 \
   -e L4Q5 \
