@@ -15,7 +15,9 @@ data Core =
   | CortexM3
   | CortexM33
   | CortexM4F
+  | CortexM55
   | CortexM7F
+  | CortexA35
   | CortexA7
   deriving (Eq, Show, Ord, Generic)
 
@@ -53,8 +55,9 @@ freertosCore _shortName family = coreStr $ core family
    coreStr CortexM3     = "CM3"
    coreStr CortexM33    = "CM4F"
    coreStr CortexM4F    = "CM4F"
+   coreStr CortexM55    = "CM4F"
    coreStr CortexM7F    = "CM4F"
-   coreStr CortexA7     = error "freertosCore: Don't know how to handle CortexA7"
+   coreStr n            = error $ "freertosCore: Don't know how to handle " <> show n
 
 -- -mcpu for GCC/LD
 cpu :: Core -> String
@@ -63,7 +66,9 @@ cpu CortexM0Plus = "cortex-m0plus"
 cpu CortexM3     = "cortex-m3"
 cpu CortexM33    = "cortex-m33"
 cpu CortexM4F    = "cortex-m4"
+cpu CortexM55    = "cortex-m55"
 cpu CortexM7F    = "cortex-m7"
+cpu CortexA35    = "cortex-a35"
 cpu CortexA7     = "cortex-a7"
 
 -- -mfpu for GCC

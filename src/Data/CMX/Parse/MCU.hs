@@ -181,7 +181,9 @@ parseCore = match . drop 4
     match "Cortex-M3"  = CortexM3
     match "Cortex-M33" = CortexM33
     match "Cortex-M4"  = CortexM4F
+    match "Cortex-M55" = CortexM55
     match "Cortex-M7"  = CortexM7F
+    match "Cortex-A35" = CortexA35
     match "Cortex-A7"  = CortexA7
     match unknownCore = error $ "Unknow core" ++ unknownCore
 

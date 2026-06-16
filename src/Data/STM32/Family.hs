@@ -24,15 +24,21 @@ data Family =
   | L4
   | L4Plus -- L4S L4R
   | L5
+  | N6
+  | U0
+  | U3
   | U5
   | C0
   | G0
   | G4
   | WB
+  | WB0
   | WBA
   | WL
+  | WL3
   | TS
   | MP1
+  | MP2
   deriving (Eq, Ord, Show, Read, Generic)
 
 instance Serialize Family
@@ -45,6 +51,7 @@ familyParser :: Parser Family
 familyParser = do
   f <- asum
     [ MP1 <$ string "MP1"
+    , MP2 <$ string "MP2"
     , G4  <$ string "GB"
     , (\a b ->
         Data.Maybe.fromMaybe

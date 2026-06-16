@@ -187,7 +187,10 @@ checkRAM (name, _)
   = error $ "ram1 + ram2 + ram3 + ccram is not equal mcuRam" ++ showName name
 
 checkMCU :: MCU -> MCU
-checkMCU MCU{..} | mcuFlash == 0 && mcuFamily /= MP1 = error $ "MCU Flash is 0 @" ++ mcuRefName
+checkMCU MCU{..}
+  | mcuFlash == 0
+  && (not $ elem mcuFamily [MP1, MP2, N6])
+  = error $ "MCU Flash is 0 @" ++ mcuRefName
 checkMCU MCU{..} | mcuRam   == 0 = error $ "MCU Ram is 0 @" ++ mcuRefName
 checkMCU x = x
 
