@@ -1,4 +1,5 @@
 {-# LANGUAGE Arrows #-}
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE NoMonomorphismRestriction #-}
 {-# LANGUAGE RecordWildCards #-}
 module Data.CMX.Parse.MCU (parseMCU, parseAFs, parseClockSources) where
@@ -188,7 +189,7 @@ parseCore = match . drop 4
     match unknownCore = error $ "Unknow core" ++ unknownCore
 
 parseMCU file refName = do
-  res <- runX (readDocument [] file >>> mcu refName)
+  !res <- runX (readDocument [] file >>> mcu refName)
   case res of
     []  -> return $ error $ "no mcu parsed from " ++ file
     [x] -> return x
