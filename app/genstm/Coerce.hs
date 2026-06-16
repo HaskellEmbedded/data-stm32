@@ -64,6 +64,7 @@ adjustFieldsByRegName targetRegName fn x@Peripheral{..} = adjustRegs adj x
     adj reg@Register{..} | otherwise = reg
 
 filterByPeriph ADC _ = adjustADCRegs
+filterByPeriph DAC _ = adjustDACRegs
 filterByPeriph GPIO (Just 1) = renameGPIO . adjustGPIOF1Regs
 filterByPeriph GPIO (Just 2) = renameGPIO . adjustGPIORegs
 filterByPeriph CAN  _        = adjustCANRegs
@@ -216,6 +217,13 @@ adjustADCRegs = adjustRegFields fix
     fix "CR2" x | fieldName x == "EXTSEL" = Just $ x { fieldRegType = Just "ADCExtSel" }
     fix "CR2" x | fieldName x == "JEXTSEL" = Just $ x { fieldRegType = Just "ADCJExtSel" }
     fix "JSQR" x | fieldName x == "JL" = Just $ x { fieldRegType = Just "ADCJL" }
+    fix _ x = Just x
+
+adjustDACRegs = adjustRegFields fix
+  where
+    fix "CR" x | "MAMP" `L.isPrefixOf` (fieldName x) = Just $ x { fieldRegType = Just "DACMAMP" }
+    fix "CR" x | "WAVE" `L.isPrefixOf` (fieldName x) = Just $ x { fieldRegType = Just "DACWAVE" }
+    fix "CR" x | "TSEL" `L.isPrefixOf` (fieldName x) = Just $ x { fieldRegType = Just "DACTSEL" }
     fix _ x = Just x
 
 -- UART

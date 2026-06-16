@@ -111,6 +111,9 @@ driverMapping = [
   , DriverInfo ADC Nothing (ByIP "aditf2_v1_1")
       [] CommonRegTypes NoDriver
 
+  , DriverInfo DAC Nothing (ByDev "F765")
+      [ByIP "dacif_v1_1"] CommonRegTypes CommonDriver
+
   , DriverInfo DMA Nothing (ByDev "F765")
       [ ByIP "STM32F401_dma_v2_0"
       , ByIP "STM32F410_dma_v2_0"
